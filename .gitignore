@@ -1,0 +1,10 @@
+/chain.exe
+/chain
+/tests/chain
+/tests/workdir
+/docs
+
+***/.DS_Store
+.vscode
+.idea
+go.sum
