@@ -92,7 +92,7 @@ func TestHotstuff_SuccessfulPropose(t *testing.T) {
 	assert.Equal(b1, hs.GetBLeaf())
 	assert.True(hs.IsProposing())
 
-	driver.On("MajorityCount").Return(3)
+	driver.On("MajorityValidatorCount").Return(3)
 
 	v1 := newMockVote(b1, "r1")
 	hs.OnReceiveVote(v1)
@@ -133,7 +133,7 @@ func TestHotstuff_OnReceiveVote(t *testing.T) {
 	driver.On("CreateLeaf", b0, q0, b0.Height()+1).Once().Return(b1)
 	driver.On("BroadcastProposal", b1).Once()
 	hs.OnPropose()
-	driver.On("MajorityCount").Return(2)
+	driver.On("MajorityValidatorCount").Return(2)
 
 	v1 := newMockVote(b1, "r1")
 	hs.OnReceiveVote(v1)
@@ -257,7 +257,7 @@ func TestHotstuff_Update(t *testing.T) {
 	hs3 := new(Hotstuff)
 	hs3.state = newState(b2, q2)
 
-	tests := []struct {
+	type testCase struct {
 		name      string
 		hs        *Hotstuff
 		bNew      Block
@@ -265,16 +265,32 @@ func TestHotstuff_Update(t *testing.T) {
 		qcHigh    QC
 		bLock     Block
 		bExec     Block
-	}{
-		{"proposal 1", hs0, b1, 0, q0, b0, b0},
-		{"proposal dup", hs0, bf0, 0, q0, b0, b0},
-		{"proposal 2", hs0, b2, 0, q1, b0, b0},
-		{"proposal 3", hs1, b3, 0, q2, b1, b0},
-		{"proposal 4", hs2, b4, 1, q3, b2, b1},
-		{"not three chain", hs0, bb5, 0, qq4, bb3, b0},
-		{"exec debts", hs0, bb6, 3, qq5, bb4, bb3},
-		{"three chain but invalid commit phase", hs3, b4, 0, q3, b2, b2},
 	}
+	var tests []testCase
+
+	if Phases == "ONE" {
+		tests = []testCase{
+			{"proposal 1", hs0, b1, 0, q0, b1, b0},
+			{"proposal dup", hs0, bf0, 0, q0, b1, b0},
+			{"proposal 2", hs0, b2, 1, q1, b2, b1},
+			{"proposal 3", hs1, b3, 2, q2, b3, b2},
+			{"proposal 4", hs2, b4, 3, q3, b4, b3},
+			{"not one chain", hs0, bb3, 0, q1, bb3, bb1},
+			{"one chain but invalid commit phase", hs3, b2, 0, q2, b2, b2},
+		}
+	} else if Phases == "THREE" {
+		tests = []testCase{
+			{"proposal 1", hs0, b1, 0, q0, b0, b0},
+			{"proposal dup", hs0, bf0, 0, q0, b0, b0},
+			{"proposal 2", hs0, b2, 0, q1, b0, b0},
+			{"proposal 3", hs1, b3, 0, q2, b1, b0},
+			{"proposal 4", hs2, b4, 1, q3, b2, b1},
+			{"not three chain", hs0, bb5, 0, qq4, bb3, b0},
+			{"exec debts", hs0, bb6, 3, qq5, bb4, bb3},
+			{"three chain but invalid commit phase", hs3, b4, 0, q3, b2, b2},
+		}
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			driver := new(MockDriver)

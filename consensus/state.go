@@ -150,11 +150,27 @@ func (state *state) isThisNodeLeader() bool {
 	return state.isLeader(state.resources.Signer.PublicKey())
 }
 
+func (state *state) isThisNodeWorker() bool {
+	return state.isWorker(state.resources.Signer.PublicKey())
+}
+
+func (state *state) isThisNodeVoter() bool {
+	return state.isVoter(state.resources.Signer.PublicKey())
+}
+
 func (state *state) isLeader(pubKey *core.PublicKey) bool {
 	if !state.resources.VldStore.IsWorker(pubKey) {
 		return false
 	}
 	return state.getLeaderIndex() == state.resources.VldStore.GetWorkerIndex(pubKey)
+}
+
+func (state *state) isWorker(pubKey *core.PublicKey) bool {
+	return state.resources.VldStore.IsWorker(pubKey)
+}
+
+func (state *state) isVoter(pubKey *core.PublicKey) bool {
+	return state.resources.VldStore.IsVoter(pubKey)
 }
 
 func (state *state) setLeaderIndex(idx int) {
@@ -166,7 +182,7 @@ func (state *state) getLeaderIndex() int {
 }
 
 func (state *state) getFaultyCount() int {
-	return state.resources.VldStore.VoterCount() - state.resources.VldStore.MajorityCount()
+	return state.resources.VldStore.ValidatorCount() - state.resources.VldStore.MajorityValidatorCount()
 }
 
 func (state *state) addCommitedTxCount(count int) {

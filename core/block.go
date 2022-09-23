@@ -72,7 +72,7 @@ func (blk *Block) Validate(vs ValidatorStore) error {
 		PubKey: blk.data.Proposer,
 		Value:  blk.data.Signature,
 	})
-	if !vs.IsVoter(sig.PublicKey()) {
+	if !vs.IsWorker(sig.PublicKey()) {
 		return ErrInvalidValidator
 	}
 	if err != nil {

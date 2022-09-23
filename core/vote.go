@@ -36,7 +36,7 @@ func (vote *Vote) Validate(vs ValidatorStore) error {
 	if err != nil {
 		return err
 	}
-	if !vs.IsVoter(sig.PublicKey()) {
+	if !(vs.IsVoter(sig.PublicKey()) || vs.IsWorker(sig.PublicKey())) {
 		return ErrInvalidValidator
 	}
 	if !sig.Verify(vote.data.BlockHash) {

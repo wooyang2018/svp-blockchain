@@ -11,6 +11,7 @@ import (
 )
 
 type TxPool interface {
+	SubmitTx(tx *core.Transaction) error
 	PopTxsFromQueue(max int) [][]byte
 	SetTxsPending(hashes [][]byte)
 	GetTxsToExecute(hashes [][]byte) ([]*core.Transaction, [][]byte)
@@ -19,6 +20,7 @@ type TxPool interface {
 	SyncTxs(peer *core.PublicKey, hashes [][]byte) error
 	GetTx(hash []byte) *core.Transaction
 	GetStatus() txpool.Status
+	GetTxStatus(hash []byte) txpool.TxStatus
 }
 
 type Storage interface {

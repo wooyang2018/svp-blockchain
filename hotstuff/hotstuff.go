@@ -6,7 +6,7 @@
 package hotstuff
 
 import (
-	"log"
+	"github.com/wooyang2018/ppov-blockchain/logger"
 )
 
 // Hotstuff consensus engine
@@ -23,7 +23,6 @@ func New(driver Driver, b0 Block, q0 QC) *Hotstuff {
 }
 
 // OnPropose is called to propose a new block
-// TODO: 找到 Proposal 的应对函数
 func (hs *Hotstuff) OnPropose() Block {
 	bLeaf := hs.GetBLeaf()
 	bNew := hs.driver.CreateLeaf(bLeaf, hs.GetQCHigh(), bLeaf.Height()+1)
@@ -42,7 +41,8 @@ func (hs *Hotstuff) OnReceiveVote(v Vote) {
 	if err != nil {
 		return
 	}
-	if hs.GetVoteCount() >= hs.driver.MajorityCount() {
+	logger.I().Debugw("hotstuff received vote", "height", v.Block().Height())
+	if hs.GetVoteCount() >= hs.driver.MajorityValidatorCount() {
 		votes := hs.GetVotes()
 		hs.endProposal()
 		hs.UpdateQCHigh(hs.driver.CreateQC(votes))
@@ -61,7 +61,6 @@ func (hs *Hotstuff) OnReceiveProposal(bNew Block) {
 // CanVote returns true if the hotstuff instance can vote the given block
 func (hs *Hotstuff) CanVote(bNew Block) bool {
 	if CmpBlockHeight(bNew, hs.GetBVote()) == 1 {
-		//TODO: 为什么安全性规则和活性规则是二选一
 		return hs.CheckSafetyRule(bNew) || hs.CheckLivenessRule(bNew)
 	}
 	return false
@@ -90,11 +89,12 @@ func (hs *Hotstuff) Update(bNew Block) {
 
 	if Phases == "ONE" {
 		if CmpBlockHeight(bNew, hs.GetBLock()) == 1 {
-			hs.setBLock(bNew) // commit phase for b1
-			hs.onCommit(b2)
-			hs.setBExec(b2)
+			hs.setBLock(bNew) // commit phase for bNew
+			if b2 != nil {
+				hs.onCommit(b2) // decide phase for b2
+				hs.setBExec(b2)
+			}
 		}
-
 	} else if Phases == "THREE" {
 		if CmpBlockHeight(b1, hs.GetBLock()) == 1 {
 			hs.setBLock(b1) // commit phase for b1
@@ -109,12 +109,10 @@ func (hs *Hotstuff) Update(bNew Block) {
 func (hs *Hotstuff) onCommit(b Block) {
 	if CmpBlockHeight(b, hs.GetBExec()) == 1 {
 		// commit parent blocks recurrsively
-		// 好：onCommit递归
 		hs.onCommit(b.Parent())
 		hs.driver.Commit(b)
-
 	} else if !hs.GetBExec().Equal(b) {
-		log.Fatalf("hotstuff safety breached b-recurrsive: %+v\n bexec: %d",
+		logger.I().Warnf("hotstuff safety breached b-recurrsive: %+v\n bexec: %d",
 			b, hs.GetBExec().Height())
 	}
 }
@@ -122,6 +120,7 @@ func (hs *Hotstuff) onCommit(b Block) {
 // UpdateQCHigh replaces qcHigh if the block of given qc is higher than the qcHigh block
 func (hs *Hotstuff) UpdateQCHigh(qc QC) {
 	if CmpBlockHeight(qc.Block(), hs.GetQCHigh().Block()) == 1 {
+		logger.I().Debugw("hotstuff updated high qc", "height", qc.Block().Height())
 		hs.setQCHigh(qc)
 		hs.setBLeaf(qc.Block())
 		hs.qcHighEmitter.Emit(qc)

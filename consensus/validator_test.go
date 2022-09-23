@@ -13,11 +13,12 @@ import (
 func TestValidator_verifyProposalToVote(t *testing.T) {
 	priv0 := core.GenerateKey(nil)
 	priv1 := core.GenerateKey(nil)
+	validators := []string{
+		priv0.PublicKey().String(),
+		priv1.PublicKey().String(),
+	}
 	resources := &Resources{
-		VldStore: core.NewValidatorStore([]*core.PublicKey{
-			priv0.PublicKey(),
-			priv1.PublicKey(),
-		}),
+		VldStore: core.NewValidatorStore(validators, []int{1, 1}, validators),
 	}
 	mStrg := new(MockStorage)
 	mTxPool := new(MockTxPool)

@@ -133,7 +133,7 @@ type MockDriver struct {
 
 var _ Driver = (*MockDriver)(nil)
 
-func (m *MockDriver) MajorityCount() int {
+func (m *MockDriver) MajorityValidatorCount() int {
 	args := m.Called()
 	return args.Int(0)
 }

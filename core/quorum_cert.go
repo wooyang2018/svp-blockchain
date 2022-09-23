@@ -32,12 +32,11 @@ func NewQuorumCert() *QuorumCert {
 	}
 }
 
-// Validate godoc
 func (qc *QuorumCert) Validate(vs ValidatorStore) error {
 	if qc.data == nil {
 		return ErrNilQC
 	}
-	if len(qc.sigs) < vs.MajorityCount() {
+	if len(qc.sigs) < vs.MajorityValidatorCount() {
 		return ErrNotEnoughSig
 	}
 	if qc.sigs.hasDuplicate() {

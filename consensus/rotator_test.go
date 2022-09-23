@@ -14,13 +14,13 @@ import (
 func setupRotator() (*rotator, *core.Block) {
 	key1 := core.GenerateKey(nil)
 	key2 := core.GenerateKey(nil)
-	workers := []*core.PublicKey{
-		key1.PublicKey(),
-		key2.PublicKey(),
+	workers := []string{
+		key1.PublicKey().String(),
+		key2.PublicKey().String(),
 	}
 	weights := []int{1, 1}
 	resources := &Resources{
-		VldStore: core.NewValidatorStore(workers, weights, nil),
+		VldStore: core.NewValidatorStore(workers, weights, workers),
 	}
 
 	b0 := core.NewBlock().Sign(key1)
@@ -49,7 +49,7 @@ func TestRotator_changeView(t *testing.T) {
 	rot.state.setLeaderIndex(1)
 
 	msgSvc := new(MockMsgService)
-	msgSvc.On("SendNewView", rot.resources.VldStore.GetVoter(0), b0.QuorumCert()).Return(nil)
+	msgSvc.On("SendNewView", rot.resources.VldStore.GetWorker(0), b0.QuorumCert()).Return(nil)
 	rot.resources.MsgSvc = msgSvc
 
 	rot.changeView()

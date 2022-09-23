@@ -76,7 +76,7 @@ func (cons *Consensus) stop() {
 func (cons *Consensus) setupState(b0 *core.Block) {
 	cons.state = newState(cons.resources)
 	cons.state.setBlock(b0)
-	cons.state.setLeaderIndex(cons.resources.VldStore.GetVoterIndex(b0.Proposer()))
+	cons.state.setLeaderIndex(cons.resources.VldStore.GetWorkerIndex(b0.Proposer()))
 }
 
 func (cons *Consensus) getInitialBlockAndQC() (*core.Block, *core.QuorumCert) {

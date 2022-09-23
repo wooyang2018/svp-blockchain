@@ -43,9 +43,11 @@ func TestBlock(t *testing.T) {
 
 	vs := new(MockValidatorStore)
 	vs.On("VoterCount").Return(1)
-	vs.On("MajorityCount").Return(1)
+	vs.On("MajorityValidatorCount").Return(1)
 	vs.On("IsVoter", privKey.PublicKey()).Return(true)
 	vs.On("IsVoter", mock.Anything).Return(false)
+	vs.On("IsWorker", privKey.PublicKey()).Return(true)
+	vs.On("IsWorker", mock.Anything).Return(false)
 
 	bOk, err := blk.Marshal()
 	assertt.NoError(err)
@@ -97,11 +99,8 @@ func TestBlock(t *testing.T) {
 
 func TestBlock_Vote(t *testing.T) {
 	assert := assert.New(t)
-
 	privKey := GenerateKey(nil)
-
 	blk := NewBlock().Sign(privKey)
-
 	vote := blk.Vote(privKey)
 	assert.Equal(blk.Hash(), vote.BlockHash())
 

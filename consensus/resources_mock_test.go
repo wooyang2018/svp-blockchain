@@ -17,6 +17,11 @@ type MockTxPool struct {
 
 var _ TxPool = (*MockTxPool)(nil)
 
+func (m *MockTxPool) SubmitTx(tx *core.Transaction) error {
+	args := m.Called(tx)
+	return args.Error(0)
+}
+
 func (m *MockTxPool) PopTxsFromQueue(max int) [][]byte {
 	args := m.Called(max)
 	return castBytesBytes(args.Get(0))
@@ -47,6 +52,11 @@ func (m *MockTxPool) SyncTxs(peer *core.PublicKey, hashes [][]byte) error {
 func (m *MockTxPool) GetTx(hash []byte) *core.Transaction {
 	args := m.Called(hash)
 	return castTransaction(args.Get(0))
+}
+
+func (m *MockTxPool) GetTxStatus(hash []byte) txpool.TxStatus {
+	args := m.Called()
+	return args.Get(0).(txpool.TxStatus)
 }
 
 func (m *MockTxPool) GetStatus() txpool.Status {

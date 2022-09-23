@@ -3,6 +3,8 @@
 
 package hotstuff
 
+const Phases = "ONE" //ONE, TWO, THREE
+
 // Block type
 type Block interface {
 	Height() uint64
@@ -24,7 +26,7 @@ type Vote interface {
 
 // Driver godoc
 type Driver interface {
-	MajorityCount() int
+	MajorityValidatorCount() int
 	CreateLeaf(parent Block, qc QC, height uint64) Block
 	CreateQC(votes []Vote) QC
 	BroadcastProposal(blk Block)
@@ -51,5 +53,3 @@ func CmpBlockHeight(b1, b2 Block) int {
 	}
 	return -1
 }
-
-const Phases = "ONE" //ONE, TWO, THREE

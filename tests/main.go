@@ -21,7 +21,7 @@ import (
 
 var (
 	WorkDir   = "./workdir"
-	NodeCount = 4
+	NodeCount = 7
 
 	LoadTxPerSec     = 100
 	LoadMintAccounts = 100
@@ -44,6 +44,8 @@ var (
 	RunBenchmark      = false
 	BenchmarkDuration = 5 * time.Minute
 	BenchLoads        = []int{1000, 2000, 3000, 4000, 4500, 5000, 5500, 6000, 7000}
+
+	SetupClusterTemplate = false
 )
 
 func getNodeConfig() node.Config {
@@ -73,12 +75,22 @@ func main() {
 	os.Mkdir(WorkDir, 0755)
 	buildJuria()
 	setupTransport()
+
 	if RunBenchmark {
 		runBenchmark()
 	} else {
+		var cfactory cluster.ClusterFactory
+		if RemoteLinuxCluster {
+			cfactory = makeRemoteClusterFactory()
+		} else {
+			cfactory = makeLocalClusterFactory()
+		}
+		if SetupClusterTemplate {
+			return
+		}
 		runExperiments(testutil.NewLoadGenerator(
 			LoadTxPerSec, makeLoadClient(),
-		))
+		), cfactory)
 	}
 }
 
@@ -105,14 +117,7 @@ func runBenchmark() {
 	bm.Run()
 }
 
-func runExperiments(loadGen *testutil.LoadGenerator) {
-	var cfactory cluster.ClusterFactory
-	if RemoteLinuxCluster {
-		cfactory = makeRemoteClusterFactory()
-	} else {
-		cfactory = makeLocalClusterFactory()
-	}
-
+func runExperiments(loadGen *testutil.LoadGenerator, cfactory cluster.ClusterFactory) {
 	r := &ExperimentRunner{
 		experiments: setupExperiments(),
 		cfactory:    cfactory,
@@ -128,6 +133,7 @@ func printVars() {
 	fmt.Println("LoadTxPerSec=", LoadTxPerSec)
 	fmt.Println("RemoteCluster =", RemoteLinuxCluster)
 	fmt.Println("RunBenchmark=", RunBenchmark)
+	fmt.Println("SetupClusterTemplate=", SetupClusterTemplate)
 	fmt.Println()
 }
 
@@ -167,7 +173,7 @@ func buildJuriaCoinBinCC() {
 
 func makeLocalClusterFactory() *cluster.LocalFactory {
 	ftry, err := cluster.NewLocalFactory(cluster.LocalFactoryParams{
-		JuriaPath:  "./chain",
+		BinPath:    "./chain",
 		WorkDir:    path.Join(WorkDir, "local-clusters"),
 		NodeCount:  NodeCount,
 		NodeConfig: getNodeConfig(),
@@ -178,7 +184,7 @@ func makeLocalClusterFactory() *cluster.LocalFactory {
 
 func makeRemoteClusterFactory() *cluster.RemoteFactory {
 	ftry, err := cluster.NewRemoteFactory(cluster.RemoteFactoryParams{
-		JuriaPath:     "./juria",
+		BinPath:       "./chain",
 		WorkDir:       path.Join(WorkDir, "remote-clusters"),
 		NodeCount:     NodeCount,
 		NodeConfig:    getNodeConfig(),

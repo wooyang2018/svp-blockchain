@@ -24,8 +24,8 @@ type hsDriver struct {
 //验证hsDriver实现了hotstuff的Driver
 var _ hotstuff.Driver = (*hsDriver)(nil)
 
-func (hsd *hsDriver) MajorityCount() int {
-	return hsd.resources.VldStore.MajorityCount()
+func (hsd *hsDriver) MajorityValidatorCount() int {
+	return hsd.resources.VldStore.MajorityValidatorCount()
 }
 
 func (hsd *hsDriver) CreateLeaf(parent hotstuff.Block, qc hotstuff.QC, height uint64) hotstuff.Block {
@@ -63,7 +63,7 @@ func (hsd *hsDriver) VoteBlock(hsBlk hotstuff.Block) {
 	vote := blk.Vote(hsd.resources.Signer)
 	hsd.resources.TxPool.SetTxsPending(blk.Transactions())
 	hsd.delayVoteWhenNoTxs()
-	proposer := hsd.resources.VldStore.GetVoterIndex(blk.Proposer())
+	proposer := hsd.resources.VldStore.GetWorkerIndex(blk.Proposer())
 	if proposer != hsd.state.getLeaderIndex() {
 		return // view changed happened
 	}

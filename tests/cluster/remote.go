@@ -18,7 +18,7 @@ import (
 )
 
 type RemoteFactoryParams struct {
-	JuriaPath string
+	BinPath   string
 	WorkDir   string
 	NodeCount int
 
@@ -139,7 +139,7 @@ func (ftry *RemoteFactory) sendJuria() error {
 func (ftry *RemoteFactory) sendJuriaOne(i int) error {
 	cmd := exec.Command("scp",
 		"-i", ftry.params.KeySSH,
-		ftry.params.JuriaPath,
+		ftry.params.BinPath,
 		fmt.Sprintf("%s@%s:%s", ftry.params.LoginName, ftry.hosts[i],
 			ftry.params.RemoteWorkDir),
 	)
@@ -173,10 +173,10 @@ func (ftry *RemoteFactory) SetupCluster(name string) (*Cluster, error) {
 		nodeConfig: ftry.params.NodeConfig,
 	}
 	cls.nodeConfig.Datadir = path.Join(ftry.params.RemoteWorkDir, name)
-	juriaPath := path.Join(ftry.params.RemoteWorkDir, "juria")
+	binPath := path.Join(ftry.params.RemoteWorkDir, "juria")
 	for i := 0; i < ftry.params.NodeCount; i++ {
 		node := &RemoteNode{
-			juriaPath:     juriaPath,
+			binPath:       binPath,
 			config:        cls.nodeConfig,
 			loginName:     ftry.params.LoginName,
 			keySSH:        ftry.params.KeySSH,
@@ -210,8 +210,8 @@ func (ftry *RemoteFactory) setupClusterDirOne(i int, name string) error {
 }
 
 type RemoteNode struct {
-	juriaPath string
-	config    node.Config
+	binPath string
+	config  node.Config
 
 	loginName string
 	keySSH    string
@@ -230,7 +230,7 @@ func (node *RemoteNode) Start() error {
 	cmd := exec.Command("ssh",
 		"-i", node.keySSH,
 		fmt.Sprintf("%s@%s", node.loginName, node.host),
-		"nohup", node.juriaPath,
+		"nohup", node.binPath,
 	)
 	AddJuriaFlags(cmd, &node.config)
 	cmd.Args = append(cmd.Args,

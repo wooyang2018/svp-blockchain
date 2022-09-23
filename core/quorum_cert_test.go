@@ -17,15 +17,20 @@ func TestQuorumCert(t *testing.T) {
 
 	vs := new(MockValidatorStore)
 	vs.On("VoterCount").Return(4)
-	vs.On("MajorityCount").Return(3)
+	vs.On("WorkerCount").Return(3)
+	vs.On("MajorityValidatorCount").Return(3)
 
 	for i := range privKeys {
 		privKeys[i] = GenerateKey(nil)
 		if i != 4 {
 			vs.On("IsVoter", privKeys[i].pubKey).Return(true)
 		}
+		if i != 3 && i != 4 {
+			vs.On("IsWorker", privKeys[i].pubKey).Return(true)
+		}
 	}
 	vs.On("IsVoter", mock.Anything).Return(false)
+	vs.On("IsWorker", mock.Anything).Return(false)
 
 	blockHash := []byte{1}
 	votes := make([]*Vote, len(privKeys))

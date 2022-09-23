@@ -155,7 +155,25 @@ func (sigs sigList) hasDuplicate() bool {
 
 func (sigs sigList) hasInvalidValidator(vs ValidatorStore) bool {
 	for _, sig := range sigs {
+		if !(vs.IsVoter(sig.PublicKey()) || vs.IsWorker(sig.PublicKey())) {
+			return true
+		}
+	}
+	return false
+}
+
+func (sigs sigList) hasInvalidVoter(vs ValidatorStore) bool {
+	for _, sig := range sigs {
 		if !vs.IsVoter(sig.PublicKey()) {
+			return true
+		}
+	}
+	return false
+}
+
+func (sigs sigList) hasInvalidWorker(vs ValidatorStore) bool {
+	for _, sig := range sigs {
+		if !vs.IsWorker(sig.PublicKey()) {
 			return true
 		}
 	}

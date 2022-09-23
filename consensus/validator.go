@@ -107,7 +107,7 @@ func (vld *validator) onReceiveProposal(proposal *core.Block) error {
 	if err := proposal.Validate(vld.resources.VldStore); err != nil {
 		return err
 	}
-	pidx := vld.resources.VldStore.GetVoterIndex(proposal.Proposer())
+	pidx := vld.resources.VldStore.GetWorkerIndex(proposal.Proposer())
 	logger.I().Debugw("received proposal", "proposer", pidx, "height", proposal.Height())
 	parent, err := vld.getParentBlock(proposal)
 	if err != nil {
@@ -251,7 +251,7 @@ func (vld *validator) updateHotstuff(blk *core.Block, voting bool) error {
 
 func (vld *validator) verifyProposalToVote(proposal *core.Block) error {
 	if !vld.state.isLeader(proposal.Proposer()) {
-		pidx := vld.resources.VldStore.GetVoterIndex(proposal.Proposer())
+		pidx := vld.resources.VldStore.GetWorkerIndex(proposal.Proposer())
 		return fmt.Errorf("proposer %d is not leader", pidx)
 	}
 	// on node restart, not commited any blocks yet, don't check merkle root

@@ -124,7 +124,7 @@ func (rot *rotator) changeView() {
 	rot.state.setLeaderIndex(leaderIdx)
 	rot.setPendingViewChange(true)
 	rot.setViewStart()
-	leader := rot.resources.VldStore.GetVoter(rot.state.getLeaderIndex())
+	leader := rot.resources.VldStore.GetWorker(rot.state.getLeaderIndex())
 	rot.resources.MsgSvc.SendNewView(leader, rot.hotstuff.GetQCHigh().(*hsQC).qc)
 	logger.I().Infow("view changed",
 		"leader", leaderIdx, "qc", qcRefHeight(rot.hotstuff.GetQCHigh()))
@@ -132,7 +132,7 @@ func (rot *rotator) changeView() {
 
 func (rot *rotator) nextLeader() int {
 	leaderIdx := rot.state.getLeaderIndex() + 1
-	if leaderIdx >= rot.resources.VldStore.VoterCount() {
+	if leaderIdx >= rot.resources.VldStore.WorkerCount() {
 		leaderIdx = 0
 	}
 	return leaderIdx
@@ -140,7 +140,7 @@ func (rot *rotator) nextLeader() int {
 
 func (rot *rotator) onNewQCHigh(qc hotstuff.QC) {
 	rot.state.setQC(qc.(*hsQC).qc)
-	proposer := rot.resources.VldStore.GetVoterIndex(qcRefProposer(qc))
+	proposer := rot.resources.VldStore.GetWorkerIndex(qcRefProposer(qc))
 	logger.I().Debugw("updated qc", "proposer", proposer, "qc", qcRefHeight(qc))
 	var ltreset, vtreset bool
 	if proposer == rot.state.getLeaderIndex() { // if qc is from current leader

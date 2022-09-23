@@ -28,25 +28,18 @@ func setupTestHsDriver() *hsDriver {
 
 func TestHsDriver_TestMajorityCount(t *testing.T) {
 	hsd := setupTestHsDriver()
-	hsd.resources.VldStore = core.NewValidatorStore(
-		[]*core.PublicKey{
-			core.GenerateKey(nil).PublicKey(),
-			core.GenerateKey(nil).PublicKey(),
-			core.GenerateKey(nil).PublicKey(),
-			core.GenerateKey(nil).PublicKey(),
-		},
-		[]int{1, 2, 1, 1},
-		[]*core.PublicKey{
-			core.GenerateKey(nil).PublicKey(),
-			core.GenerateKey(nil).PublicKey(),
-			core.GenerateKey(nil).PublicKey(),
-			core.GenerateKey(nil).PublicKey(),
-		})
+	validators := []string{
+		core.GenerateKey(nil).PublicKey().String(),
+		core.GenerateKey(nil).PublicKey().String(),
+		core.GenerateKey(nil).PublicKey().String(),
+		core.GenerateKey(nil).PublicKey().String(),
+	}
+	hsd.resources.VldStore = core.NewValidatorStore(validators, []int{1, 1, 1, 1}, validators)
 
-	res := hsd.MajorityCount()
+	res := hsd.MajorityValidatorCount()
 
 	assert := assert.New(t)
-	assert.Equal(hsd.resources.VldStore.MajorityCount(), res)
+	assert.Equal(hsd.resources.VldStore.MajorityValidatorCount(), res)
 }
 
 func TestHsDriver_CreateLeaf(t *testing.T) {
@@ -94,7 +87,8 @@ func TestHsDriver_VoteBlock(t *testing.T) {
 	proposer := core.GenerateKey(nil)
 	blk := core.NewBlock().Sign(proposer)
 
-	hsd.resources.VldStore = core.NewValidatorStore([]*core.PublicKey{blk.Proposer()}, []int{1}, nil)
+	validators := []string{blk.Proposer().String()}
+	hsd.resources.VldStore = core.NewValidatorStore(validators, []int{1}, validators)
 
 	txPool := new(MockTxPool)
 	txPool.On("GetStatus").Return(txpool.Status{}) // no txs in the pool

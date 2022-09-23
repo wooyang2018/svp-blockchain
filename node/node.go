@@ -4,7 +4,6 @@
 package node
 
 import (
-	"encoding/base64"
 	"fmt"
 	"log"
 	"net"
@@ -113,25 +112,7 @@ func (node *Node) setupComponents() {
 }
 
 func (node *Node) setupValidatorStore() {
-	voters := make([]*core.PublicKey, len(node.genesis.Voters))
-	for i, v := range node.genesis.Voters {
-		key, err := base64.StdEncoding.DecodeString(v)
-		pubKey, err := core.NewPublicKey(key)
-		if err != nil {
-			logger.I().Fatalw("parse voter failed", "error", err)
-		}
-		voters[i] = pubKey
-	}
-	workers := make([]*core.PublicKey, len(node.genesis.Workers))
-	for i, v := range node.genesis.Workers {
-		key, err := base64.StdEncoding.DecodeString(v)
-		pubKey, err := core.NewPublicKey(key)
-		if err != nil {
-			logger.I().Fatalw("parse worker failed", "error", err)
-		}
-		workers[i] = pubKey
-	}
-	node.vldStore = core.NewValidatorStore(workers, node.genesis.Weights, voters)
+	node.vldStore = core.NewValidatorStore(node.genesis.Workers, node.genesis.Weights, node.genesis.Voters)
 }
 
 func (node *Node) setupStorage() {
@@ -170,7 +151,6 @@ func (node *Node) setupConsensus() {
 		TxPool:    node.txpool,
 		Execution: node.execution,
 	}, node.config.ConsensusConfig)
-
 }
 
 func (node *Node) setReqHandlers() {

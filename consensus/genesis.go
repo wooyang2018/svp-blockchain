@@ -68,7 +68,7 @@ func (gns *genesis) propose() {
 	if !gns.isLeader(gns.resources.Signer.PublicKey()) {
 		return
 	}
-	gns.votes = make(map[string]*core.Vote, gns.resources.VldStore.MajorityCount())
+	gns.votes = make(map[string]*core.Vote, gns.resources.VldStore.MajorityValidatorCount())
 	b0 := gns.createGenesisBlock()
 	gns.setB0(b0)
 	logger.I().Infow("created genesis block, broadcasting...")
@@ -101,10 +101,10 @@ func (gns *genesis) broadcastProposalLoop() {
 }
 
 func (gns *genesis) isLeader(pubKey *core.PublicKey) bool {
-	if !gns.resources.VldStore.IsVoter(pubKey) {
+	if !gns.resources.VldStore.IsWorker(pubKey) {
 		return false
 	}
-	return gns.resources.VldStore.GetVoterIndex(pubKey) == 0
+	return gns.resources.VldStore.GetWorkerIndex(pubKey) == 0
 }
 
 func hashChainID(chainID int64) []byte {
@@ -234,7 +234,7 @@ func (gns *genesis) acceptVote(vote *core.Vote) {
 	defer gns.mtxVote.Unlock()
 
 	gns.votes[vote.Voter().String()] = vote
-	if len(gns.votes) < gns.resources.VldStore.MajorityCount() {
+	if len(gns.votes) < gns.resources.VldStore.MajorityValidatorCount() {
 		return
 	}
 	vlist := make([]*core.Vote, 0, len(gns.votes))

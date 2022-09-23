@@ -18,7 +18,7 @@ import (
 )
 
 type LocalFactoryParams struct {
-	JuriaPath string
+	BinPath   string
 	WorkDir   string
 	NodeCount int
 
@@ -83,8 +83,8 @@ func (ftry *LocalFactory) SetupCluster(name string) (*Cluster, error) {
 	// create localNodes
 	for i := 0; i < ftry.params.NodeCount; i++ {
 		node := &LocalNode{
-			juriaPath: ftry.params.JuriaPath,
-			config:    ftry.params.NodeConfig,
+			binPath: ftry.params.BinPath,
+			config:  ftry.params.NodeConfig,
 		}
 		node.config.Datadir = path.Join(clusterDir, strconv.Itoa(i))
 		node.config.Port = node.config.Port + i
@@ -98,8 +98,8 @@ func (ftry *LocalFactory) SetupCluster(name string) (*Cluster, error) {
 }
 
 type LocalNode struct {
-	juriaPath string
-	config    node.Config
+	binPath string
+	config  node.Config
 
 	running bool
 	mtxRun  sync.RWMutex
@@ -120,7 +120,7 @@ func (node *LocalNode) Start() error {
 		return err
 	}
 	node.logFile = f
-	node.cmd = exec.Command(node.juriaPath)
+	node.cmd = exec.Command(node.binPath)
 	AddJuriaFlags(node.cmd, &node.config)
 	node.cmd.Stderr = node.logFile
 	node.cmd.Stdout = node.logFile

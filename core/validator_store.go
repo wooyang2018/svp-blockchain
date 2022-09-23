@@ -4,14 +4,19 @@
 package core
 
 import (
+	"encoding/base64"
 	"math"
+
+	"github.com/wooyang2018/ppov-blockchain/logger"
 )
 
 // ValidatorStore godoc
 type ValidatorStore interface {
 	VoterCount() int
+	MajorityVoterCount() int
 	WorkerCount() int
-	MajorityCount() int
+	ValidatorCount() int
+	MajorityValidatorCount() int
 	IsVoter(pubKey *PublicKey) bool
 	IsWorker(pubKey *PublicKey) bool
 	GetVoter(idx int) *PublicKey
@@ -25,31 +30,65 @@ type ppovValidatorStore struct {
 	voters  []*PublicKey //投票节点列表
 	workers []*PublicKey //记账节点列表
 	weights []int        //记账节点权重列表
-	vcount  int          //投票节点收集区块的阈值
 
-	vMap     map[string]int
-	wMap     map[string]int
-	majority int
+	vcount    int //投票节点收集区块的阈值
+	voterMap  map[string]int
+	workerMap map[string]int
+
+	validators []*PublicKey //投票节点和记账节点的集合
 }
 
 var _ ValidatorStore = (*ppovValidatorStore)(nil)
 
-func NewValidatorStore(workers []*PublicKey, weights []int, voters []*PublicKey) ValidatorStore {
+func StringToPubKey(v string) *PublicKey {
+	key, err := base64.StdEncoding.DecodeString(v)
+	pubKey, err := NewPublicKey(key)
+	if err != nil {
+		logger.I().Fatalw("parse voter failed", "error", err)
+	}
+	return pubKey
+}
+
+func NewValidatorStore(workers []string, weights []int, voters []string) ValidatorStore {
 	store := &ppovValidatorStore{
-		voters:  voters,
-		workers: workers,
 		weights: weights,
 	}
+
+	set := make(map[string]*PublicKey)
+	for _, v := range workers {
+		set[v] = StringToPubKey(v)
+	}
+	for _, v := range voters {
+		if _, ok := set[v]; !ok {
+			set[v] = StringToPubKey(v)
+		}
+	}
+
+	store.validators = make([]*PublicKey, 0, len(set))
+	for _, v := range set {
+		store.validators = append(store.validators, v)
+	}
+
+	store.voters = make([]*PublicKey, len(voters))
+	for i, v := range voters {
+		store.voters[i] = set[v]
+	}
+	store.workers = make([]*PublicKey, len(workers))
+	for i, v := range workers {
+		store.workers[i] = set[v]
+	}
+
 	store.vcount = len(workers) //TODO
-	store.vMap = make(map[string]int, len(store.voters))
+
+	store.voterMap = make(map[string]int, len(store.voters))
 	for i, v := range store.voters {
-		store.vMap[v.String()] = i
+		store.voterMap[v.String()] = i
 	}
-	store.wMap = make(map[string]int, len(store.workers))
+	store.workerMap = make(map[string]int, len(store.workers))
 	for i, v := range store.workers {
-		store.wMap[v.String()] = i
+		store.workerMap[v.String()] = i
 	}
-	store.majority = MajorityCount(len(voters))
+
 	return store
 }
 
@@ -57,19 +96,27 @@ func (store *ppovValidatorStore) VoterCount() int {
 	return len(store.voters)
 }
 
+func (store *ppovValidatorStore) MajorityVoterCount() int {
+	return MajorityCount(store.VoterCount())
+}
+
 func (store *ppovValidatorStore) WorkerCount() int {
 	return len(store.workers)
 }
 
-func (store *ppovValidatorStore) MajorityCount() int {
-	return store.majority
+func (store *ppovValidatorStore) ValidatorCount() int {
+	return len(store.validators)
+}
+
+func (store *ppovValidatorStore) MajorityValidatorCount() int {
+	return MajorityCount(len(store.validators))
 }
 
 func (store *ppovValidatorStore) IsVoter(pubKey *PublicKey) bool {
 	if pubKey == nil {
 		return false
 	}
-	_, ok := store.vMap[pubKey.String()]
+	_, ok := store.voterMap[pubKey.String()]
 	return ok
 }
 
@@ -77,7 +124,7 @@ func (store *ppovValidatorStore) IsWorker(pubKey *PublicKey) bool {
 	if pubKey == nil {
 		return false
 	}
-	_, ok := store.wMap[pubKey.String()]
+	_, ok := store.workerMap[pubKey.String()]
 	return ok
 }
 
@@ -99,14 +146,14 @@ func (store *ppovValidatorStore) GetVoterIndex(pubKey *PublicKey) int {
 	if pubKey == nil {
 		return 0
 	}
-	return store.vMap[pubKey.String()]
+	return store.voterMap[pubKey.String()]
 }
 
 func (store *ppovValidatorStore) GetWorkerIndex(pubKey *PublicKey) int {
 	if pubKey == nil {
 		return 0
 	}
-	return store.wMap[pubKey.String()]
+	return store.workerMap[pubKey.String()]
 }
 
 func (store *ppovValidatorStore) GetWorkerWeight(idx int) int {
