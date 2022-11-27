@@ -50,6 +50,7 @@ var (
 func getNodeConfig() node.Config {
 	config := node.DefaultConfig
 	config.Debug = true
+	config.BroadcastTx = false
 	return config
 }
 

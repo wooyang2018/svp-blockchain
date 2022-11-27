@@ -43,23 +43,27 @@ const (
 )
 
 type TxPool struct {
-	storage   Storage
-	execution Execution
-	msgSvc    MsgService
-
-	store       *txStore
-	broadcaster *broadcaster
+	storage     Storage      //存储服务
+	execution   Execution    //交易执行服务
+	msgSvc      MsgService   //通信服务
+	store       *txStore     //交易缓存
+	broadcaster *broadcaster //交易广播器
+	broadcastTx bool         //是否广播交易
 }
 
-func New(storage Storage, execution Execution, msgSvc MsgService) *TxPool {
+func New(storage Storage, execution Execution, msgSvc MsgService, broadcastTx bool) *TxPool {
 	pool := &TxPool{
 		storage:     storage,
 		execution:   execution,
 		msgSvc:      msgSvc,
 		store:       newTxStore(),
-		broadcaster: newBroadcaster(msgSvc),
+		broadcastTx: broadcastTx,
 	}
-	go pool.subscribeTxs()
+	if pool.broadcastTx {
+		pool.broadcaster = newBroadcaster(msgSvc)
+		go pool.broadcaster.run() //运行交易广播器
+		go pool.subscribeTxs()
+	}
 	return pool
 }
 
@@ -69,6 +73,10 @@ func (pool *TxPool) SubmitTx(tx *core.Transaction) error {
 
 func (pool *TxPool) SyncTxs(peer *core.PublicKey, hashes [][]byte) error {
 	return pool.syncTxs(peer, hashes)
+}
+
+func (pool *TxPool) StoreTxs(txs *core.TxList) error {
+	return pool.storeTxs(txs)
 }
 
 func (pool *TxPool) PopTxsFromQueue(max int) [][]byte {
@@ -107,7 +115,9 @@ func (pool *TxPool) submitTx(tx *core.Transaction) error {
 	if err := pool.addNewTx(tx); err != nil {
 		return err
 	}
-	pool.broadcaster.queue <- tx
+	if pool.broadcastTx {
+		pool.broadcaster.queue <- tx
+	}
 	return nil
 }
 
@@ -189,6 +199,20 @@ func (pool *TxPool) requestTxList(peer *core.PublicKey, hashes [][]byte) (*core.
 		}
 	}
 	return txList, nil
+}
+
+func (pool *TxPool) storeTxs(txs *core.TxList) error {
+	missing := make([]*core.Transaction, 0)
+	for _, tx := range *txs {
+		if !pool.storage.HasTx(tx.Hash()) && pool.store.getTx(tx.Hash()) == nil {
+			missing = append(missing, tx)
+		}
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+	txList := core.TxList(missing)
+	return pool.addTxList(&txList)
 }
 
 func (pool *TxPool) getTxsToExecute(hashes [][]byte) ([]*core.Transaction, [][]byte) {

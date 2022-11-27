@@ -18,6 +18,8 @@ const (
 	FlagPort    = "port"
 	FlagAPIPort = "apiPort"
 
+	FlagBroadcastTx = "broadcast-tx"
+
 	// storage
 	FlagMerkleBranchFactor = "storage-merkleBranchFactor"
 
@@ -66,6 +68,9 @@ func init() {
 
 	rootCmd.Flags().IntVarP(&nodeConfig.APIPort,
 		FlagAPIPort, "P", nodeConfig.APIPort, "node api port")
+
+	rootCmd.Flags().BoolVar(&nodeConfig.BroadcastTx,
+		FlagBroadcastTx, false, "whether to broadcast transaction")
 
 	rootCmd.Flags().Uint8Var(&nodeConfig.StorageConfig.MerkleBranchFactor,
 		FlagMerkleBranchFactor, nodeConfig.StorageConfig.MerkleBranchFactor,

@@ -25,6 +25,7 @@ func newTxItem(tx *core.Transaction) *txItem {
 	}
 }
 
+// inQueue 根据index判断交易是否在队列中
 func (item *txItem) inQueue() bool {
 	return item.index != -1
 }
@@ -70,8 +71,8 @@ func (txq *txQueue) Pop() interface{} {
 }
 
 type txStore struct {
-	txq     *txQueue
-	txItems map[string]*txItem
+	txq     *txQueue           //交易队列/堆,receivedTime顺序，涉及排队的交易
+	txItems map[string]*txItem //tx.Hash ==> txItem，涉及全部交易
 
 	mtx sync.RWMutex
 }

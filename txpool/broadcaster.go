@@ -29,7 +29,6 @@ func newBroadcaster(msgSvc MsgService) *broadcaster {
 	}
 	b.txBatch = make([]*core.Transaction, 0, b.batchSize)
 	b.timer = time.NewTimer(b.timeout)
-	go b.run()
 
 	return b
 }

@@ -10,10 +10,11 @@ import (
 )
 
 type Config struct {
-	Debug   bool
-	Datadir string
-	Port    int
-	APIPort int
+	Debug       bool
+	Datadir     string
+	Port        int
+	APIPort     int
+	BroadcastTx bool
 
 	StorageConfig   storage.Config
 	ExecutionConfig execution.Config
@@ -23,6 +24,7 @@ type Config struct {
 var DefaultConfig = Config{
 	Port:            15150,
 	APIPort:         9040,
+	BroadcastTx:     false,
 	StorageConfig:   storage.DefaultConfig,
 	ExecutionConfig: execution.DefaultConfig,
 	ConsensusConfig: consensus.DefaultConfig,
