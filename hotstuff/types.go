@@ -3,7 +3,7 @@
 
 package hotstuff
 
-const Phases = "ONE" //ONE, TWO, THREE
+const Phases = "TWO" //ONE, TWO, THREE
 
 // Block type
 type Block interface {

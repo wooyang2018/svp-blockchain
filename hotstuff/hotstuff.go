@@ -95,6 +95,14 @@ func (hs *Hotstuff) Update(bNew Block) {
 				hs.setBExec(b2)
 			}
 		}
+	} else if Phases == "TWO" {
+		if CmpBlockHeight(b2, hs.GetBLock()) == 1 {
+			hs.setBLock(b2) // commit phase for b2
+			if IsTwoChain(b1, b2) {
+				hs.onCommit(b1) // decide phase for b1
+				hs.setBExec(b1)
+			}
+		}
 	} else if Phases == "THREE" {
 		if CmpBlockHeight(b1, hs.GetBLock()) == 1 {
 			hs.setBLock(b1) // commit phase for b1
@@ -137,6 +145,13 @@ func GetJustifyBlocks(bNew Block) (b, b1, b2 Block) {
 	}
 	b = b1.Justify().Block()
 	return b, b1, b2
+}
+
+func IsTwoChain(b1, b2 Block) bool {
+	if b1 == nil || b2 == nil {
+		return false
+	}
+	return b1.Equal(b2.Parent())
 }
 
 // IsThreeChain checks whether the blocks satisfy three chain rule: b<--b1<--p2
