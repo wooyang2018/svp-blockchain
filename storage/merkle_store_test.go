@@ -5,23 +5,20 @@ package storage
 
 import (
 	"math/big"
+	"os"
 	"testing"
 
-	"github.com/dgraph-io/badger/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/wooyang2018/ppov-blockchain/merkle"
 )
 
-func createOnMemoryDB() *badger.DB {
-	db, _ := badger.Open(badger.DefaultOptions("").WithInMemory(true))
-	return db
-}
-
 func TestMerkleStore(t *testing.T) {
 	assert := assert.New(t)
 
-	db := createOnMemoryDB()
-	ms := &merkleStore{&badgerGetter{db}}
+	dir, _ := os.MkdirTemp("", "db")
+	rawDB, _ := NewLevelDB(dir)
+	db := &levelDB{rawDB}
+	ms := &merkleStore{db}
 	assert.Equal(uint8(0), ms.GetHeight())
 	assert.Equal(big.NewInt(0), ms.GetLeafCount())
 
@@ -39,7 +36,7 @@ func TestMerkleStore(t *testing.T) {
 		},
 	}
 
-	updateBadgerDB(db, ms.commitUpdate(upd))
+	updateLevelDB(db, ms.commitUpdate(upd))
 
 	assert.Equal(upd.Height, ms.GetHeight())
 	assert.Equal(upd.LeafCount, ms.GetLeafCount())

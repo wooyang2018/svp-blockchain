@@ -9,16 +9,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dgraph-io/badger/v3"
+	"github.com/syndtr/goleveldb/leveldb"
+	_ "golang.org/x/crypto/sha3"
+
 	"github.com/wooyang2018/ppov-blockchain/core"
 	"github.com/wooyang2018/ppov-blockchain/logger"
 	"github.com/wooyang2018/ppov-blockchain/merkle"
-	_ "golang.org/x/crypto/sha3"
 )
 
 type CommitData struct {
 	Block        *core.Block
-	QC           *core.QuorumCert // QC for commited block
+	QC           *core.QuorumCert // QC for committed block
 	Transactions []*core.Transaction
 	BlockCommit  *core.BlockCommit
 	TxCommits    []*core.TxCommit
@@ -36,7 +37,7 @@ var DefaultConfig = Config{
 }
 
 type Storage struct {
-	db          *badger.DB
+	db          *levelDB
 	chainStore  *chainStore
 	stateStore  *stateStore
 	merkleStore *merkleStore
@@ -46,13 +47,12 @@ type Storage struct {
 	mtxWriteState sync.RWMutex
 }
 
-func New(db *badger.DB, config Config) *Storage {
+func New(db *leveldb.DB, config Config) *Storage {
 	strg := new(Storage)
-	strg.db = db
-	getter := &badgerGetter{db}
-	strg.chainStore = &chainStore{getter}
-	strg.stateStore = &stateStore{getter, crypto.SHA3_256, config.ConcurrentLimit}
-	strg.merkleStore = &merkleStore{getter}
+	strg.db = &levelDB{db}
+	strg.chainStore = &chainStore{strg.db}
+	strg.stateStore = &stateStore{strg.db, crypto.SHA3_256, config.ConcurrentLimit}
+	strg.merkleStore = &merkleStore{strg.db}
 	strg.merkleTree = merkle.NewTree(strg.merkleStore, merkle.Config{
 		Hash:            crypto.SHA3_256,
 		BranchFactor:    config.MerkleBranchFactor,
@@ -166,7 +166,7 @@ func (strg *Storage) writeCommitData(data *CommitData) error {
 	if err := strg.writeStateMerkleTree(data); err != nil {
 		return err
 	}
-	return strg.setCommitedBlockHeight(data.Block.Height())
+	return strg.setCommittedBlockHeight(data.Block.Height())
 }
 
 func (strg *Storage) computeMerkleUpdate(data *CommitData) {
@@ -188,12 +188,12 @@ func (strg *Storage) writeChainData(data *CommitData) error {
 	updFns = append(updFns, strg.chainStore.setLastQC(data.QC))
 	updFns = append(updFns, strg.chainStore.setTxs(data.Transactions)...)
 	updFns = append(updFns, strg.chainStore.setTxCommits(data.TxCommits)...)
-	return updateBadgerDB(strg.db, updFns)
+	return updateLevelDB(strg.db, updFns)
 }
 
 func (strg *Storage) writeBlockCommit(data *CommitData) error {
 	updFn := strg.chainStore.setBlockCommit(data.BlockCommit)
-	return updateBadgerDB(strg.db, []updateFunc{updFn})
+	return updateLevelDB(strg.db, []updateFunc{updFn})
 }
 
 // commit state values and merkle tree in one transaction
@@ -206,10 +206,10 @@ func (strg *Storage) writeStateMerkleTree(data *CommitData) error {
 
 	updFns := strg.stateStore.commitStateChanges(data.BlockCommit.StateChanges())
 	updFns = append(updFns, strg.merkleStore.commitUpdate(data.merkleUpdate)...)
-	return updateBadgerDB(strg.db, updFns)
+	return updateLevelDB(strg.db, updFns)
 }
 
-func (strg *Storage) setCommitedBlockHeight(height uint64) error {
+func (strg *Storage) setCommittedBlockHeight(height uint64) error {
 	updFn := strg.chainStore.setBlockHeight(height)
-	return updateBadgerDB(strg.db, []updateFunc{updFn})
+	return updateLevelDB(strg.db, []updateFunc{updFn})
 }

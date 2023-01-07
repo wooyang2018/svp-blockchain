@@ -116,7 +116,7 @@ func (node *Node) setupValidatorStore() {
 }
 
 func (node *Node) setupStorage() {
-	db, err := storage.NewDB(path.Join(node.config.Datadir, "db"))
+	db, err := storage.NewLevelDB(path.Join(node.config.Datadir, "db"))
 	if err != nil {
 		logger.I().Fatalw("setup storage failed", "error", err)
 	}

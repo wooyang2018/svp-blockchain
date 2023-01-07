@@ -6,6 +6,7 @@ package storage
 import (
 	"crypto"
 	"math/big"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,14 +20,16 @@ const hashFunc = crypto.SHA3_256
 func TestStateStore_loadPrevValuesAndTreeIndexes(t *testing.T) {
 	assert := assert.New(t)
 
-	db := createOnMemoryDB()
-	ss := &stateStore{&badgerGetter{db}, hashFunc, 20}
+	dir, _ := os.MkdirTemp("", "db")
+	rawDB, _ := NewLevelDB(dir)
+	db := &levelDB{rawDB}
+	ss := &stateStore{db, hashFunc, 20}
 
 	updfns := make([]updateFunc, 3)
 	updfns[0] = ss.setState([]byte{1}, []byte{100})
 	updfns[1] = ss.setState([]byte{2}, []byte{200})
 	updfns[2] = ss.setTreeIndex([]byte{1}, big.NewInt(9).Bytes())
-	updateBadgerDB(db, updfns)
+	updateLevelDB(db, updfns)
 
 	scList := []*core.StateChange{
 		core.NewStateChange().SetKey([]byte{1}),
@@ -44,8 +47,10 @@ func TestStateStore_loadPrevValuesAndTreeIndexes(t *testing.T) {
 func TestStateStore_updateState(t *testing.T) {
 	assert := assert.New(t)
 
-	db := createOnMemoryDB()
-	ss := &stateStore{&badgerGetter{db}, hashFunc, 20}
+	dir, _ := os.MkdirTemp("", "db")
+	rawDB, _ := NewLevelDB(dir)
+	db := &levelDB{rawDB}
+	ss := &stateStore{db, hashFunc, 20}
 
 	upd := core.NewStateChange().
 		SetKey([]byte{1}).
@@ -54,7 +59,7 @@ func TestStateStore_updateState(t *testing.T) {
 
 	assert.Nil(ss.getStateNotFoundNil(upd.Key()))
 
-	updateBadgerDB(db, ss.commitStateChange(upd))
+	updateLevelDB(db, ss.commitStateChange(upd))
 
 	assert.Equal(upd.Value(), ss.getStateNotFoundNil(upd.Key()))
 

@@ -4,16 +4,21 @@
 package storage
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	"github.com/wooyang2018/ppov-blockchain/core"
 )
 
 func TestChainStore(t *testing.T) {
 	assert := assert.New(t)
-	db := createOnMemoryDB()
-	cs := &chainStore{&badgerGetter{db}}
+
+	dir, _ := os.MkdirTemp("", "db")
+	rawDB, _ := NewLevelDB(dir)
+	db := &levelDB{rawDB}
+	cs := &chainStore{db}
 
 	priv := core.GenerateKey(nil)
 	qc := core.NewQuorumCert().Build(
@@ -52,7 +57,7 @@ func TestChainStore(t *testing.T) {
 	updfns = append(updfns, cs.setTx(tx))
 	updfns = append(updfns, cs.setTxCommit(txc))
 
-	updateBadgerDB(db, updfns)
+	updateLevelDB(db, updfns)
 
 	blk1, err := cs.getBlock(blk.Hash())
 	assert.NoError(err)

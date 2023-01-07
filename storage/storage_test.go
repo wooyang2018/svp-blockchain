@@ -5,6 +5,7 @@ package storage
 
 import (
 	"math/big"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,7 +13,9 @@ import (
 )
 
 func newTestStorage() *Storage {
-	return New(createOnMemoryDB(), DefaultConfig)
+	dir, _ := os.MkdirTemp("", "db")
+	rawDB, _ := NewLevelDB(dir)
+	return New(rawDB, DefaultConfig)
 }
 
 func TestStorage_StateZero(t *testing.T) {
@@ -161,7 +164,7 @@ func TestStorage_Commit(t *testing.T) {
 
 	// tampering state value
 	updFn := strg.stateStore.setState([]byte{5}, []byte{100})
-	updateBadgerDB(strg.db, []updateFunc{updFn})
+	updateLevelDB(strg.db, []updateFunc{updFn})
 
 	// should panic
 	assert.Panics(func() {
