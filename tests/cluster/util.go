@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/multiformats/go-multiaddr"
+
 	"github.com/wooyang2018/ppov-blockchain/core"
 	"github.com/wooyang2018/ppov-blockchain/node"
 )
@@ -97,17 +98,10 @@ func SetupTemplateDir(dir string, keys []*core.PrivateKey, vlds []node.Peer) err
 		Weights: make([]int, 0, 0),
 	}
 	for i, v := range keys {
-		if i%3 == 0 {
+		genesis.Voters = append(genesis.Voters, v.PublicKey().String())
+		if i%2 == 0 {
 			genesis.Workers = append(genesis.Workers, v.PublicKey().String())
 			genesis.Weights = append(genesis.Weights, 1)
-			genesis.Voters = append(genesis.Voters, v.PublicKey().String())
-		}
-		if i%3 == 1 {
-			genesis.Workers = append(genesis.Workers, v.PublicKey().String())
-			genesis.Weights = append(genesis.Weights, 1)
-		}
-		if i%3 == 2 {
-			genesis.Voters = append(genesis.Voters, v.PublicKey().String())
 		}
 	}
 	for i, key := range keys {

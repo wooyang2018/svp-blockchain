@@ -3,7 +3,7 @@
 
 package hotstuff
 
-const Phases = "TWO" //ONE, TWO, THREE
+const PPoVFlag = true //true: 二阶段提交 false: 三阶段提交
 
 // Block type
 type Block interface {

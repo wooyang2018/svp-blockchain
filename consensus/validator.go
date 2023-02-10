@@ -254,7 +254,7 @@ func (vld *validator) verifyProposalToVote(proposal *core.Block) error {
 		pidx := vld.resources.VldStore.GetWorkerIndex(proposal.Proposer())
 		return fmt.Errorf("proposer %d is not leader", pidx)
 	}
-	// on node restart, not commited any blocks yet, don't check merkle root
+	// on node restart, not committed any blocks yet, don't check merkle root
 	if vld.state.getCommitedHeight() != 0 {
 		if err := vld.verifyMerkleRoot(proposal); err != nil {
 			return err

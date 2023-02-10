@@ -82,41 +82,25 @@ func (hs *Hotstuff) CheckLivenessRule(bNew Block) bool {
 	return CmpBlockHeight(bNew.Justify().Block(), hs.GetBLock()) == 1
 }
 
-// Update perform three chain consensus phases
+// Update perform two/three chain consensus phases
 func (hs *Hotstuff) Update(bNew Block) {
 	b, b1, b2 := GetJustifyBlocks(bNew)
-	hs.UpdateQCHigh(bNew.Justify()) // precommit phase for b2
-
-	if Phases == "ONE" {
-		if CmpBlockHeight(bNew, hs.GetBLock()) == 1 {
-			hs.setBLock(bNew) // commit phase for bNew
-			if b2 != nil {
-				hs.onCommit(b2) // decide phase for b2
-				hs.setBExec(b2)
-			}
-		}
-	} else if Phases == "TWO" {
-		if CmpBlockHeight(b2, hs.GetBLock()) == 1 {
-			hs.setBLock(b2) // commit phase for b2
-			if IsTwoChain(b1, b2) {
-				hs.onCommit(b1) // decide phase for b1
-				hs.setBExec(b1)
-			}
-		}
-	} else if Phases == "THREE" {
-		if CmpBlockHeight(b1, hs.GetBLock()) == 1 {
-			hs.setBLock(b1) // commit phase for b1
-			if IsThreeChain(b, b1, b2) {
-				hs.onCommit(b) // decide phase for b
-				hs.setBExec(b)
-			}
+	hs.UpdateQCHigh(bNew.Justify()) // prepare phase for b2
+	if CmpBlockHeight(b1, hs.GetBLock()) == 1 {
+		hs.setBLock(b1)                     // commit phase for b1
+		if PPoVFlag && IsTwoChain(b1, b2) { // decide phase for b1
+			hs.onCommit(b1)
+			hs.setBExec(b1)
+		} else if IsThreeChain(b, b1, b2) { // decide phase for b
+			hs.onCommit(b)
+			hs.setBExec(b)
 		}
 	}
 }
 
 func (hs *Hotstuff) onCommit(b Block) {
 	if CmpBlockHeight(b, hs.GetBExec()) == 1 {
-		// commit parent blocks recurrsively
+		// commit parent blocks recursively
 		hs.onCommit(b.Parent())
 		hs.driver.Commit(b)
 	} else if !hs.GetBExec().Equal(b) {

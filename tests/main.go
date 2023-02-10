@@ -21,7 +21,7 @@ import (
 
 var (
 	WorkDir   = "./workdir"
-	NodeCount = 4
+	NodeCount = 7
 
 	LoadTxPerSec     = 100
 	LoadMintAccounts = 100
