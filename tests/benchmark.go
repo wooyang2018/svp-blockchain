@@ -27,10 +27,10 @@ import (
 type Measurement struct {
 	Timestamp   int64
 	TxSubmitted int
-	TxCommited  int
+	TxCommitted int
 
 	Load       float32 // actual tx sent per sec
-	Throughput float32 // tx commited per sec
+	Throughput float32 // tx committed per sec
 	Latency    time.Duration
 
 	ConsensusStatus map[int]*consensus.Status
@@ -49,9 +49,9 @@ type Benchmark struct {
 	cluster *cluster.Cluster
 	err     error
 
-	measurements     []*Measurement
-	lastTxCommitedN0 int
-	lastMeasuredTime time.Time
+	measurements      []*Measurement
+	lastTxCommittedN0 int
+	lastMeasuredTime  time.Time
 
 	benchmarkName string
 	resultDir     string
@@ -80,7 +80,7 @@ func (bm *Benchmark) runWithLoad(tps int) error {
 	bm.loadGen = testutil.NewLoadGenerator(tps, bm.loadClient)
 	bm.benchmarkName = fmt.Sprintf("bench_n_%d_load_%d",
 		bm.cfactory.GetParams().NodeCount, tps)
-	if JuriaCoinBinCC {
+	if PPoVCoinBinCC {
 		bm.benchmarkName += "bincc"
 	}
 
@@ -241,7 +241,7 @@ func (bm *Benchmark) measure() error {
 func (bm *Benchmark) onStartMeasure() {
 	bm.loadGen.ResetTotalSubmitted()
 	consStatus := testutil.GetStatusAll(bm.cluster)
-	bm.lastTxCommitedN0 = consStatus[0].CommitedTxCount
+	bm.lastTxCommittedN0 = consStatus[0].CommittedTxCount
 	bm.lastMeasuredTime = time.Now()
 	fmt.Printf("\nStarted performance measurements\n")
 }
@@ -275,13 +275,13 @@ func (bm *Benchmark) onTick() error {
 			bm.cluster.NodeCount()-len(meas.TxPoolStatus))
 	}
 
-	meas.TxCommited = meas.ConsensusStatus[0].CommitedTxCount - bm.lastTxCommitedN0
-	bm.lastTxCommitedN0 = meas.ConsensusStatus[0].CommitedTxCount
+	meas.TxCommitted = meas.ConsensusStatus[0].CommittedTxCount - bm.lastTxCommittedN0
+	bm.lastTxCommittedN0 = meas.ConsensusStatus[0].CommittedTxCount
 
 	elapsed := time.Since(bm.lastMeasuredTime)
 	bm.lastMeasuredTime = time.Now()
 	meas.Load = float32(meas.TxSubmitted) / float32(elapsed.Seconds())
-	meas.Throughput = float32(meas.TxCommited) / float32(elapsed.Seconds())
+	meas.Throughput = float32(meas.TxCommitted) / float32(elapsed.Seconds())
 
 	bm.measurements = append(bm.measurements, meas)
 
@@ -324,7 +324,7 @@ func (bm *Benchmark) savePerformance() error {
 	w.Write([]string{
 		"Timestamp",
 		"TxSubmitted",
-		"TxCommited",
+		"TxCommitted",
 		"Load",
 		"Throughput",
 		"Latency",
@@ -339,7 +339,7 @@ func (bm *Benchmark) savePerformance() error {
 		w.Write([]string{
 			strconv.Itoa(int(m.Timestamp)),
 			strconv.Itoa(int(m.TxSubmitted)),
-			strconv.Itoa(int(m.TxCommited)),
+			strconv.Itoa(int(m.TxCommitted)),
 			fmt.Sprintf("%.2f", m.Load),
 			fmt.Sprintf("%.2f", m.Throughput),
 			m.Latency.String(),

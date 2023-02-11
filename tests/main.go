@@ -27,8 +27,8 @@ var (
 	LoadMintAccounts = 100
 	LoadDestAccounts = 10000 // increase dest accounts for benchmark
 
-	// Deploy juriacoin chaincode as bincc type (not embeded in juria node)
-	JuriaCoinBinCC = false
+	// Deploy ppovcoin chaincode as bincc type (not embeded in ppov node)
+	PPoVCoinBinCC = false
 
 	// Run tests in remote linux cluster
 	// if false it'll use local cluster (running multiple nodes on single local machine)
@@ -37,7 +37,7 @@ var (
 	RemoteLoginName     = "ubuntu"
 	RemoteKeySSH        = "serverkey"
 	RemoteHostsPath     = "hosts"
-	RemoteWorkDir       = "/home/ubuntu/juria-tests"
+	RemoteWorkDir       = "/home/ubuntu/ppov-tests"
 	RemoteNetworkDevice = "ens5"
 
 	// run benchmark, otherwise run experiments
@@ -73,7 +73,7 @@ func setupExperiments() []Experiment {
 func main() {
 	printVars()
 	os.Mkdir(WorkDir, 0755)
-	buildJuria()
+	buildPPoV()
 	setupTransport()
 
 	if RunBenchmark {
@@ -137,7 +137,7 @@ func printVars() {
 	fmt.Println()
 }
 
-func buildJuria() {
+func buildPPoV() {
 	cmd := exec.Command("go", "build", "../cmd/chain")
 	if RemoteLinuxCluster {
 		cmd.Env = os.Environ()
@@ -150,15 +150,15 @@ func buildJuria() {
 
 func makeLoadClient() testutil.LoadClient {
 	var binccPath string
-	if JuriaCoinBinCC {
-		buildJuriaCoinBinCC()
-		binccPath = "./juriacoin"
+	if PPoVCoinBinCC {
+		buildPPoVCoinBinCC()
+		binccPath = "./ppovcoin"
 	}
 	fmt.Println("Preparing load client")
-	return testutil.NewJuriaCoinClient(LoadMintAccounts, LoadDestAccounts, binccPath)
+	return testutil.NewPPoVCoinClient(LoadMintAccounts, LoadDestAccounts, binccPath)
 }
 
-func buildJuriaCoinBinCC() {
+func buildPPoVCoinBinCC() {
 	cmd := exec.Command("go", "build")
 	cmd.Args = append(cmd.Args, "-ldflags", "-s -w")
 	cmd.Args = append(cmd.Args, "../execution/bincc/ppovcoin")

@@ -65,10 +65,10 @@ func (hc *checker) shouldCommitNewBlocks(
 		}
 	}
 	if validCount < hc.minimumHealthyNode() {
-		return fmt.Errorf("%d nodes are not commiting new blocks",
+		return fmt.Errorf("%d nodes are not committing new blocks",
 			hc.cluster.NodeCount()-validCount)
 	}
-	fmt.Printf(" + Commited blocks in %s = %d\n", hc.getLivenessWaitTime(), blkCount)
+	fmt.Printf(" + Committed blocks in %s = %d\n", hc.getLivenessWaitTime(), blkCount)
 	return nil
 }
 
@@ -78,19 +78,19 @@ func (hc *checker) shouldCommitTxs(
 	validCount := 0
 	txCount := 0
 	for i, s := range status {
-		if prevStatus == nil && s.CommitedTxCount > 0 {
+		if prevStatus == nil && s.CommittedTxCount > 0 {
 			validCount++
-		} else if s.CommitedTxCount > prevStatus[i].CommitedTxCount {
+		} else if s.CommittedTxCount > prevStatus[i].CommittedTxCount {
 			if txCount == 0 {
-				txCount = s.CommitedTxCount - prevStatus[i].CommitedTxCount
+				txCount = s.CommittedTxCount - prevStatus[i].CommittedTxCount
 			}
 			validCount++
 		}
 	}
 	if validCount < hc.minimumHealthyNode() {
-		return fmt.Errorf("%d nodes are not commiting new txs",
+		return fmt.Errorf("%d nodes are not committing new txs",
 			hc.cluster.NodeCount()-validCount)
 	}
-	fmt.Printf(" + Commited txs in %s = %d\n", hc.getLivenessWaitTime(), txCount)
+	fmt.Printf(" + Committed txs in %s = %d\n", hc.getLivenessWaitTime(), txCount)
 	return nil
 }

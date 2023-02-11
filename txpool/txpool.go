@@ -39,7 +39,7 @@ const (
 	TxStatusNotFound TxStatus = iota
 	TxStatusQueue
 	TxStatusPending
-	TxStatusCommited
+	TxStatusCommitted
 )
 
 type TxPool struct {
@@ -219,7 +219,7 @@ func (pool *TxPool) getTxStatus(hash []byte) TxStatus {
 		return status
 	}
 	if pool.storage.HasTx(hash) {
-		return TxStatusCommited
+		return TxStatusCommitted
 	}
 	return TxStatusNotFound
 }

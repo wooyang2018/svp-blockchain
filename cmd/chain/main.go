@@ -7,6 +7,7 @@ import (
 	"log"
 
 	"github.com/spf13/cobra"
+
 	"github.com/wooyang2018/ppov-blockchain/node"
 )
 
@@ -25,7 +26,7 @@ const (
 	FlagExecConcurrentLimit = "execution-concurrentLimit"
 
 	// consensus
-	FlagChainID       = "chainid"
+	FlagChainID       = "chainID"
 	FlagBlockTxLimit  = "consensus-blockTxLimit"
 	FlagTxWaitTime    = "consensus-txWaitTime"
 	FlagBeatTimeout   = "consensus-beatTimeout"

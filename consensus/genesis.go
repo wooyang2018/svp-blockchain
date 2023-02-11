@@ -11,10 +11,11 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/crypto/sha3"
+
 	"github.com/wooyang2018/ppov-blockchain/core"
 	"github.com/wooyang2018/ppov-blockchain/logger"
 	"github.com/wooyang2018/ppov-blockchain/storage"
-	"golang.org/x/crypto/sha3"
 )
 
 type genesis struct {
@@ -61,7 +62,7 @@ func (gns *genesis) commit() {
 	if err != nil {
 		logger.I().Fatalf("commit storage error: %+v", err)
 	}
-	logger.I().Debugw("commited genesis bock")
+	logger.I().Debugw("committed genesis bock")
 }
 
 func (gns *genesis) propose() {

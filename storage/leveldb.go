@@ -11,9 +11,9 @@ const (
 	colBlockByHash           byte = iota + 1 // block by hash
 	colBlockHashByHeight                     // block hash by height
 	colBlockHeight                           // last block height
-	colLastQC                                // qc for last commited block to be used on restart
+	colLastQC                                // qc for last committed block to be used on restart
 	colBlockCommitByHash                     // block commit by block hash
-	colTxCount                               // total commited tx count
+	colTxCount                               // total committed tx count
 	colTxByHash                              // tx by hash
 	colTxCommitByHash                        // tx commit info by tx hash
 	colStateValueByKey                       // state value by state key

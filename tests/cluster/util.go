@@ -126,7 +126,7 @@ func RunCommand(cmd *exec.Cmd) error {
 	return cmd.Run()
 }
 
-func AddJuriaFlags(cmd *exec.Cmd, config *node.Config) {
+func AddPPoVFlags(cmd *exec.Cmd, config *node.Config) {
 	cmd.Args = append(cmd.Args, "-d", config.Datadir)
 	cmd.Args = append(cmd.Args, "-p", strconv.Itoa(config.Port))
 	cmd.Args = append(cmd.Args, "-P", strconv.Itoa(config.APIPort))
@@ -141,7 +141,7 @@ func AddJuriaFlags(cmd *exec.Cmd, config *node.Config) {
 	cmd.Args = append(cmd.Args, "--execution-concurrentLimit",
 		strconv.Itoa(config.ExecutionConfig.ConcurrentLimit))
 
-	cmd.Args = append(cmd.Args, "--chainid",
+	cmd.Args = append(cmd.Args, "--chainID",
 		strconv.Itoa(int(config.ConsensusConfig.ChainID)))
 
 	cmd.Args = append(cmd.Args, "--consensus-blockTxLimit",

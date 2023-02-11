@@ -18,10 +18,10 @@ func (expm *CorrectExecution) Name() string {
 }
 
 func (expm *CorrectExecution) Run(cls *cluster.Cluster) error {
-	jc := testutil.NewJuriaCoinClient(0, 0, "")
+	jc := testutil.NewPPoVCoinClient(0, 0, "")
 
 	if err := jc.SetupOnCluster(cls); err != nil {
-		return fmt.Errorf("setup juriacoin failed. %w", err)
+		return fmt.Errorf("setup ppovcoin failed. %w", err)
 	}
 	acc1 := core.GenerateKey(nil)
 	acc2 := core.GenerateKey(nil)

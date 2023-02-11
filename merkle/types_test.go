@@ -85,8 +85,9 @@ func TestGroup_SetNode(t *testing.T) {
 	assert.Equal(sha1Sum([]byte{1, 1, 3, 3}), b.MakeParent().Data)
 }
 
-//   h(1,1,2,2)
-//    /      \
+//	h(1,1,2,2)
+//	 /      \
+//
 // [1,1]    [2,2]
 func storeWith3Nodes() Store {
 	s2 := NewMapStore()

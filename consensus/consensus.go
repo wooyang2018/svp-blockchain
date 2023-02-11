@@ -144,7 +144,7 @@ func (cons *Consensus) getStatus() (status Status) {
 		return status
 	}
 	status.StartTime = cons.startTime
-	status.CommitedTxCount = cons.state.getCommitedTxCount()
+	status.CommittedTxCount = cons.state.getCommittedTxCount()
 	status.BlockPoolSize = cons.state.getBlockPoolSize()
 	status.QCPoolSize = cons.state.getQCPoolSize()
 	status.LeaderIndex = cons.state.getLeaderIndex()

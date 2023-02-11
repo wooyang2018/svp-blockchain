@@ -8,7 +8,7 @@ import (
 	"github.com/wooyang2018/ppov-blockchain/execution/bincc"
 )
 
-// bincc version of juriacoin. User can compile and deploy it separately to the running juria network
+// bincc version of ppovcoin. User can compile and deploy it separately to the running ppov network
 
 func main() {
 	jcc := new(ppovcoin.PPoVCoin)

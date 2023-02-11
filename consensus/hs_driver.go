@@ -21,7 +21,7 @@ type hsDriver struct {
 	state *state
 }
 
-//验证hsDriver实现了hotstuff的Driver
+// 验证hsDriver实现了hotstuff的Driver
 var _ hotstuff.Driver = (*hsDriver)(nil)
 
 func (hsd *hsDriver) MajorityValidatorCount() int {
@@ -91,7 +91,7 @@ func (hsd *hsDriver) Commit(hsBlk hotstuff.Block) {
 	bexe := hsBlk.(*hsBlock).block
 	start := time.Now()
 	txs, old := hsd.resources.TxPool.GetTxsToExecute(bexe.Transactions())
-	logger.I().Debugw("commiting block", "height", bexe.Height(), "txs", len(txs))
+	logger.I().Debugw("committing block", "height", bexe.Height(), "txs", len(txs))
 	bcm, txcs := hsd.resources.Execution.Execute(bexe, txs)
 	bcm.SetOldBlockTxs(old)
 	data := &storage.CommitData{
@@ -105,31 +105,31 @@ func (hsd *hsDriver) Commit(hsBlk hotstuff.Block) {
 	if err != nil {
 		logger.I().Fatalf("commit storage error: %+v", err)
 	}
-	hsd.state.addCommitedTxCount(len(txs))
-	hsd.cleanStateOnCommited(bexe)
-	logger.I().Debugw("commited bock",
+	hsd.state.addCommittedTxCount(len(txs))
+	hsd.cleanStateOnCommitted(bexe)
+	logger.I().Debugw("committed bock",
 		"height", bexe.Height(),
 		"txs", len(txs),
 		"elapsed", time.Since(start))
 }
 
-func (hsd *hsDriver) cleanStateOnCommited(bexec *core.Block) {
-	// qc for bexe is no longer needed here after commited to storage
+func (hsd *hsDriver) cleanStateOnCommitted(bexec *core.Block) {
+	// qc for bexec is no longer needed here after committed to storage
 	hsd.state.deleteQC(bexec.Hash())
 	hsd.resources.TxPool.RemoveTxs(bexec.Transactions())
-	hsd.state.setCommitedBlock(bexec)
+	hsd.state.setCommittedBlock(bexec)
 
-	folks := hsd.state.getUncommitedOlderBlocks(bexec)
-	for _, blk := range folks {
-		// put transactions from folked block back to queue
+	blks := hsd.state.getUncommittedOlderBlocks(bexec)
+	for _, blk := range blks {
+		// put transactions from forked block back to queue
 		hsd.resources.TxPool.PutTxsToQueue(blk.Transactions())
 		hsd.state.deleteBlock(blk.Hash())
 		hsd.state.deleteQC(blk.Hash())
 	}
-	hsd.deleteCommitedOlderBlocks(bexec)
+	hsd.deleteCommittedOlderBlocks(bexec)
 }
 
-func (hsd *hsDriver) deleteCommitedOlderBlocks(bexec *core.Block) {
+func (hsd *hsDriver) deleteCommittedOlderBlocks(bexec *core.Block) {
 	height := int64(bexec.Height()) - 20
 	if height < 0 {
 		return
@@ -137,6 +137,6 @@ func (hsd *hsDriver) deleteCommitedOlderBlocks(bexec *core.Block) {
 	blks := hsd.state.getOlderBlocks(uint64(height))
 	for _, blk := range blks {
 		hsd.state.deleteBlock(blk.Hash())
-		hsd.state.deleteCommited(blk.Hash())
+		hsd.state.deleteCommitted(blk.Hash())
 	}
 }

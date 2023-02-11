@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	"github.com/wooyang2018/ppov-blockchain/core"
 )
 
@@ -32,7 +33,7 @@ func TestValidator_verifyProposalToVote(t *testing.T) {
 
 	// valid tx
 	tx1 := core.NewTransaction().SetExpiry(15).Sign(core.GenerateKey(nil))
-	// commited tx
+	// committed tx
 	tx2 := core.NewTransaction().SetExpiry(9).Sign(core.GenerateKey(nil))
 	// expired tx
 	tx3 := core.NewTransaction().SetExpiry(13).Sign(core.GenerateKey(nil))
@@ -58,7 +59,7 @@ func TestValidator_verifyProposalToVote(t *testing.T) {
 		resources: resources,
 		state:     newState(resources),
 	}
-	vld.state.commitedHeight = mStrg.GetBlockHeight()
+	vld.state.committedHeight = mStrg.GetBlockHeight()
 	vld.state.setLeaderIndex(1)
 
 	tests := []struct {
@@ -86,7 +87,7 @@ func TestValidator_verifyProposalToVote(t *testing.T) {
 			SetTransactions([][]byte{tx1.Hash(), tx4.Hash()}).
 			Sign(priv1),
 		},
-		{"commited tx", false, core.NewBlock().
+		{"committed tx", false, core.NewBlock().
 			SetHeight(14).SetExecHeight(10).SetMerkleRoot(mRoot).
 			SetTransactions([][]byte{tx1.Hash(), tx2.Hash(), tx4.Hash()}).
 			Sign(priv1),

@@ -6,10 +6,10 @@ package consensus
 type Status struct {
 	StartTime int64
 
-	// commited tx count since node is up
-	CommitedTxCount int
-	BlockPoolSize   int
-	QCPoolSize      int
+	// committed tx count since node is up
+	CommittedTxCount int
+	BlockPoolSize    int
+	QCPoolSize       int
 
 	// start timestamp of current view
 	ViewStart int64

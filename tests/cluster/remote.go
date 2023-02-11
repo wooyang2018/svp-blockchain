@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/multiformats/go-multiaddr"
+
 	"github.com/wooyang2018/ppov-blockchain/node"
 )
 
@@ -73,7 +74,7 @@ func (ftry *RemoteFactory) setup() error {
 	if err := ftry.setupRemoteServers(); err != nil {
 		return err
 	}
-	if err := ftry.sendJuria(); err != nil {
+	if err := ftry.sendPPoV(); err != nil {
 		return err
 	}
 	addrs, err := ftry.makeAddrs()
@@ -115,7 +116,7 @@ func (ftry *RemoteFactory) setupRemoteServerOne(i int) error {
 		"-i", ftry.params.KeySSH,
 		fmt.Sprintf("%s@%s", ftry.params.LoginName, ftry.hosts[i]),
 		"sudo", "tc", "qdisc", "del", "dev", ftry.params.NetworkDevice, "root", ";",
-		"sudo", "killall", "juria", ";",
+		"sudo", "killall", "ppov", ";",
 		"sudo", "killall", "dstat", ";",
 		"sudo", "apt", "update", ";",
 		"sudo", "apt", "install", "-y", "dstat", ";",
@@ -126,9 +127,9 @@ func (ftry *RemoteFactory) setupRemoteServerOne(i int) error {
 	return RunCommand(cmd)
 }
 
-func (ftry *RemoteFactory) sendJuria() error {
+func (ftry *RemoteFactory) sendPPoV() error {
 	for i := 0; i < ftry.params.NodeCount; i++ {
-		err := ftry.sendJuriaOne(i)
+		err := ftry.sendPPoVOne(i)
 		if err != nil {
 			return err
 		}
@@ -136,7 +137,7 @@ func (ftry *RemoteFactory) sendJuria() error {
 	return nil
 }
 
-func (ftry *RemoteFactory) sendJuriaOne(i int) error {
+func (ftry *RemoteFactory) sendPPoVOne(i int) error {
 	cmd := exec.Command("scp",
 		"-i", ftry.params.KeySSH,
 		ftry.params.BinPath,
@@ -173,7 +174,7 @@ func (ftry *RemoteFactory) SetupCluster(name string) (*Cluster, error) {
 		nodeConfig: ftry.params.NodeConfig,
 	}
 	cls.nodeConfig.Datadir = path.Join(ftry.params.RemoteWorkDir, name)
-	binPath := path.Join(ftry.params.RemoteWorkDir, "juria")
+	binPath := path.Join(ftry.params.RemoteWorkDir, "ppov")
 	for i := 0; i < ftry.params.NodeCount; i++ {
 		node := &RemoteNode{
 			binPath:       binPath,
@@ -232,7 +233,7 @@ func (node *RemoteNode) Start() error {
 		fmt.Sprintf("%s@%s", node.loginName, node.host),
 		"nohup", node.binPath,
 	)
-	AddJuriaFlags(cmd, &node.config)
+	AddPPoVFlags(cmd, &node.config)
 	cmd.Args = append(cmd.Args,
 		">>", path.Join(node.config.Datadir, "log.txt"), "2>&1", "&",
 	)
@@ -244,7 +245,7 @@ func (node *RemoteNode) Stop() {
 	cmd := exec.Command("ssh",
 		"-i", node.keySSH,
 		fmt.Sprintf("%s@%s", node.loginName, node.host),
-		"sudo", "killall", "juria",
+		"sudo", "killall", "ppov",
 	)
 	cmd.Run()
 }

@@ -40,7 +40,7 @@ get status, select lowest bexec height
 get bexec block, all bexec.MerkleRoot must be equal
 
 Liveness
-get status, remember heighest bexec and commitedTxCount
+get status, remember highest bexec and committedTxCount
 wait for 20s
 for majority check, wait more for ((total - majority) * leaderTimeout)
 get status again

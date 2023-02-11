@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/multiformats/go-multiaddr"
+
 	"github.com/wooyang2018/ppov-blockchain/node"
 )
 
@@ -121,7 +122,7 @@ func (node *LocalNode) Start() error {
 	}
 	node.logFile = f
 	node.cmd = exec.Command(node.binPath)
-	AddJuriaFlags(node.cmd, &node.config)
+	AddPPoVFlags(node.cmd, &node.config)
 	node.cmd.Stderr = node.logFile
 	node.cmd.Stdout = node.logFile
 	node.setRunning(true)

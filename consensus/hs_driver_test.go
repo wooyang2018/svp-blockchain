@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
 	"github.com/wooyang2018/ppov-blockchain/core"
 	"github.com/wooyang2018/ppov-blockchain/hotstuff"
 	"github.com/wooyang2018/ppov-blockchain/storage"
@@ -134,7 +135,7 @@ func TestHsDriver_Commit(t *testing.T) {
 	bexec := core.NewBlock().SetTransactions([][]byte{tx.Hash()}).
 		SetParentHash(parent.Hash()).SetHeight(11).Sign(hsd.resources.Signer)
 	hsd.state.setBlock(parent)
-	hsd.state.setCommitedBlock(parent)
+	hsd.state.setCommittedBlock(parent)
 	hsd.state.setBlock(bfolk)
 	hsd.state.setBlock(bexec)
 

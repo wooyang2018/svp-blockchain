@@ -122,16 +122,16 @@ func (vld *validator) getParentBlock(proposal *core.Block) (*core.Block, error) 
 	if parent != nil {
 		return parent, nil
 	}
-	if err := vld.syncMissingCommitedBlocks(proposal); err != nil {
+	if err := vld.syncMissingCommittedBlocks(proposal); err != nil {
 		return nil, err
 	}
 	return vld.syncMissingParentBlocksRecursive(proposal.Proposer(), proposal)
 }
 
-func (vld *validator) syncMissingCommitedBlocks(proposal *core.Block) error {
+func (vld *validator) syncMissingCommittedBlocks(proposal *core.Block) error {
 	commitHeight := vld.resources.Storage.GetBlockHeight()
 	if proposal.ExecHeight() <= commitHeight {
-		return nil // already sync commited blocks
+		return nil // already sync committed blocks
 	}
 	// seems like I left behind. Lets check with qcRef to confirm
 	// only qc is trusted and proposal is not
@@ -150,11 +150,11 @@ func (vld *validator) syncMissingCommitedBlocks(proposal *core.Block) error {
 	if qcRef.Height() < commitHeight {
 		return fmt.Errorf("old qc ref %d", qcRef.Height())
 	}
-	return vld.syncForwardCommitedBlocks(
+	return vld.syncForwardCommittedBlocks(
 		proposal.Proposer(), commitHeight+1, proposal.ExecHeight())
 }
 
-func (vld *validator) syncForwardCommitedBlocks(peer *core.PublicKey, start, end uint64) error {
+func (vld *validator) syncForwardCommittedBlocks(peer *core.PublicKey, start, end uint64) error {
 	var blk *core.Block
 	for height := start; height < end; height++ { // end is exclusive
 		var err error
@@ -255,7 +255,7 @@ func (vld *validator) verifyProposalToVote(proposal *core.Block) error {
 		return fmt.Errorf("proposer %d is not leader", pidx)
 	}
 	// on node restart, not committed any blocks yet, don't check merkle root
-	if vld.state.getCommitedHeight() != 0 {
+	if vld.state.getCommittedHeight() != 0 {
 		if err := vld.verifyMerkleRoot(proposal); err != nil {
 			return err
 		}
@@ -278,7 +278,7 @@ func (vld *validator) verifyMerkleRoot(proposal *core.Block) error {
 func (vld *validator) verifyProposalTxs(proposal *core.Block) error {
 	for _, hash := range proposal.Transactions() {
 		if vld.resources.Storage.HasTx(hash) {
-			return fmt.Errorf("already commited tx: %s", base64String(hash))
+			return fmt.Errorf("already committed tx: %s", base64String(hash))
 		}
 		tx := vld.resources.TxPool.GetTx(hash)
 		if tx == nil {

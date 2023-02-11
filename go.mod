@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/fatih/color v1.14.1
 	github.com/gin-gonic/gin v1.8.2
-	github.com/libp2p/go-libp2p v0.25.0
+	github.com/libp2p/go-libp2p v0.25.1
 	github.com/multiformats/go-multiaddr v0.8.0
 	github.com/spf13/cobra v1.6.1
 	github.com/stretchr/testify v1.8.1
@@ -79,7 +79,7 @@ require (
 	github.com/multiformats/go-multibase v0.1.1 // indirect
 	github.com/multiformats/go-multicodec v0.7.0 // indirect
 	github.com/multiformats/go-multihash v0.2.1 // indirect
-	github.com/multiformats/go-multistream v0.4.0 // indirect
+	github.com/multiformats/go-multistream v0.4.1 // indirect
 	github.com/multiformats/go-varint v0.0.7 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/onsi/ginkgo/v2 v2.5.1 // indirect
