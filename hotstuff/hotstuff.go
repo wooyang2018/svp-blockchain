@@ -79,21 +79,34 @@ func (hs *Hotstuff) CheckSafetyRule(bNew Block) bool {
 
 // CheckLivenessRule returns true if the qc referenced block of the given block is higher than b_Lock
 func (hs *Hotstuff) CheckLivenessRule(bNew Block) bool {
-	return CmpBlockHeight(bNew.Justify().Block(), hs.GetBLock()) == 1
+	if PPoVFlag {
+		return CmpBlockHeight(bNew.Justify().Block(), hs.GetBLock()) >= 0
+	} else {
+		return CmpBlockHeight(bNew.Justify().Block(), hs.GetBLock()) == 1
+	}
 }
 
 // Update perform two/three chain consensus phases
 func (hs *Hotstuff) Update(bNew Block) {
-	b, b1, b2 := GetJustifyBlocks(bNew)
-	hs.UpdateQCHigh(bNew.Justify()) // prepare phase for b2
-	if CmpBlockHeight(b1, hs.GetBLock()) == 1 {
-		hs.setBLock(b1)                     // commit phase for b1
-		if PPoVFlag && IsTwoChain(b1, b2) { // decide phase for b1
-			hs.onCommit(b1)
-			hs.setBExec(b1)
-		} else if IsThreeChain(b, b1, b2) { // decide phase for b
-			hs.onCommit(b)
-			hs.setBExec(b)
+	if PPoVFlag {
+		_, b, b1 := GetJustifyBlocks(bNew)
+		hs.UpdateQCHigh(bNew.Justify()) // prepare phase for b1
+		if CmpBlockHeight(b1, hs.GetBLock()) == 1 {
+			hs.setBLock(b1)        // commit phase for b1
+			if IsTwoChain(b, b1) { // decide phase for b
+				hs.onCommit(b)
+				hs.setBExec(b)
+			}
+		}
+	} else {
+		b, b1, b2 := GetJustifyBlocks(bNew)
+		hs.UpdateQCHigh(bNew.Justify()) // prepare phase for b2
+		if CmpBlockHeight(b1, hs.GetBLock()) == 1 {
+			hs.setBLock(b1)              // commit phase for b1
+			if IsThreeChain(b, b1, b2) { // decide phase for b
+				hs.onCommit(b)
+				hs.setBExec(b)
+			}
 		}
 	}
 }
