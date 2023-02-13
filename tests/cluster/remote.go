@@ -343,3 +343,9 @@ func (node *RemoteNode) setRunning(val bool) {
 func (node *RemoteNode) GetEndpoint() string {
 	return fmt.Sprintf("http://%s:%d", node.host, node.config.APIPort)
 }
+
+func (node *RemoteNode) PrintCmd() string {
+	cmd := exec.Command(node.binPath)
+	AddPPoVFlags(cmd, &node.config)
+	return cmd.String()
+}

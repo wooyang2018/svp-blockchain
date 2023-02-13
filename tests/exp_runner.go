@@ -30,7 +30,6 @@ type ExperimentRunner struct {
 }
 
 func (r *ExperimentRunner) Run() (pass, fail int) {
-
 	bold := color.New(color.Bold)
 	boldGrean := color.New(color.Bold, color.FgGreen)
 	boldRed := color.New(color.Bold, color.FgRed)

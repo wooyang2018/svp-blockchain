@@ -71,13 +71,15 @@ func (ftry *LocalFactory) makeAddrs() ([]multiaddr.Multiaddr, error) {
 
 func (ftry *LocalFactory) SetupCluster(name string) (*Cluster, error) {
 	clusterDir := path.Join(ftry.params.WorkDir, name)
-	err := os.RemoveAll(clusterDir) // no error if path not exist
-	if err != nil {
-		return nil, err
-	}
-	err = exec.Command("cp", "-r", ftry.templateDir, clusterDir).Run()
-	if err != nil {
-		return nil, err
+	if ftry.templateDir != clusterDir {
+		err := os.RemoveAll(clusterDir) // no error if path not exist
+		if err != nil {
+			return nil, err
+		}
+		err = exec.Command("cp", "-r", ftry.templateDir, clusterDir).Run()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	nodes := make([]Node, ftry.params.NodeCount)
@@ -166,4 +168,10 @@ func (node *LocalNode) setRunning(val bool) {
 
 func (node *LocalNode) GetEndpoint() string {
 	return fmt.Sprintf("http://127.0.0.1:%d", node.config.APIPort)
+}
+
+func (node *LocalNode) PrintCmd() string {
+	cmd := exec.Command(node.binPath)
+	AddPPoVFlags(cmd, &node.config)
+	return cmd.String()
 }

@@ -86,6 +86,14 @@ func main() {
 			cfactory = makeLocalClusterFactory()
 		}
 		if SetupClusterTemplate {
+			cls, err := cfactory.SetupCluster("cluster_template")
+			if err != nil {
+				return
+			}
+			fmt.Println("\nThe cluster startup command is as follows:")
+			for i := 0; i < cls.NodeCount(); i++ {
+				fmt.Println(cls.GetNode(i).PrintCmd())
+			}
 			return
 		}
 		runExperiments(testutil.NewLoadGenerator(

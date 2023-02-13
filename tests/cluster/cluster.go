@@ -17,6 +17,7 @@ type Node interface {
 	RemoveEffect()
 	IsRunning() bool
 	GetEndpoint() string
+	PrintCmd() string
 }
 
 type ClusterFactory interface {
