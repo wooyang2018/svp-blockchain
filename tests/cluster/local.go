@@ -136,7 +136,7 @@ func (node *LocalNode) Stop() {
 		return
 	}
 	node.setRunning(false)
-	syscall.Kill(node.cmd.Process.Pid, syscall.SIGTERM)
+	node.cmd.Process.Signal(syscall.SIGINT)
 	node.logFile.Close()
 }
 
