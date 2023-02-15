@@ -46,11 +46,8 @@ func Run(config Config) {
 	node.setupLogger()
 	node.readFiles()
 	node.setupComponents()
-	logger.I().Infow("node setup done, starting consensus...")
+	logger.I().Infow("node setup done")
 	node.consensus.Start()
-	status := node.consensus.GetStatus()
-	logger.I().Infow("started consensus",
-		"leader", status.LeaderIndex, "bLeaf", status.BLeaf, "qc", status.QCHigh)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)

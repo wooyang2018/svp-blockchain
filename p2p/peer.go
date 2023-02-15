@@ -75,7 +75,6 @@ func (p *Peer) Addr() multiaddr.Multiaddr {
 	return p.addr
 }
 
-// Status gogoc
 func (p *Peer) Status() PeerStatus {
 	p.mtxStatus.RLock()
 	defer p.mtxStatus.RUnlock()
@@ -159,15 +158,31 @@ func (p *Peer) readFixedSize(size uint32) ([]byte, error) {
 	return b, err
 }
 
-// WriteMsg gogoc
 func (p *Peer) WriteMsg(msg []byte) error {
 	p.mtxWrite.Lock()
 	defer p.mtxWrite.Unlock()
 
 	if p.Status() != PeerStatusConnected {
-		return fmt.Errorf("Peer not connected")
+		go p.rewrite(msg)
+		return fmt.Errorf("peer not connected, rewritting....")
 	}
 	return p.write(msg)
+}
+
+// 重试3次
+func (p *Peer) rewrite(msg []byte) {
+	t := 1000 * time.Millisecond
+	for i := 0; i < 3; i++ {
+		time.Sleep(t)
+		p.mtxWrite.Lock()
+		if p.Status() == PeerStatusConnected {
+			p.write(msg)
+			p.mtxWrite.Unlock()
+			break
+		}
+		p.mtxWrite.Unlock()
+		t = t * 2
+	}
 }
 
 func (p *Peer) write(b []byte) error {
@@ -179,7 +194,6 @@ func (p *Peer) write(b []byte) error {
 	return err
 }
 
-// SubscribeMsg gogoc
 func (p *Peer) SubscribeMsg() *emitter.Subscription {
 	return p.emitter.Subscribe(10)
 }

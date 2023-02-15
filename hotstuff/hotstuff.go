@@ -9,6 +9,8 @@ import (
 	"github.com/wooyang2018/ppov-blockchain/logger"
 )
 
+var initialized bool //自程序执行起是否更新过HighQC
+
 // Hotstuff consensus engine
 type Hotstuff struct {
 	driver Driver
@@ -24,8 +26,14 @@ func New(driver Driver, b0 Block, q0 QC) *Hotstuff {
 
 // OnPropose is called to propose a new block
 func (hs *Hotstuff) OnPropose() Block {
-	bLeaf := hs.GetBLeaf()
-	bNew := hs.driver.CreateLeaf(bLeaf, hs.GetQCHigh(), bLeaf.Height()+1)
+	var parent Block
+	if !initialized {
+		parent = hs.GetQCHigh().Block()
+		initialized = true
+	} else {
+		parent = hs.GetBLeaf()
+	}
+	bNew := hs.driver.CreateLeaf(parent, hs.GetQCHigh(), parent.Height()+1)
 	if bNew == nil {
 		return nil
 	}
@@ -79,11 +87,7 @@ func (hs *Hotstuff) CheckSafetyRule(bNew Block) bool {
 
 // CheckLivenessRule returns true if the qc referenced block of the given block is higher than b_Lock
 func (hs *Hotstuff) CheckLivenessRule(bNew Block) bool {
-	if PPoVFlag {
-		return CmpBlockHeight(bNew.Justify().Block(), hs.GetBLock()) >= 0
-	} else {
-		return CmpBlockHeight(bNew.Justify().Block(), hs.GetBLock()) == 1
-	}
+	return CmpBlockHeight(bNew.Justify().Block(), hs.GetBLock()) == 1
 }
 
 // Update perform two/three chain consensus phases
@@ -125,6 +129,7 @@ func (hs *Hotstuff) onCommit(b Block) {
 // UpdateQCHigh replaces qcHigh if the block of given qc is higher than the qcHigh block
 func (hs *Hotstuff) UpdateQCHigh(qc QC) {
 	if CmpBlockHeight(qc.Block(), hs.GetQCHigh().Block()) == 1 {
+		initialized = true
 		logger.I().Debugw("hotstuff updated high qc", "height", qc.Block().Height())
 		hs.setQCHigh(qc)
 		hs.setBLeaf(qc.Block())
