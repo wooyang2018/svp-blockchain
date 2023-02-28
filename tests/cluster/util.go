@@ -6,7 +6,6 @@ package cluster
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -19,17 +18,24 @@ import (
 	"github.com/wooyang2018/ppov-blockchain/node"
 )
 
-func ReadRemoteHosts(hostsPath string, nodeCount int) ([]string, error) {
-	raw, err := ioutil.ReadFile(hostsPath)
+func ReadRemoteHosts(hostsPath string, nodeCount int) ([]string, []string, error) {
+	raw, err := os.ReadFile(hostsPath)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	hosts := strings.Split(string(raw), "\n")
-	if len(hosts) < nodeCount {
-		return nil, fmt.Errorf("not enough hosts, %d | %d",
-			len(hosts), nodeCount)
+	lines := strings.Split(string(raw), "\n")
+	if len(lines) < nodeCount {
+		return nil, nil, fmt.Errorf("not enough hosts, %d | %d",
+			len(lines), nodeCount)
 	}
-	return hosts[:nodeCount], nil
+	hosts := make([]string, nodeCount)
+	workDirs := make([]string, nodeCount)
+	for i := 0; i < nodeCount; i++ {
+		words := strings.Split(lines[i], "\t")
+		hosts[i] = words[0]
+		workDirs[i] = words[1]
+	}
+	return hosts, workDirs, nil
 }
 
 func WriteNodeKey(datadir string, key *core.PrivateKey) error {
@@ -97,12 +103,10 @@ func SetupTemplateDir(dir string, keys []*core.PrivateKey, vlds []node.Peer) err
 		Voters:  make([]string, 0, 0),
 		Weights: make([]int, 0, 0),
 	}
-	for i, v := range keys {
+	for _, v := range keys {
 		genesis.Voters = append(genesis.Voters, v.PublicKey().String())
-		if i%2 == 0 {
-			genesis.Workers = append(genesis.Workers, v.PublicKey().String())
-			genesis.Weights = append(genesis.Weights, 1)
-		}
+		genesis.Workers = append(genesis.Workers, v.PublicKey().String())
+		genesis.Weights = append(genesis.Weights, 1)
 	}
 	for i, key := range keys {
 		dir := path.Join(dir, strconv.Itoa(i))

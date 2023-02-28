@@ -6,7 +6,6 @@ package node
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 
@@ -33,7 +32,7 @@ const (
 )
 
 func readNodeKey(datadir string) (*core.PrivateKey, error) {
-	b, err := ioutil.ReadFile(path.Join(datadir, NodekeyFile))
+	b, err := os.ReadFile(path.Join(datadir, NodekeyFile))
 	if err != nil {
 		return nil, fmt.Errorf("cannot read %s, %w", NodekeyFile, err)
 	}

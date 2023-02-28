@@ -13,7 +13,6 @@ import (
 // ValidatorStore godoc
 type ValidatorStore interface {
 	VoterCount() int
-	MajorityVoterCount() int
 	WorkerCount() int
 	ValidatorCount() int
 	MajorityValidatorCount() int
@@ -94,10 +93,6 @@ func NewValidatorStore(workers []string, weights []int, voters []string) Validat
 
 func (store *ppovValidatorStore) VoterCount() int {
 	return len(store.voters)
-}
-
-func (store *ppovValidatorStore) MajorityVoterCount() int {
-	return MajorityCount(store.VoterCount())
 }
 
 func (store *ppovValidatorStore) WorkerCount() int {

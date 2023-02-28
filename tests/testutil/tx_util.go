@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -74,7 +73,7 @@ func SubmitTx(cls *cluster.Cluster, tx *core.Transaction) (int, error) {
 			"application/json", bytes.NewReader(b))
 		retErr = checkResponse(resp, err)
 		if retErr == nil {
-			io.Copy(ioutil.Discard, resp.Body)
+			io.Copy(io.Discard, resp.Body)
 			resp.Body.Close()
 			return i, nil
 		}

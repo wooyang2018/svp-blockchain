@@ -31,11 +31,6 @@ func (m *MockValidatorStore) ValidatorCount() int {
 	return args.Int(0)
 }
 
-func (m *MockValidatorStore) MajorityVoterCount() int {
-	//TODO implement me
-	panic("implement me")
-}
-
 func (m *MockValidatorStore) MajorityValidatorCount() int {
 	args := m.Called()
 	return args.Int(0)

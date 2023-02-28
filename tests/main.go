@@ -21,7 +21,7 @@ import (
 
 var (
 	WorkDir   = "./workdir"
-	NodeCount = 7
+	NodeCount = 4
 
 	LoadTxPerSec     = 100
 	LoadMintAccounts = 100
@@ -34,11 +34,10 @@ var (
 	// if false it'll use local cluster (running multiple nodes on single local machine)
 	RemoteLinuxCluster  = false
 	RemoteSetupRequired = true
-	RemoteLoginName     = "ubuntu"
-	RemoteKeySSH        = "serverkey"
+	RemoteLoginName     = "wooyoung"
+	RemoteKeySSH        = "~/.ssh/id_rsa"
 	RemoteHostsPath     = "hosts"
-	RemoteWorkDir       = "/home/ubuntu/ppov-tests"
-	RemoteNetworkDevice = "ens5"
+	RemoteNetworkDevice = "ens38"
 
 	// run benchmark, otherwise run experiments
 	RunBenchmark      = false
@@ -199,7 +198,6 @@ func makeRemoteClusterFactory() *cluster.RemoteFactory {
 		LoginName:     RemoteLoginName,
 		KeySSH:        RemoteKeySSH,
 		HostsPath:     RemoteHostsPath,
-		RemoteWorkDir: RemoteWorkDir,
 		SetupRequired: RemoteSetupRequired,
 		NetworkDevice: RemoteNetworkDevice,
 	})

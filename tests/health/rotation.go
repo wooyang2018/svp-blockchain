@@ -37,7 +37,7 @@ func (hc *checker) checkRotation() error {
 
 func (hc *checker) getRotationTimeout() time.Duration {
 	config := hc.cluster.NodeConfig()
-	d := config.ConsensusConfig.ViewWidth + 5*time.Second
+	d := config.ConsensusConfig.ViewWidth + 10*time.Second
 	if hc.majority {
 		d += time.Duration(hc.getFaultyCount()) * hc.LeaderTimeout()
 	}

@@ -29,7 +29,6 @@ type RemoteFactoryParams struct {
 	KeySSH    string
 	HostsPath string // file path to host ip addresses
 
-	RemoteWorkDir string
 	SetupRequired bool
 
 	NetworkDevice string
@@ -39,6 +38,7 @@ type RemoteFactory struct {
 	params      RemoteFactoryParams
 	templateDir string
 	hosts       []string
+	workDirs    []string
 }
 
 var _ ClusterFactory = (*RemoteFactory)(nil)
@@ -49,11 +49,12 @@ func NewRemoteFactory(params RemoteFactoryParams) (*RemoteFactory, error) {
 		params: params,
 	}
 	ftry.templateDir = path.Join(ftry.params.WorkDir, "cluster_template")
-	hosts, err := ReadRemoteHosts(ftry.params.HostsPath, ftry.params.NodeCount)
+	hosts, workDirs, err := ReadRemoteHosts(ftry.params.HostsPath, ftry.params.NodeCount)
 	if err != nil {
 		return nil, err
 	}
 	ftry.hosts = hosts
+	ftry.workDirs = workDirs
 	if ftry.params.SetupRequired {
 		if err := ftry.setup(); err != nil {
 			return nil, err
@@ -114,14 +115,14 @@ func (ftry *RemoteFactory) setupRemoteServerOne(i int) error {
 	// also kills remaining effect and nodes to make sure clean environment
 	cmd := exec.Command("ssh",
 		"-i", ftry.params.KeySSH,
-		fmt.Sprintf("%s@%s", ftry.params.LoginName, ftry.hosts[i]),
+		fmt.Sprintf("%s@%s", ftry.params.LoginName, ftry.hosts[i]), "-S",
 		"sudo", "tc", "qdisc", "del", "dev", ftry.params.NetworkDevice, "root", ";",
-		"sudo", "killall", "ppov", ";",
+		"sudo", "killall", "chain", ";",
 		"sudo", "killall", "dstat", ";",
 		"sudo", "apt", "update", ";",
 		"sudo", "apt", "install", "-y", "dstat", ";",
-		"mkdir", ftry.params.RemoteWorkDir, ";",
-		"cd", ftry.params.RemoteWorkDir, ";",
+		"mkdir", ftry.workDirs[i], ";",
+		"cd", ftry.workDirs[i], ";",
 		"rm", "-r", "template",
 	)
 	return RunCommand(cmd)
@@ -142,7 +143,7 @@ func (ftry *RemoteFactory) sendPPoVOne(i int) error {
 		"-i", ftry.params.KeySSH,
 		ftry.params.BinPath,
 		fmt.Sprintf("%s@%s:%s", ftry.params.LoginName, ftry.hosts[i],
-			ftry.params.RemoteWorkDir),
+			ftry.workDirs[i]),
 	)
 	return RunCommand(cmd)
 }
@@ -162,7 +163,7 @@ func (ftry *RemoteFactory) sendTemplateOne(i int) error {
 		"-i", ftry.params.KeySSH,
 		"-r", path.Join(ftry.templateDir, strconv.Itoa(i)),
 		fmt.Sprintf("%s@%s:%s", ftry.params.LoginName, ftry.hosts[i],
-			path.Join(ftry.params.RemoteWorkDir, "/template")),
+			path.Join(ftry.workDirs[i], "/template")),
 	)
 	return RunCommand(cmd)
 }
@@ -173,17 +174,18 @@ func (ftry *RemoteFactory) SetupCluster(name string) (*Cluster, error) {
 		nodes:      make([]Node, ftry.params.NodeCount),
 		nodeConfig: ftry.params.NodeConfig,
 	}
-	cls.nodeConfig.Datadir = path.Join(ftry.params.RemoteWorkDir, name)
-	binPath := path.Join(ftry.params.RemoteWorkDir, "ppov")
 	for i := 0; i < ftry.params.NodeCount; i++ {
 		node := &RemoteNode{
-			binPath:       binPath,
-			config:        cls.nodeConfig,
+			binPath:       path.Join(ftry.workDirs[i], "chain"),
+			config:        ftry.params.NodeConfig,
 			loginName:     ftry.params.LoginName,
 			keySSH:        ftry.params.KeySSH,
 			networkDevice: ftry.params.NetworkDevice,
 			host:          ftry.hosts[i],
 		}
+		node.config.Datadir = path.Join(ftry.workDirs[i], name)
+		node.config.Port = node.config.Port + i
+		node.config.APIPort = node.config.APIPort + i
 		node.RemoveEffect()
 		node.StopDstat()
 		cls.nodes[i] = node
@@ -203,7 +205,7 @@ func (ftry *RemoteFactory) setupClusterDirOne(i int, name string) error {
 	cmd := exec.Command("ssh",
 		"-i", ftry.params.KeySSH,
 		fmt.Sprintf("%s@%s", ftry.params.LoginName, ftry.hosts[i]),
-		"cd", ftry.params.RemoteWorkDir, ";",
+		"cd", ftry.workDirs[i], ";",
 		"rm", "-r", name, ";",
 		"cp", "-r", "template", name,
 	)
@@ -244,8 +246,8 @@ func (node *RemoteNode) Stop() {
 	node.setRunning(false)
 	cmd := exec.Command("ssh",
 		"-i", node.keySSH,
-		fmt.Sprintf("%s@%s", node.loginName, node.host),
-		"sudo", "killall", "ppov",
+		fmt.Sprintf("%s@%s", node.loginName, node.host), "-S",
+		"sudo", "killall", "chain",
 	)
 	cmd.Run()
 }
@@ -253,7 +255,7 @@ func (node *RemoteNode) Stop() {
 func (node *RemoteNode) EffectDelay(d time.Duration) error {
 	cmd := exec.Command("ssh",
 		"-i", node.keySSH,
-		fmt.Sprintf("%s@%s", node.loginName, node.host),
+		fmt.Sprintf("%s@%s", node.loginName, node.host), "-S",
 		"sudo", "tc", "qdisc", "add", "dev", node.networkDevice, "root",
 		"netem", "delay", d.String(),
 	)
@@ -263,7 +265,7 @@ func (node *RemoteNode) EffectDelay(d time.Duration) error {
 func (node *RemoteNode) EffectLoss(percent float32) error {
 	cmd := exec.Command("ssh",
 		"-i", node.keySSH,
-		fmt.Sprintf("%s@%s", node.loginName, node.host),
+		fmt.Sprintf("%s@%s", node.loginName, node.host), "-S",
 		"sudo", "tc", "qdisc", "add", "dev", node.networkDevice, "root",
 		"netem", "loss", fmt.Sprintf("%f%%", percent),
 	)
@@ -273,7 +275,7 @@ func (node *RemoteNode) EffectLoss(percent float32) error {
 func (node *RemoteNode) RemoveEffect() {
 	cmd := exec.Command("ssh",
 		"-i", node.keySSH,
-		fmt.Sprintf("%s@%s", node.loginName, node.host),
+		fmt.Sprintf("%s@%s", node.loginName, node.host), "-S",
 		"sudo", "tc", "qdisc", "del", "dev", node.networkDevice, "root",
 	)
 	cmd.Run()
@@ -282,7 +284,7 @@ func (node *RemoteNode) RemoveEffect() {
 func (node *RemoteNode) InstallDstat() {
 	cmd := exec.Command("ssh",
 		"-i", node.keySSH,
-		fmt.Sprintf("%s@%s", node.loginName, node.host),
+		fmt.Sprintf("%s@%s", node.loginName, node.host), "-S",
 		"sudo", "apt", "update", ";",
 		"sudo", "apt", "install", "-y", "dstat",
 	)
@@ -303,7 +305,7 @@ func (node *RemoteNode) StartDstat() {
 func (node *RemoteNode) StopDstat() {
 	cmd := exec.Command("ssh",
 		"-i", node.keySSH,
-		fmt.Sprintf("%s@%s", node.loginName, node.host),
+		fmt.Sprintf("%s@%s", node.loginName, node.host), "-S",
 		"sudo", "killall", "dstat",
 	)
 	cmd.Run()
