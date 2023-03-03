@@ -52,7 +52,12 @@ func (cons *Consensus) GetBlock(hash []byte) *core.Block {
 func (cons *Consensus) start() {
 	cons.startTime = time.Now().UnixNano()
 	b0, q0 := cons.getInitialBlockAndQC()
-	cons.setupState(b0)
+	if hotstuff.PPoVFlag {
+		b1, _ := cons.resources.Storage.GetBlock(q0.BlockHash())
+		cons.setupState(b1)
+	} else {
+		cons.setupState(b0)
+	}
 	cons.setupHsDriver()
 	cons.setupHotstuff(b0, q0)
 	cons.setupValidator()

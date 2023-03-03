@@ -28,10 +28,16 @@ type state struct {
 func newState(b0 Block, q0 QC) *state {
 	s := new(state)
 	s.qcHighEmitter = emitter.New()
-	s.setBVote(b0)
-	s.setBLock(b0)
+	if PPoVFlag {
+		s.setBVote(q0.Block())
+		s.setBLock(q0.Block())
+		s.setBLeaf(q0.Block())
+	} else {
+		s.setBVote(b0)
+		s.setBLock(b0)
+		s.setBLeaf(b0)
+	}
 	s.setBExec(b0)
-	s.setBLeaf(b0)
 	s.setQCHigh(q0)
 	return s
 }

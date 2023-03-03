@@ -163,26 +163,9 @@ func (p *Peer) WriteMsg(msg []byte) error {
 	defer p.mtxWrite.Unlock()
 
 	if p.Status() != PeerStatusConnected {
-		go p.rewrite(msg)
-		return fmt.Errorf("peer not connected, rewritting....")
+		return fmt.Errorf("peer not connected")
 	}
 	return p.write(msg)
-}
-
-// 重试3次
-func (p *Peer) rewrite(msg []byte) {
-	t := 1000 * time.Millisecond
-	for i := 0; i < 3; i++ {
-		time.Sleep(t)
-		p.mtxWrite.Lock()
-		if p.Status() == PeerStatusConnected {
-			p.write(msg)
-			p.mtxWrite.Unlock()
-			break
-		}
-		p.mtxWrite.Unlock()
-		t = t * 2
-	}
 }
 
 func (p *Peer) write(b []byte) error {
