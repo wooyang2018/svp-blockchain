@@ -2,6 +2,7 @@
 /chain
 /tests/chain
 /tests/workdir
+/tests/hosts
 /docs
 
 ***/.DS_Store

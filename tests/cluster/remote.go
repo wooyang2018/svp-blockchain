@@ -95,7 +95,7 @@ func (ftry *RemoteFactory) makeAddrs() ([]multiaddr.Multiaddr, error) {
 	// create validator infos (pubkey + addr)
 	for i := range addrs {
 		addr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d",
-			ftry.hosts[i], ftry.params.NodeConfig.Port))
+			ftry.hosts[i], ftry.params.NodeConfig.Port+i))
 		if err != nil {
 			return nil, err
 		}
@@ -115,7 +115,7 @@ func (ftry *RemoteFactory) setupRemoteServerOne(i int) error {
 	// also kills remaining effect and nodes to make sure clean environment
 	cmd := exec.Command("ssh",
 		"-i", ftry.params.KeySSH,
-		fmt.Sprintf("%s@%s", ftry.params.LoginName, ftry.hosts[i]), "-S",
+		fmt.Sprintf("%s@%s", ftry.params.LoginName, ftry.hosts[i]),
 		"sudo", "tc", "qdisc", "del", "dev", ftry.params.NetworkDevice, "root", ";",
 		"sudo", "killall", "chain", ";",
 		"sudo", "killall", "dstat", ";",
@@ -246,8 +246,8 @@ func (node *RemoteNode) Stop() {
 	node.setRunning(false)
 	cmd := exec.Command("ssh",
 		"-i", node.keySSH,
-		fmt.Sprintf("%s@%s", node.loginName, node.host), "-S",
-		"sudo", "killall", "chain",
+		fmt.Sprintf("%s@%s", node.loginName, node.host),
+		"sudo", "killall", node.binPath,
 	)
 	cmd.Run()
 }
@@ -255,7 +255,7 @@ func (node *RemoteNode) Stop() {
 func (node *RemoteNode) EffectDelay(d time.Duration) error {
 	cmd := exec.Command("ssh",
 		"-i", node.keySSH,
-		fmt.Sprintf("%s@%s", node.loginName, node.host), "-S",
+		fmt.Sprintf("%s@%s", node.loginName, node.host),
 		"sudo", "tc", "qdisc", "add", "dev", node.networkDevice, "root",
 		"netem", "delay", d.String(),
 	)
@@ -265,7 +265,7 @@ func (node *RemoteNode) EffectDelay(d time.Duration) error {
 func (node *RemoteNode) EffectLoss(percent float32) error {
 	cmd := exec.Command("ssh",
 		"-i", node.keySSH,
-		fmt.Sprintf("%s@%s", node.loginName, node.host), "-S",
+		fmt.Sprintf("%s@%s", node.loginName, node.host),
 		"sudo", "tc", "qdisc", "add", "dev", node.networkDevice, "root",
 		"netem", "loss", fmt.Sprintf("%f%%", percent),
 	)
@@ -275,7 +275,7 @@ func (node *RemoteNode) EffectLoss(percent float32) error {
 func (node *RemoteNode) RemoveEffect() {
 	cmd := exec.Command("ssh",
 		"-i", node.keySSH,
-		fmt.Sprintf("%s@%s", node.loginName, node.host), "-S",
+		fmt.Sprintf("%s@%s", node.loginName, node.host),
 		"sudo", "tc", "qdisc", "del", "dev", node.networkDevice, "root",
 	)
 	cmd.Run()
@@ -284,7 +284,7 @@ func (node *RemoteNode) RemoveEffect() {
 func (node *RemoteNode) InstallDstat() {
 	cmd := exec.Command("ssh",
 		"-i", node.keySSH,
-		fmt.Sprintf("%s@%s", node.loginName, node.host), "-S",
+		fmt.Sprintf("%s@%s", node.loginName, node.host),
 		"sudo", "apt", "update", ";",
 		"sudo", "apt", "install", "-y", "dstat",
 	)
@@ -305,7 +305,7 @@ func (node *RemoteNode) StartDstat() {
 func (node *RemoteNode) StopDstat() {
 	cmd := exec.Command("ssh",
 		"-i", node.keySSH,
-		fmt.Sprintf("%s@%s", node.loginName, node.host), "-S",
+		fmt.Sprintf("%s@%s", node.loginName, node.host),
 		"sudo", "killall", "dstat",
 	)
 	cmd.Run()

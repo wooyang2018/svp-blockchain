@@ -26,7 +26,7 @@ func (expm *NetworkDelay) Run(cls *cluster.Cluster) error {
 	for i := 0; i < cls.NodeCount(); i++ {
 		delay := expm.Delay + time.Duration(rand.Int63n(int64(expm.Delay)))
 		if err := cls.GetNode(i).EffectDelay(delay); err != nil {
-			return err
+			fmt.Println(err)
 		}
 		effects[i] = delay.String()
 	}

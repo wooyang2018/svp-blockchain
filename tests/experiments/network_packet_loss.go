@@ -26,7 +26,7 @@ func (expm *NetworkPacketLoss) Run(cls *cluster.Cluster) error {
 	for i := 0; i < cls.NodeCount(); i++ {
 		percent := expm.Percent + rand.Float32()
 		if err := cls.GetNode(i).EffectLoss(percent); err != nil {
-			return err
+			fmt.Println(err)
 		}
 		effects[i] = fmt.Sprintf("%.2f%%", percent)
 	}
