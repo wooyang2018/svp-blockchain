@@ -90,6 +90,7 @@ func (ftry *LocalFactory) SetupCluster(name string) (*Cluster, error) {
 			config:  ftry.params.NodeConfig,
 		}
 		node.config.Datadir = path.Join(clusterDir, strconv.Itoa(i))
+		node.config.ConsensusConfig.BenchmarkPath = path.Join(node.config.Datadir, "consensus.csv")
 		node.config.Port = node.config.Port + i
 		node.config.APIPort = node.config.APIPort + i
 		nodes[i] = node

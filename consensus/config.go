@@ -25,6 +25,9 @@ type Config struct {
 
 	// leader must create next qc within this duration
 	LeaderTimeout time.Duration
+
+	// path to save the benchmark log of the consensus algorithm (it will not be saved if blank)
+	BenchmarkPath string
 }
 
 var DefaultConfig = Config{
@@ -34,4 +37,5 @@ var DefaultConfig = Config{
 	BlockDelay:    100 * time.Millisecond, // maximum block rate = 10 blk per sec
 	ViewWidth:     60 * time.Second,
 	LeaderTimeout: 20 * time.Second,
+	BenchmarkPath: "",
 }

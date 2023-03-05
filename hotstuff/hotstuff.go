@@ -6,19 +6,24 @@
 package hotstuff
 
 import (
+	"os"
+	"time"
+
 	"github.com/wooyang2018/ppov-blockchain/logger"
 )
 
 // Hotstuff consensus engine
 type Hotstuff struct {
-	driver Driver
 	*state
+	driver Driver
+	tester *tester
 }
 
-func New(driver Driver, b0 Block, q0 QC) *Hotstuff {
+func New(driver Driver, file *os.File, b0 Block, q0 QC) *Hotstuff {
 	return &Hotstuff{
-		driver: driver,
 		state:  newState(b0, q0),
+		driver: driver,
+		tester: newTester(file),
 	}
 }
 
@@ -90,8 +95,11 @@ func (hs *Hotstuff) Update(bNew Block) {
 		if CmpBlockHeight(b1, hs.GetBLock()) == 1 {
 			hs.setBLock(b1)        // commit phase for b1
 			if IsTwoChain(b, b1) { // decide phase for b
+				t1 := time.Now().UnixNano()
 				hs.onCommit(b)
 				hs.setBExec(b)
+				t2 := time.Now().UnixNano()
+				hs.tester.saveItem(b.Height(), b.Timestamp(), t1, t2, len(b.Transactions()))
 			}
 		}
 	} else {
@@ -100,8 +108,11 @@ func (hs *Hotstuff) Update(bNew Block) {
 		if CmpBlockHeight(b1, hs.GetBLock()) == 1 {
 			hs.setBLock(b1)              // commit phase for b1
 			if IsThreeChain(b, b1, b2) { // decide phase for b
+				t1 := time.Now().UnixNano()
 				hs.onCommit(b)
 				hs.setBExec(b)
+				t2 := time.Now().UnixNano()
+				hs.tester.saveItem(b.Height(), b.Timestamp(), t1, t2, len(b.Transactions()))
 			}
 		}
 	}

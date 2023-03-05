@@ -11,6 +11,8 @@ type Block interface {
 	Parent() Block
 	Equal(blk Block) bool
 	Justify() QC
+	Timestamp() int64
+	Transactions() [][]byte
 }
 
 // QC type

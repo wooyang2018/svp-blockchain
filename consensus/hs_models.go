@@ -85,6 +85,14 @@ func (b *hsBlock) Height() uint64 {
 	return b.block.Height()
 }
 
+func (b *hsBlock) Timestamp() int64 {
+	return b.block.Timestamp()
+}
+
+func (b *hsBlock) Transactions() [][]byte {
+	return b.block.Transactions()
+}
+
 func (b *hsBlock) Parent() hotstuff.Block {
 	blk := b.store.getBlock(b.block.ParentHash())
 	if blk == nil {

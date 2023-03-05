@@ -184,6 +184,7 @@ func (ftry *RemoteFactory) SetupCluster(name string) (*Cluster, error) {
 			host:          ftry.hosts[i],
 		}
 		node.config.Datadir = path.Join(ftry.workDirs[i], name)
+		node.config.ConsensusConfig.BenchmarkPath = path.Join(node.config.Datadir, "consensus.csv")
 		node.config.Port = node.config.Port + i
 		node.config.APIPort = node.config.APIPort + i
 		node.RemoveEffect()
