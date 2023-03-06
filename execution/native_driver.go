@@ -7,12 +7,14 @@ import (
 	"bytes"
 	"errors"
 
+	"github.com/wooyang2018/ppov-blockchain/chaincode/empty"
 	"github.com/wooyang2018/ppov-blockchain/chaincode/ppovcoin"
 	"github.com/wooyang2018/ppov-blockchain/execution/chaincode"
 )
 
 var (
-	NativeCodeIDPPoVCoin = bytes.Repeat([]byte{1}, 32)
+	NativeCodeIDEmpty    = bytes.Repeat([]byte{1}, 32)
+	NativeCodeIDPPoVCoin = bytes.Repeat([]byte{2}, 32)
 )
 
 type nativeCodeDriver struct{}
@@ -30,6 +32,8 @@ func (drv *nativeCodeDriver) Install(codeID, data []byte) error {
 
 func (drv *nativeCodeDriver) GetInstance(codeID []byte) (chaincode.Chaincode, error) {
 	switch string(codeID) {
+	case string(NativeCodeIDEmpty):
+		return new(empty.Empty), nil
 	case string(NativeCodeIDPPoVCoin):
 		return new(ppovcoin.PPoVCoin), nil
 	default:

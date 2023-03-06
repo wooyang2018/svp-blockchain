@@ -27,8 +27,8 @@ var (
 	LoadMintAccounts = 100
 	LoadDestAccounts = 10000 // increase dest accounts for benchmark
 
-	// Deploy ppovcoin chaincode as bincc type (not embeded in ppov node)
-	PPoVCoinBinCC = false
+	PPoVCoinBinCC  = false // Deploy ppovcoin chaincode as bincc type (not embeded in ppov node)
+	EmptyChainCode = true  // Deploy empty chaincode instead of ppovcoin
 
 	// Run tests in remote linux cluster
 	// if false it'll use local cluster (running multiple nodes on single local machine)
@@ -156,12 +156,15 @@ func buildPPoV() {
 }
 
 func makeLoadClient() testutil.LoadClient {
+	fmt.Println("Preparing load client")
+	if EmptyChainCode {
+		return testutil.NewEmptyClient()
+	}
 	var binccPath string
 	if PPoVCoinBinCC {
 		buildPPoVCoinBinCC()
 		binccPath = "./ppovcoin"
 	}
-	fmt.Println("Preparing load client")
 	return testutil.NewPPoVCoinClient(LoadMintAccounts, LoadDestAccounts, binccPath)
 }
 
