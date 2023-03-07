@@ -147,7 +147,11 @@ func (bm *Benchmark) runAsync(loadCtx context.Context, done chan struct{}) {
 	if bm.err != nil {
 		return
 	}
-	go bm.loadGen.Run(loadCtx)
+	if BenchBatchSubmit {
+		go bm.loadGen.BatchRun(loadCtx)
+	} else {
+		go bm.loadGen.Run(loadCtx)
+	}
 	testutil.Sleep(20 * time.Second)
 
 	bm.err = health.CheckAllNodes(bm.cluster)

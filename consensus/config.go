@@ -31,11 +31,11 @@ type Config struct {
 }
 
 var DefaultConfig = Config{
-	BlockTxLimit:  400,
+	BlockTxLimit:  30000,
 	TxWaitTime:    1 * time.Second,
-	BeatTimeout:   1500 * time.Millisecond,
+	BeatTimeout:   1000 * time.Millisecond,
 	BlockDelay:    100 * time.Millisecond, // maximum block rate = 10 blk per sec
-	ViewWidth:     60 * time.Second,
-	LeaderTimeout: 20 * time.Second,
+	ViewWidth:     1 * time.Hour,
+	LeaderTimeout: 1 * time.Hour,
 	BenchmarkPath: "",
 }

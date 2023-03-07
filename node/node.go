@@ -99,7 +99,7 @@ func (node *Node) setupComponents() {
 	node.setupValidatorStore()
 	node.setupStorage()
 	node.setupHost()
-	logger.I().Infow("setup p2p host", "port", node.config.Port, "broadcast-tx", node.config.BroadcastTx)
+	logger.I().Infow("setup p2p host", "port", node.config.Port, "broadcast-tx", node.config.BroadcastTx, "execute-tx", node.config.ExecuteTX)
 	node.msgSvc = p2p.NewMsgService(node.host)
 	node.execution = execution.New(node.storage, node.config.ExecutionConfig)
 	node.txpool = txpool.New(node.storage, node.execution, node.msgSvc, node.config.BroadcastTx)

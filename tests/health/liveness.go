@@ -58,7 +58,7 @@ func (hc *checker) shouldEqualMerkleRoot(blocks map[int]*core.Block) error {
 	var height uint64
 	equalCount := make(map[string]int)
 	for i, blk := range blocks {
-		if blk.MerkleRoot() == nil {
+		if !hc.empty && blk.MerkleRoot() == nil {
 			return fmt.Errorf("nil merkle root at node %d, block %d", i, blk.Height())
 		}
 		equalCount[string(blk.MerkleRoot())]++

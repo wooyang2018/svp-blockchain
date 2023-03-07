@@ -11,5 +11,6 @@ import (
 type LoadClient interface {
 	SetupOnCluster(cls *cluster.Cluster) error
 	SubmitTx() (int, *core.Transaction, error)
+	BatchSubmitTx(num int) (int, *core.TxList, error)
 	SubmitTxAndWait() (int, error)
 }

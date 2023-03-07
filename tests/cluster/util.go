@@ -134,11 +134,15 @@ func AddPPoVFlags(cmd *exec.Cmd, config *node.Config) {
 	cmd.Args = append(cmd.Args, "-d", config.Datadir)
 	cmd.Args = append(cmd.Args, "-p", strconv.Itoa(config.Port))
 	cmd.Args = append(cmd.Args, "-P", strconv.Itoa(config.APIPort))
+
 	if config.Debug {
 		cmd.Args = append(cmd.Args, "--debug")
 	}
 	if config.BroadcastTx {
 		cmd.Args = append(cmd.Args, "--broadcast-tx")
+	}
+	if config.ExecuteTX {
+		cmd.Args = append(cmd.Args, "--execute-tx")
 	}
 
 	cmd.Args = append(cmd.Args, "--storage-merkleBranchFactor",

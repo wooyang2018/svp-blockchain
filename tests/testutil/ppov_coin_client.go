@@ -18,32 +18,29 @@ import (
 )
 
 type PPoVCoinClient struct {
-	binccPath string
-
-	minter   *core.PrivateKey
-	accounts []*core.PrivateKey
-	dests    []*core.PrivateKey
-
-	cluster *cluster.Cluster
-
+	binccPath       string
+	minter          *core.PrivateKey
+	accounts        []*core.PrivateKey
+	dests           []*core.PrivateKey
+	cluster         *cluster.Cluster
 	binccCodeID     []byte
 	binccUploadNode int
-
-	codeAddr []byte
-
-	transferCount int64
+	codeAddr        []byte
+	transferCount   int64
+	nodes           []int
 }
 
 var _ LoadClient = (*PPoVCoinClient)(nil)
 
 // create and setup a LoadService
 // submit chaincode deploy tx and wait for commit
-func NewPPoVCoinClient(mintCount, destCount int, binccPath string) *PPoVCoinClient {
+func NewPPoVCoinClient(nodes []int, mintCount, destCount int, binccPath string) *PPoVCoinClient {
 	client := &PPoVCoinClient{
 		binccPath: binccPath,
 		minter:    core.GenerateKey(nil),
 		accounts:  make([]*core.PrivateKey, mintCount),
 		dests:     make([]*core.PrivateKey, destCount),
+		nodes:     nodes,
 	}
 	client.generateKeyConcurrent(client.accounts)
 	client.generateKeyConcurrent(client.dests)
@@ -79,8 +76,30 @@ func (client *PPoVCoinClient) SubmitTxAndWait() (int, error) {
 
 func (client *PPoVCoinClient) SubmitTx() (int, *core.Transaction, error) {
 	tx := client.makeRandomTransfer()
-	nodeIdx, err := SubmitTx(client.cluster, tx)
+	nodeIdx, err := SubmitTx(client.cluster, client.nodes, tx)
 	return nodeIdx, tx, err
+}
+
+func (client *PPoVCoinClient) BatchSubmitTx(num int) (int, *core.TxList, error) {
+	//使用100个协程快速生成num个交易
+	jobCh := make(chan struct{}, num)
+	defer close(jobCh)
+	out := make(chan *core.Transaction, num)
+	defer close(out)
+	for i := 0; i < 100; i++ {
+		go func(jobCh <-chan struct{}, out chan<- *core.Transaction) {
+			for range jobCh {
+				out <- client.makeRandomTransfer()
+			}
+		}(jobCh, out)
+	}
+	txs := make([]*core.Transaction, num)
+	for i := 0; i < num; i++ {
+		txs[i] = <-out
+	}
+	txList := core.TxList(txs)
+	nodeIdx, err := BatchSubmitTx(client.cluster, client.nodes, &txList)
+	return nodeIdx, &txList, err
 }
 
 func (client *PPoVCoinClient) setupOnCluster(cls *cluster.Cluster) error {

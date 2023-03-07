@@ -18,7 +18,7 @@ func (expm *CorrectExecution) Name() string {
 }
 
 func (expm *CorrectExecution) Run(cls *cluster.Cluster) error {
-	jc := testutil.NewPPoVCoinClient(0, 0, "")
+	jc := testutil.NewPPoVCoinClient(nil, 0, 0, "")
 
 	if err := jc.SetupOnCluster(cls); err != nil {
 		return fmt.Errorf("setup ppovcoin failed. %w", err)

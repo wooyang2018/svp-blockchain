@@ -53,16 +53,33 @@ func (lg *LoadGenerator) Run(ctx context.Context) {
 	}
 }
 
-func (lg *LoadGenerator) loadWorker(jobs <-chan struct{}) {
-	for range jobs {
-		if _, _, err := lg.client.SubmitTx(); err == nil {
-			lg.increaseSubmitted()
+func (lg *LoadGenerator) BatchRun(ctx context.Context) {
+	jobPerTick := 2000
+	delay := time.Second / time.Duration(lg.txPerSec/jobPerTick)
+	ticker := time.NewTicker(delay)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if _, txs, err := lg.client.BatchSubmitTx(jobPerTick); err == nil {
+				lg.increaseSubmitted(int64(len(*txs)))
+			}
 		}
 	}
 }
 
-func (lg *LoadGenerator) increaseSubmitted() {
-	atomic.AddInt64(&lg.totalSubmitted, 1)
+func (lg *LoadGenerator) loadWorker(jobs <-chan struct{}) {
+	for range jobs {
+		if _, _, err := lg.client.SubmitTx(); err == nil {
+			lg.increaseSubmitted(1)
+		}
+	}
+}
+
+func (lg *LoadGenerator) increaseSubmitted(delta int64) {
+	atomic.AddInt64(&lg.totalSubmitted, delta)
 }
 
 func (lg *LoadGenerator) ResetTotalSubmitted() int {

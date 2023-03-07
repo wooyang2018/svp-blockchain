@@ -132,9 +132,10 @@ func (pool *TxPool) subscribeTxs() {
 }
 
 func (pool *TxPool) addTxList(txList *core.TxList) error {
-	jobCh := make(chan *core.Transaction)
+	jobCh := make(chan *core.Transaction, len(*txList))
 	defer close(jobCh)
 	out := make(chan error, len(*txList))
+	defer close(out)
 
 	for i := 0; i < 50; i++ {
 		go pool.workerAddNewTx(jobCh, out)

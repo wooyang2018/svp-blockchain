@@ -27,22 +27,24 @@ var (
 	LoadMintAccounts = 100
 	LoadDestAccounts = 10000 // increase dest accounts for benchmark
 
-	PPoVCoinBinCC  = false // Deploy ppovcoin chaincode as bincc type (not embeded in ppov node)
-	EmptyChainCode = true  // Deploy empty chaincode instead of ppovcoin
+	PPoVCoinBinCC  = false // deploy ppovcoin chaincode as bincc type (not embeded in ppov node)
+	EmptyChainCode = true  // deploy empty chaincode instead of ppovcoin
 
-	// Run tests in remote linux cluster
+	// run tests in remote linux cluster
 	// if false it'll use local cluster (running multiple nodes on single local machine)
-	RemoteLinuxCluster  = false
+	RemoteLinuxCluster  = true
 	RemoteSetupRequired = true
-	RemoteLoginName     = "wooyoung"
+	RemoteLoginName     = "gdcni22"
 	RemoteKeySSH        = "~/.ssh/id_rsa"
 	RemoteHostsPath     = "hosts"
-	RemoteNetworkDevice = "ens38"
+	RemoteNetworkDevice = "ens9f0"
 
 	// run benchmark, otherwise run experiments
-	RunBenchmark      = false
-	BenchmarkDuration = 5 * time.Minute
-	BenchLoads        = []int{1000, 2000, 3000, 4000, 4500, 5000, 5500, 6000, 7000}
+	RunBenchmark     = true
+	BenchDuration    = 5 * time.Minute
+	BenchLoads       = []int{15000}
+	BenchBatchSubmit = true //whether to enable batch transaction submission
+	BenchSubmitNodes = []int{0}
 
 	SetupClusterTemplate = false
 )
@@ -50,7 +52,6 @@ var (
 func getNodeConfig() node.Config {
 	config := node.DefaultConfig
 	config.Debug = true
-	config.BroadcastTx = false
 	return config
 }
 
@@ -117,7 +118,7 @@ func runBenchmark() {
 	}
 	bm := &Benchmark{
 		workDir:    path.Join(WorkDir, "benchmarks"),
-		duration:   BenchmarkDuration,
+		duration:   BenchDuration,
 		interval:   5 * time.Second,
 		cfactory:   makeRemoteClusterFactory(),
 		loadClient: makeLoadClient(),
@@ -159,14 +160,14 @@ func buildPPoV() {
 func makeLoadClient() testutil.LoadClient {
 	fmt.Println("Preparing load client")
 	if EmptyChainCode {
-		return testutil.NewEmptyClient()
+		return testutil.NewEmptyClient(BenchSubmitNodes)
 	}
 	var binccPath string
 	if PPoVCoinBinCC {
 		buildPPoVCoinBinCC()
 		binccPath = "./ppovcoin"
 	}
-	return testutil.NewPPoVCoinClient(LoadMintAccounts, LoadDestAccounts, binccPath)
+	return testutil.NewPPoVCoinClient(BenchSubmitNodes, LoadMintAccounts, LoadDestAccounts, binccPath)
 }
 
 func buildPPoVCoinBinCC() {

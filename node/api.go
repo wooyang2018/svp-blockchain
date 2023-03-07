@@ -30,17 +30,14 @@ func serveNodeAPI(node *Node) {
 	r.Use(gin.Recovery())
 
 	r.GET("/consensus", api.getConsensusStatus)
-
 	r.GET("/txpool", api.getTxPoolStatus)
 	r.POST("/transactions", api.submitTX)
+	r.POST("/transactions/batch", api.storeTxs)
 	r.GET("/transactions/:hash/status", api.getTxStatus)
 	r.GET("/transactions/:hash/commit", api.getTxCommit)
-
 	r.GET("/blocks/:hash", api.getBlock)
-	r.GET("/blocksbyh/:height", api.getBlockByHeight)
-
+	r.GET("/blocks/height/:height", api.getBlockByHeight)
 	r.POST("/querystate", api.queryState)
-
 	r.POST("/bincc", api.uploadBinChainCode)
 	r.Static("/bincc", node.config.ExecutionConfig.BinccDir)
 
@@ -72,6 +69,20 @@ func (api *nodeAPI) submitTX(c *gin.Context) {
 		return
 	}
 	c.String(http.StatusOK, "transaction accepted")
+}
+
+func (api *nodeAPI) storeTxs(c *gin.Context) {
+	txs := core.NewTxList()
+	if err := c.ShouldBind(txs); err != nil {
+		c.String(http.StatusBadRequest, "cannot parse txs")
+		return
+	}
+	if err := api.node.txpool.StoreTxs(txs); err != nil {
+		logger.I().Warnf("store txs failed %+v", err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+	c.String(http.StatusOK, "transactions accepted")
 }
 
 func (api *nodeAPI) queryState(c *gin.Context) {

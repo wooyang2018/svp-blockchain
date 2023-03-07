@@ -48,7 +48,7 @@ func (t *tester) saveItem(height uint64, t0, t1, t2 int64, txs int) {
 		strconv.FormatInt(t2, 10),
 		strconv.Itoa(txs),
 	})
-	if height > 0 && height%200 == 0 {
+	if height > 0 && height%10 == 0 {
 		t.writer.Flush()
 		tps := float32(t.txCount) / float32(t.elapsed) * 1e9
 		logger.I().Debugw("benchmark test", "height", height, "elapsed", time.Duration(t.elapsed), "txs", t.txCount, "tps", tps)

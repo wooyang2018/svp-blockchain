@@ -21,7 +21,7 @@ import (
 )
 
 func SubmitTxAndWait(cls *cluster.Cluster, tx *core.Transaction) (int, error) {
-	idx, err := SubmitTx(cls, tx)
+	idx, err := SubmitTx(cls, nil, tx)
 	if err != nil {
 		return 0, err
 	}
@@ -58,13 +58,15 @@ func WaitTxCommitted(node cluster.Node, tx *core.Transaction) error {
 	}
 }
 
-func SubmitTx(cls *cluster.Cluster, tx *core.Transaction) (int, error) {
+func SubmitTx(cls *cluster.Cluster, retryOrder []int, tx *core.Transaction) (int, error) {
 	b, err := json.Marshal(tx)
 	if err != nil {
 		return 0, err
 	}
+	if len(retryOrder) == 0 {
+		retryOrder = PickUniqueRandoms(cls.NodeCount(), cls.NodeCount())
+	}
 	var retErr error
-	retryOrder := PickUniqueRandoms(cls.NodeCount(), cls.NodeCount())
 	for _, i := range retryOrder {
 		if !cls.GetNode(i).IsRunning() {
 			continue
@@ -79,6 +81,31 @@ func SubmitTx(cls *cluster.Cluster, tx *core.Transaction) (int, error) {
 		}
 	}
 	return 0, fmt.Errorf("cannot submit tx %w", retErr)
+}
+
+func BatchSubmitTx(cls *cluster.Cluster, retryOrder []int, txs *core.TxList) (int, error) {
+	b, err := json.Marshal(txs)
+	if err != nil {
+		return 0, err
+	}
+	if len(retryOrder) == 0 {
+		retryOrder = PickUniqueRandoms(cls.NodeCount(), cls.NodeCount())
+	}
+	var retErr error
+	for _, i := range retryOrder {
+		if !cls.GetNode(i).IsRunning() {
+			continue
+		}
+		resp, err := http.Post(cls.GetNode(i).GetEndpoint()+"/transactions/batch",
+			"application/json", bytes.NewReader(b))
+		retErr = checkResponse(resp, err)
+		if retErr == nil {
+			io.Copy(io.Discard, resp.Body)
+			resp.Body.Close()
+			return i, nil
+		}
+	}
+	return 0, fmt.Errorf("cannot submit txs %w", retErr)
 }
 
 func GetTxStatus(node cluster.Node, hash []byte) (txpool.TxStatus, error) {

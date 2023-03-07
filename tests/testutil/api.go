@@ -121,7 +121,7 @@ func GetBlockByHeight(node cluster.Node, height uint64) (*core.Block, error) {
 	if !node.IsRunning() {
 		return nil, fmt.Errorf("node is not running")
 	}
-	resp, err := getRequestWithRetry(fmt.Sprintf("%s/blocksbyh/%d", node.GetEndpoint(), height))
+	resp, err := getRequestWithRetry(fmt.Sprintf("%s/blocks/height/%d", node.GetEndpoint(), height))
 	if err != nil {
 		return nil, err
 	}
