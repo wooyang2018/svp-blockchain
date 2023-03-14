@@ -50,6 +50,7 @@ type MsgService interface {
 
 type Execution interface {
 	Execute(blk *core.Block, txs []*core.Transaction) (*core.BlockCommit, []*core.TxCommit)
+	MockExecute(blk *core.Block) (*core.BlockCommit, []*core.TxCommit)
 }
 
 type Resources struct {

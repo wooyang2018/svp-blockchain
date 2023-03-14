@@ -10,6 +10,7 @@ import (
 
 	"github.com/wooyang2018/ppov-blockchain/core"
 	"github.com/wooyang2018/ppov-blockchain/execution/bincc"
+	"github.com/wooyang2018/ppov-blockchain/logger"
 )
 
 type Config struct {
@@ -59,6 +60,33 @@ func (exec *Execution) Execute(blk *core.Block, txs []*core.Transaction) (
 		txs:             txs,
 	}
 	return bexe.execute()
+}
+
+func (exec *Execution) MockExecute(blk *core.Block) (*core.BlockCommit, []*core.TxCommit) {
+	bexe := &blkExecutor{
+		state: exec.stateStore,
+		blk:   blk,
+	}
+	start := time.Now()
+	txCount := len(bexe.blk.Transactions())
+	bexe.rootTrk = newStateTracker(bexe.state, nil)
+	bexe.txCommits = make([]*core.TxCommit, txCount)
+	for i := 0; i < txCount; i++ {
+		bexe.txCommits[i] = core.NewTxCommit().
+			SetHash(bexe.blk.Transactions()[i]).
+			SetBlockHash(bexe.blk.Hash()).
+			SetBlockHeight(bexe.blk.Height())
+	}
+	elapsed := time.Since(start)
+	bcm := core.NewBlockCommit().
+		SetHash(bexe.blk.Hash()).
+		SetStateChanges(bexe.rootTrk.getStateChanges()).
+		SetElapsedExec(elapsed.Seconds())
+	if txCount > 0 {
+		logger.I().Debugw("batch execution",
+			"txs", txCount, "elapsed", elapsed)
+	}
+	return bcm, bexe.txCommits
 }
 
 type QueryData struct {

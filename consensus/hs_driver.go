@@ -97,28 +97,43 @@ func (hsd *hsDriver) Commit(hsBlk hotstuff.Block) {
 	bexe := hsBlk.(*hsBlock).block
 	start := time.Now()
 	rawTxs := bexe.Transactions()
+	var txCount int
+	var data *storage.CommitData
 	if ExecuteTxFlag {
 		txs, old := hsd.resources.TxPool.GetTxsToExecute(rawTxs)
-		logger.I().Debugw("committing block", "height", bexe.Height(), "txs", len(txs))
+		txCount = len(txs)
+		logger.I().Debugw("committing block", "height", bexe.Height(), "txs", txCount)
 		bcm, txcs := hsd.resources.Execution.Execute(bexe, txs)
 		bcm.SetOldBlockTxs(old)
-		data := &storage.CommitData{
+		data = &storage.CommitData{
 			Block:        bexe,
 			QC:           hsd.state.getQC(bexe.Hash()),
 			Transactions: txs,
 			BlockCommit:  bcm,
 			TxCommits:    txcs,
 		}
-		err := hsd.resources.Storage.Commit(data)
-		if err != nil {
-			logger.I().Fatalf("commit storage error: %+v", err)
+	} else {
+		txCount = len(rawTxs)
+		logger.I().Debugw("committing block", "height", bexe.Height(), "txs", txCount)
+		bcm, txcs := hsd.resources.Execution.MockExecute(bexe)
+		bcm.SetOldBlockTxs(rawTxs)
+		data = &storage.CommitData{
+			Block:        bexe,
+			QC:           hsd.state.getQC(bexe.Hash()),
+			Transactions: nil,
+			BlockCommit:  bcm,
+			TxCommits:    txcs,
 		}
 	}
-	hsd.state.addCommittedTxCount(len(rawTxs))
+	err := hsd.resources.Storage.Commit(data)
+	if err != nil {
+		logger.I().Fatalf("commit storage error: %+v", err)
+	}
+	hsd.state.addCommittedTxCount(txCount)
 	hsd.cleanStateOnCommitted(bexe)
 	logger.I().Debugw("committed bock",
 		"height", bexe.Height(),
-		"txs", len(rawTxs),
+		"txs", txCount,
 		"elapsed", time.Since(start))
 }
 

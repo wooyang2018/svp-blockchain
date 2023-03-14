@@ -253,7 +253,7 @@ func (bm *Benchmark) onStartMeasure() {
 func (bm *Benchmark) onTick() error {
 	meas := new(Measurement)
 	var wg sync.WaitGroup
-	wg.Add(3)
+	wg.Add(2)
 	go func() {
 		defer wg.Done()
 		meas.ConsensusStatus = testutil.GetStatusAll(bm.cluster)
@@ -262,10 +262,13 @@ func (bm *Benchmark) onTick() error {
 		defer wg.Done()
 		meas.TxPoolStatus = testutil.GetTxPoolStatusAll(bm.cluster)
 	}()
-	go func() {
-		defer wg.Done()
-		meas.Latency = bm.measureLatency()
-	}()
+	if consensus.ExecuteTxFlag {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			meas.Latency = bm.measureLatency()
+		}()
+	}
 	wg.Wait()
 	meas.Timestamp = time.Now().Unix()
 	meas.TxSubmitted = bm.loadGen.ResetTotalSubmitted()
@@ -279,16 +282,14 @@ func (bm *Benchmark) onTick() error {
 			bm.cluster.NodeCount()-len(meas.TxPoolStatus))
 	}
 
-	meas.TxCommitted = meas.ConsensusStatus[0].CommittedTxCount - bm.lastTxCommittedN0
-	bm.lastTxCommittedN0 = meas.ConsensusStatus[0].CommittedTxCount
-
 	elapsed := time.Since(bm.lastMeasuredTime)
 	bm.lastMeasuredTime = time.Now()
-	meas.Load = float32(meas.TxSubmitted) / float32(elapsed.Seconds())
+	meas.TxCommitted = meas.ConsensusStatus[0].CommittedTxCount - bm.lastTxCommittedN0
+	bm.lastTxCommittedN0 = meas.ConsensusStatus[0].CommittedTxCount
 	meas.Throughput = float32(meas.TxCommitted) / float32(elapsed.Seconds())
+	meas.Load = float32(meas.TxSubmitted) / float32(elapsed.Seconds())
 
 	bm.measurements = append(bm.measurements, meas)
-
 	log.Printf("  Load: %6.1f  |  Throughput: %6.1f  |  Latency: %s\n",
 		meas.Load, meas.Throughput, meas.Latency.String())
 
