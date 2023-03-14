@@ -225,9 +225,11 @@ func (vld *validator) verifyWithParentAndUpdateHotstuff(
 		return fmt.Errorf("invalid block height %d, parent %d",
 			blk.Height(), parent.Height())
 	}
-	// must sync transactions before updating block to hotstuff
-	if err := vld.resources.TxPool.SyncTxs(peer, blk.Transactions()); err != nil {
-		return err
+	if ExecuteTxFlag {
+		// must sync transactions before updating block to hotstuff
+		if err := vld.resources.TxPool.SyncTxs(peer, blk.Transactions()); err != nil {
+			return err
+		}
 	}
 	vld.state.setBlock(blk)
 	return vld.updateHotstuff(blk, voting)
@@ -259,6 +261,9 @@ func (vld *validator) verifyProposalToVote(proposal *core.Block) error {
 		if err := vld.verifyMerkleRoot(proposal); err != nil {
 			return err
 		}
+	}
+	if !ExecuteTxFlag {
+		return nil
 	}
 	return vld.verifyProposalTxs(proposal)
 }

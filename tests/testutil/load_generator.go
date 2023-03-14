@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/wooyang2018/ppov-blockchain/consensus"
 	"github.com/wooyang2018/ppov-blockchain/tests/cluster"
 )
 
@@ -54,10 +55,12 @@ func (lg *LoadGenerator) Run(ctx context.Context) {
 }
 
 func (lg *LoadGenerator) BatchRun(ctx context.Context) {
-	jobPerTick := 2000
+	jobPerTick := 30000
 	delay := time.Second / time.Duration(lg.txPerSec/jobPerTick)
 	ticker := time.NewTicker(delay)
 	defer ticker.Stop()
+	timer := time.NewTimer(30 * time.Second)
+	defer timer.Stop()
 	for {
 		select {
 		case <-ctx.Done():
@@ -65,6 +68,10 @@ func (lg *LoadGenerator) BatchRun(ctx context.Context) {
 		case <-ticker.C:
 			if _, txs, err := lg.client.BatchSubmitTx(jobPerTick); err == nil {
 				lg.increaseSubmitted(int64(len(*txs)))
+			}
+		case <-timer.C:
+			if !consensus.ExecuteTxFlag {
+				return
 			}
 		}
 	}

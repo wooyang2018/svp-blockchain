@@ -3,8 +3,12 @@ package testutil
 import (
 	"encoding/json"
 	"fmt"
+	"math"
+	"math/rand"
+	"strconv"
 	"time"
 
+	"github.com/wooyang2018/ppov-blockchain/consensus"
 	"github.com/wooyang2018/ppov-blockchain/core"
 	"github.com/wooyang2018/ppov-blockchain/execution"
 	"github.com/wooyang2018/ppov-blockchain/tests/cluster"
@@ -67,8 +71,10 @@ func (client *EmptyClient) BatchSubmitTx(num int) (int, *core.TxList, error) {
 
 func (client *EmptyClient) setupOnCluster(cls *cluster.Cluster) error {
 	client.cluster = cls
-	if err := client.deploy(); err != nil {
-		return err
+	if consensus.ExecuteTxFlag {
+		if err := client.deploy(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -102,8 +108,13 @@ func (client *EmptyClient) nativeDeploymentInput() *execution.DeploymentInput {
 }
 
 func (client *EmptyClient) MakeTx() *core.Transaction {
+	codeAddr := client.codeAddr
+	if codeAddr == nil {
+		codeAddr = execution.NativeCodeIDEmpty
+	}
 	return core.NewTransaction().
-		SetCodeAddr(client.codeAddr).
+		SetCodeAddr(codeAddr).
 		SetNonce(time.Now().UnixNano()).
+		SetInput([]byte(strconv.Itoa(rand.Intn(math.MaxInt)))).
 		Sign(client.signer)
 }

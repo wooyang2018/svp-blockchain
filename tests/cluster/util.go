@@ -141,9 +141,6 @@ func AddPPoVFlags(cmd *exec.Cmd, config *node.Config) {
 	if config.BroadcastTx {
 		cmd.Args = append(cmd.Args, "--broadcast-tx")
 	}
-	if config.ExecuteTX {
-		cmd.Args = append(cmd.Args, "--execute-tx")
-	}
 
 	cmd.Args = append(cmd.Args, "--storage-merkleBranchFactor",
 		strconv.Itoa(int(config.StorageConfig.MerkleBranchFactor)))

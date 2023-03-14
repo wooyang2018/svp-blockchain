@@ -14,6 +14,7 @@ type TxPool interface {
 	SubmitTx(tx *core.Transaction) error
 	StoreTxs(txs *core.TxList) error
 	PopTxsFromQueue(max int) [][]byte
+	GetTxsFromQueue(max int) [][]byte
 	SetTxsPending(hashes [][]byte)
 	GetTxsToExecute(hashes [][]byte) ([]*core.Transaction, [][]byte)
 	RemoveTxs(hashes [][]byte)

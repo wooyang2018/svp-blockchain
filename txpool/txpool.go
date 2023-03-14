@@ -83,6 +83,10 @@ func (pool *TxPool) PopTxsFromQueue(max int) [][]byte {
 	return pool.store.popTxsFromQueue(max)
 }
 
+func (pool *TxPool) GetTxsFromQueue(max int) [][]byte {
+	return pool.store.getTxsFromQueue(max)
+}
+
 func (pool *TxPool) PutTxsToQueue(hashes [][]byte) {
 	pool.store.putTxsToQueue(hashes)
 }
@@ -138,7 +142,11 @@ func (pool *TxPool) addTxList(txList *core.TxList) error {
 	defer close(out)
 
 	for i := 0; i < 50; i++ {
-		go pool.workerAddNewTx(jobCh, out)
+		go func(jobCh <-chan *core.Transaction, out chan<- error) {
+			for tx := range jobCh {
+				out <- pool.addNewTx(tx)
+			}
+		}(jobCh, out)
 	}
 	for _, tx := range *txList {
 		jobCh <- tx
@@ -150,12 +158,6 @@ func (pool *TxPool) addTxList(txList *core.TxList) error {
 		}
 	}
 	return nil
-}
-
-func (pool *TxPool) workerAddNewTx(jobCh <-chan *core.Transaction, out chan<- error) {
-	for tx := range jobCh {
-		out <- pool.addNewTx(tx)
-	}
 }
 
 func (pool *TxPool) addNewTx(tx *core.Transaction) error {

@@ -15,7 +15,6 @@ type Config struct {
 	Port        int
 	APIPort     int
 	BroadcastTx bool
-	ExecuteTX   bool //set to false when benchmark test
 
 	StorageConfig   storage.Config
 	ExecutionConfig execution.Config
@@ -26,7 +25,6 @@ var DefaultConfig = Config{
 	Port:            15150,
 	APIPort:         9040,
 	BroadcastTx:     true,
-	ExecuteTX:       true,
 	StorageConfig:   storage.DefaultConfig,
 	ExecutionConfig: execution.DefaultConfig,
 	ConsensusConfig: consensus.DefaultConfig,

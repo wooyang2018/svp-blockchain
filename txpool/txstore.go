@@ -112,6 +112,22 @@ func (store *txStore) popTxsFromQueue(max int) [][]byte {
 	return ret
 }
 
+func (store *txStore) getTxsFromQueue(max int) [][]byte {
+	store.mtx.Lock()
+	defer store.mtx.Unlock()
+
+	count := min(store.txq.Len(), max)
+	if count == 0 {
+		return nil
+	}
+	ret := make([][]byte, count)
+	for i := range ret {
+		item := (*store.txq)[i]
+		ret[i] = item.tx.Hash()
+	}
+	return ret
+}
+
 func min(i, j int) int {
 	if i < j {
 		return i

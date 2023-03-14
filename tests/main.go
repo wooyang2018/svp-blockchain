@@ -31,18 +31,18 @@ var (
 	EmptyChainCode = true  // deploy empty chaincode instead of ppovcoin
 
 	// run tests in remote linux cluster
-	// if false it'll use local cluster (running multiple nodes on single local machine)
-	RemoteLinuxCluster  = true
-	RemoteSetupRequired = true
-	RemoteLoginName     = "gdcni22"
-	RemoteKeySSH        = "~/.ssh/id_rsa"
-	RemoteHostsPath     = "hosts"
-	RemoteNetworkDevice = "ens9f0"
+	RemoteLinuxCluster    = true // if false it'll use local cluster (running multiple nodes on single local machine)
+	RemoteSetupRequired   = true
+	RemoteInstallRequired = false // if false it will not try to install dstat on remote machine
+	RemoteLoginName       = "gdcni22"
+	RemoteKeySSH          = "~/.ssh/id_rsa"
+	RemoteHostsPath       = "hosts"
+	RemoteNetworkDevice   = "ens9f0"
 
 	// run benchmark, otherwise run experiments
 	RunBenchmark     = true
 	BenchDuration    = 5 * time.Minute
-	BenchLoads       = []int{15000}
+	BenchLoads       = []int{100000, 200000, 300000}
 	BenchBatchSubmit = true //whether to enable batch transaction submission
 	BenchSubmitNodes = []int{0}
 
@@ -52,6 +52,9 @@ var (
 func getNodeConfig() node.Config {
 	config := node.DefaultConfig
 	config.Debug = true
+	if RunBenchmark {
+		config.BroadcastTx = false
+	}
 	return config
 }
 
@@ -196,15 +199,16 @@ func makeLocalClusterFactory() *cluster.LocalFactory {
 
 func makeRemoteClusterFactory() *cluster.RemoteFactory {
 	ftry, err := cluster.NewRemoteFactory(cluster.RemoteFactoryParams{
-		BinPath:       "./chain",
-		WorkDir:       path.Join(WorkDir, "remote-clusters"),
-		NodeCount:     NodeCount,
-		NodeConfig:    getNodeConfig(),
-		LoginName:     RemoteLoginName,
-		KeySSH:        RemoteKeySSH,
-		HostsPath:     RemoteHostsPath,
-		SetupRequired: RemoteSetupRequired,
-		NetworkDevice: RemoteNetworkDevice,
+		BinPath:         "./chain",
+		WorkDir:         path.Join(WorkDir, "remote-clusters"),
+		NodeCount:       NodeCount,
+		NodeConfig:      getNodeConfig(),
+		LoginName:       RemoteLoginName,
+		KeySSH:          RemoteKeySSH,
+		HostsPath:       RemoteHostsPath,
+		SetupRequired:   RemoteSetupRequired,
+		InstallRequired: RemoteInstallRequired,
+		NetworkDevice:   RemoteNetworkDevice,
 	})
 	check(err)
 	return ftry
