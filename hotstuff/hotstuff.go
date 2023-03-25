@@ -1,4 +1,5 @@
 // Copyright (C) 2021 Aung Maw
+// Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
 // package hotstuff implements hotstuff core algorithm from https://arxiv.org/abs/1803.05069
