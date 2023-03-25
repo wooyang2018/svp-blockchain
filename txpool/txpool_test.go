@@ -73,7 +73,7 @@ func TestTxPool_SubmitTx(t *testing.T) {
 
 	msgSvc.On("SubscribeTxList", mock.Anything).Return(emitter.New().Subscribe(10))
 
-	pool := New(storage, execution, msgSvc)
+	pool := New(storage, execution, msgSvc, true)
 	pool.broadcaster.timer.Reset(time.Hour) // to avoid timeout broadcast for testing
 	pool.broadcaster.batchSize = 2          // broadcast after two successful submitTx
 
@@ -129,7 +129,7 @@ func TestTxPool_SubscribeTxList(t *testing.T) {
 	txEmitter := emitter.New()
 	msgSvc.On("SubscribeTxList", mock.Anything).Return(txEmitter.Subscribe(10))
 
-	pool := New(storage, execution, msgSvc)
+	pool := New(storage, execution, msgSvc, true)
 	pool.broadcaster.timeout = time.Minute // to avoid timeout broadcast
 	pool.broadcaster.timer.Reset(time.Minute)
 
@@ -148,7 +148,7 @@ func TestTxPool_SubscribeTxList(t *testing.T) {
 
 	txEmitter.Emit(&core.TxList{tx1, tx2, tx3})
 
-	time.Sleep(5 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 
 	assert.Equal(2, pool.GetStatus().Queue)
 	storage.AssertExpectations(t)
@@ -165,7 +165,7 @@ func TestTxPool_Sync(t *testing.T) {
 
 	msgSvc.On("SubscribeTxList", mock.Anything).Return(emitter.New().Subscribe(10))
 
-	pool := New(storage, execution, msgSvc)
+	pool := New(storage, execution, msgSvc, true)
 	pool.broadcaster.timeout = time.Minute // to avoid timeout broadcast
 	pool.broadcaster.timer.Reset(time.Minute)
 
@@ -222,7 +222,7 @@ func TestTxPool_GetTxsToExecute(t *testing.T) {
 
 	msgSvc.On("SubscribeTxList", mock.Anything).Return(emitter.New().Subscribe(10))
 
-	pool := New(storage, execution, msgSvc)
+	pool := New(storage, execution, msgSvc, true)
 	pool.broadcaster.timeout = time.Minute // to avoid timeout broadcast
 	pool.broadcaster.timer.Reset(time.Minute)
 

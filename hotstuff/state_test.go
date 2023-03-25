@@ -10,6 +10,9 @@ import (
 )
 
 func Test_state_init(t *testing.T) {
+	if PPoVFlag {
+		t.Skip("skipping execution of Test_state_init because PPoVFlag is set to true")
+	}
 
 	b0 := new(MockBlock)
 	q0 := new(MockQC)

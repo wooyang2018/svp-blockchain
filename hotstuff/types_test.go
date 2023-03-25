@@ -47,6 +47,16 @@ func (m *MockBlock) Justify() QC {
 	return args.Get(0).(QC)
 }
 
+func (m *MockBlock) Timestamp() int64 {
+	args := m.Called()
+	return int64(args.Int(0))
+}
+
+func (m *MockBlock) Transactions() [][]byte {
+	args := m.Called()
+	return args.Get(0).([][]byte)
+}
+
 type MockQC struct {
 	mock.Mock
 }

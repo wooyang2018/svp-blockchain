@@ -22,7 +22,17 @@ func (m *MockTxPool) SubmitTx(tx *core.Transaction) error {
 	return args.Error(0)
 }
 
+func (m *MockTxPool) StoreTxs(txs *core.TxList) error {
+	args := m.Called(txs)
+	return args.Error(0)
+}
+
 func (m *MockTxPool) PopTxsFromQueue(max int) [][]byte {
+	args := m.Called(max)
+	return castBytesBytes(args.Get(0))
+}
+
+func (m *MockTxPool) GetTxsFromQueue(max int) [][]byte {
 	args := m.Called(max)
 	return castBytesBytes(args.Get(0))
 }
@@ -167,6 +177,10 @@ func (m *MockExecution) Execute(
 ) (*core.BlockCommit, []*core.TxCommit) {
 	args := m.Called(blk, txs)
 	return castBlockCommit(args.Get(0)), castTxCommits(args.Get(1))
+}
+
+func (m *MockExecution) MockExecute(blk *core.Block) (*core.BlockCommit, []*core.TxCommit) {
+	return nil, nil
 }
 
 func castBytes(val interface{}) []byte {

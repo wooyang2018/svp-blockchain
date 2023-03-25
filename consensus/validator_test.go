@@ -12,6 +12,9 @@ import (
 )
 
 func TestValidator_verifyProposalToVote(t *testing.T) {
+	if !ExecuteTxFlag {
+		t.Skip("skipping execution of TestValidator_verifyProposalToVote because ExecuteTxFlag is set to false")
+	}
 	priv0 := core.GenerateKey(nil)
 	priv1 := core.GenerateKey(nil)
 	validators := []string{

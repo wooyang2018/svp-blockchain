@@ -33,7 +33,7 @@ func setupRotator() (*rotator, *core.Block) {
 		resources: resources,
 		state:     state,
 	}
-	hotstuff := hotstuff.New(hsDriver, newHsBlock(b0, state), newHsQC(q0, state))
+	hotstuff := hotstuff.New(hsDriver, nil, newHsBlock(b0, state), newHsQC(q0, state))
 	return &rotator{
 		resources: resources,
 		config:    DefaultConfig,

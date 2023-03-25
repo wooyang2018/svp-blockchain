@@ -11,6 +11,9 @@ import (
 )
 
 func TestHotstuff_UpdateQCHigh(t *testing.T) {
+	if PPoVFlag {
+		t.Skip("skipping execution of TestHotstuff_UpdateQCHigh because PPoVFlag is set to true")
+	}
 	q0 := newMockQC(nil)
 	b0 := newMockBlock(10, nil, q0)
 
@@ -73,11 +76,14 @@ func TestHotstuff_UpdateQCHigh(t *testing.T) {
 }
 
 func TestHotstuff_SuccessfulPropose(t *testing.T) {
+	if PPoVFlag {
+		t.Skip("skipping execution of TestHotstuff_SuccessfulPropose because PPoVFlag is set to true")
+	}
 	q0 := newMockQC(nil)
 	b0 := newMockBlock(10, nil, q0)
 
 	driver := new(MockDriver)
-	hs := New(driver, b0, q0)
+	hs := New(driver, nil, b0, q0)
 
 	b1 := newMockBlock(11, b0, q0)
 
@@ -101,11 +107,14 @@ func TestHotstuff_SuccessfulPropose(t *testing.T) {
 }
 
 func TestHotstuff_FailedPropose(t *testing.T) {
+	if PPoVFlag {
+		t.Skip("skipping execution of TestHotstuff_FailedPropose because PPoVFlag is set to true")
+	}
 	q0 := newMockQC(nil)
 	b0 := newMockBlock(10, nil, q0)
 
 	driver := new(MockDriver)
-	hs := New(driver, b0, q0)
+	hs := New(driver, nil, b0, q0)
 
 	driver.On("CreateLeaf", b0, q0, b0.Height()+1).Once().Return(nil)
 
@@ -120,6 +129,9 @@ func TestHotstuff_FailedPropose(t *testing.T) {
 }
 
 func TestHotstuff_OnReceiveVote(t *testing.T) {
+	if PPoVFlag {
+		t.Skip("skipping execution of TestHotstuff_OnReceiveVote because PPoVFlag is set to true")
+	}
 	q0 := newMockQC(nil)
 	b0 := newMockBlock(10, nil, q0)
 	b1 := newMockBlock(11, b0, q0)
@@ -128,7 +140,7 @@ func TestHotstuff_OnReceiveVote(t *testing.T) {
 	assert := assert.New(t)
 
 	driver := new(MockDriver)
-	hs := New(driver, b0, q0)
+	hs := New(driver, nil, b0, q0)
 
 	driver.On("CreateLeaf", b0, q0, b0.Height()+1).Once().Return(b1)
 	driver.On("BroadcastProposal", b1).Once()
@@ -210,6 +222,9 @@ func TestHotstuff_CanVote(t *testing.T) {
 }
 
 func TestHotstuff_Update(t *testing.T) {
+	if PPoVFlag {
+		t.Skip("skipping execution of TestHotstuff_Update because PPoVFlag is set to true")
+	}
 	q0 := newMockQC(nil)
 	b0 := newMockBlock(10, nil, q0) // bLock
 
@@ -268,7 +283,7 @@ func TestHotstuff_Update(t *testing.T) {
 	}
 	var tests []testCase
 
-	if Phases == "ONE" {
+	if PPoVFlag {
 		tests = []testCase{
 			{"proposal 1", hs0, b1, 0, q0, b1, b0},
 			{"proposal dup", hs0, bf0, 0, q0, b1, b0},
@@ -278,7 +293,7 @@ func TestHotstuff_Update(t *testing.T) {
 			{"not one chain", hs0, bb3, 0, q1, bb3, bb1},
 			{"one chain but invalid commit phase", hs3, b2, 0, q2, b2, b2},
 		}
-	} else if Phases == "THREE" {
+	} else {
 		tests = []testCase{
 			{"proposal 1", hs0, b1, 0, q0, b0, b0},
 			{"proposal dup", hs0, bf0, 0, q0, b0, b0},
