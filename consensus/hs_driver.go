@@ -68,7 +68,9 @@ func (hsd *hsDriver) BroadcastProposal(hsBlk hotstuff.Block) {
 func (hsd *hsDriver) VoteBlock(hsBlk hotstuff.Block) {
 	blk := hsBlk.(*hsBlock).block
 	vote := blk.Vote(hsd.resources.Signer)
-	hsd.resources.TxPool.SetTxsPending(blk.Transactions())
+	if ExecuteTxFlag {
+		hsd.resources.TxPool.SetTxsPending(blk.Transactions())
+	}
 	hsd.delayVoteWhenNoTxs()
 	proposer := hsd.resources.VldStore.GetWorkerIndex(blk.Proposer())
 	if proposer != hsd.state.getLeaderIndex() {

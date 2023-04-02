@@ -262,16 +262,20 @@ func TestHotstuff_Update(t *testing.T) {
 
 	hs0 := new(Hotstuff)
 	hs0.state = newState(b0, q0)
+	hs0.tester = newTester(nil)
 
 	hs1 := new(Hotstuff)
 	hs1.state = newState(b0, q1)
+	hs1.tester = newTester(nil)
 
 	hs2 := new(Hotstuff)
 	hs2.state = newState(b0, q2)
+	hs2.tester = newTester(nil)
 	hs2.setBLock(b1)
 
 	hs3 := new(Hotstuff)
 	hs3.state = newState(b2, q2)
+	hs3.tester = newTester(nil)
 
 	type testCase struct {
 		name      string

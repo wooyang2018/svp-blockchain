@@ -215,7 +215,7 @@ func (pool *TxPool) storeTxs(txs *core.TxList) error {
 			}
 		}
 	}
-	logger.I().Debugw("store txs into txpool", "txs", len(missing))
+	logger.I().Debugw("store txs into txpool", "txs", len(missing), "queue", pool.store.txq.Len())
 	if len(missing) == 0 {
 		return nil
 	}

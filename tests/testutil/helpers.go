@@ -17,10 +17,10 @@ func Sleep(d time.Duration) {
 }
 
 func PickUniqueRandoms(total, count int) []int {
-	rand.Seed(time.Now().Unix())
+	r := rand.New(rand.NewSource(time.Now().Unix()))
 	unique := make(map[int]struct{}, count)
 	for len(unique) < count {
-		unique[rand.Intn(total)] = struct{}{}
+		unique[r.Intn(total)] = struct{}{}
 	}
 	ret := make([]int, 0, count)
 	for v := range unique {

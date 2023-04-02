@@ -132,6 +132,8 @@ func (bm *Benchmark) runAsync(loadCtx context.Context, done chan struct{}) {
 	if bm.err != nil {
 		return
 	}
+	bm.cluster.EmptyChainCode = EmptyChainCode
+	bm.cluster.CheckRotation = CheckRotation
 
 	bm.startDstat()
 

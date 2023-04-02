@@ -97,7 +97,9 @@ func TestHsDriver_VoteBlock(t *testing.T) {
 
 	txPool := new(MockTxPool)
 	txPool.On("GetStatus").Return(txpool.Status{}) // no txs in the pool
-	txPool.On("SetTxsPending", blk.Transactions())
+	if ExecuteTxFlag {
+		txPool.On("SetTxsPending", blk.Transactions())
+	}
 	hsd.resources.TxPool = txPool
 
 	// should sign block and send vote
@@ -116,9 +118,11 @@ func TestHsDriver_VoteBlock(t *testing.T) {
 	assert.GreaterOrEqual(elapsed, hsd.config.TxWaitTime, "should delay if no txs in the pool")
 
 	txPool = new(MockTxPool)
-	hsd.resources.TxPool = txPool
 	txPool.On("GetStatus").Return(txpool.Status{Total: 1}) // one txs in the pool
-	txPool.On("SetTxsPending", blk.Transactions())
+	if ExecuteTxFlag {
+		txPool.On("SetTxsPending", blk.Transactions())
+	}
+	hsd.resources.TxPool = txPool
 
 	start = time.Now()
 	hsd.VoteBlock(newHsBlock(blk, hsd.state))

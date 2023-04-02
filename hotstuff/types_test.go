@@ -89,9 +89,11 @@ func newMockBlock(height int, parent Block, qc QC) *MockBlock {
 	b := new(MockBlock)
 	b.On("Height").Return(height)
 	b.On("Parent").Return(parent)
-	b.On("Justify").Return(qc)
 	b.On("Equal", b).Return(true)
 	b.On("Equal", mock.Anything).Return(false)
+	b.On("Justify").Return(qc)
+	b.On("Timestamp").Return(0)
+	b.On("Transactions").Return([][]byte{})
 	return b
 }
 

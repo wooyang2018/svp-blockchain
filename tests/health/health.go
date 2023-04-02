@@ -20,8 +20,6 @@ func CheckAllNodes(cls *cluster.Cluster) error {
 	hc := &checker{
 		cluster:  cls,
 		majority: false,
-		empty:    cls.EmptyChainCode,
-		rotate:   cls.CheckRotation,
 	}
 	return hc.run()
 }
@@ -31,8 +29,6 @@ func CheckMajorityNodes(cls *cluster.Cluster) error {
 	hc := &checker{
 		cluster:  cls,
 		majority: true,
-		empty:    cls.EmptyChainCode,
-		rotate:   cls.CheckRotation,
 	}
 	return hc.run()
 }
@@ -62,8 +58,6 @@ after leader change, all leaderIdx should be equal
 type checker struct {
 	cluster   *cluster.Cluster
 	majority  bool // should (majority or all) nodes healthy
-	empty     bool
-	rotate    bool
 	interrupt chan struct{}
 	mtxIntr   sync.Mutex
 	err       error
@@ -76,7 +70,7 @@ func (hc *checker) run() error {
 	wg.Add(2)
 	go hc.runChecker(hc.checkSafety, wg)
 	go hc.runChecker(hc.checkLiveness, wg)
-	if hc.rotate {
+	if hc.cluster.CheckRotation {
 		wg.Add(1)
 		go hc.runChecker(hc.checkRotation, wg)
 	}

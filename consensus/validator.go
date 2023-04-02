@@ -109,7 +109,7 @@ func (vld *validator) onReceiveProposal(proposal *core.Block) error {
 		return err
 	}
 	pidx := vld.resources.VldStore.GetWorkerIndex(proposal.Proposer())
-	logger.I().Debugw("received proposal", "proposer", pidx, "height", proposal.Height())
+	logger.I().Debugw("received proposal", "proposer", pidx, "height", proposal.Height(), "txs", len(proposal.Transactions()))
 	parent, err := vld.getParentBlock(proposal)
 	if err != nil {
 		return err
@@ -274,9 +274,11 @@ func (vld *validator) verifyMerkleRoot(proposal *core.Block) error {
 	if bh != proposal.ExecHeight() {
 		return fmt.Errorf("invalid exec height")
 	}
-	mr := vld.resources.Storage.GetMerkleRoot()
-	if !bytes.Equal(mr, proposal.MerkleRoot()) {
-		return fmt.Errorf("invalid merkle root")
+	if ExecuteTxFlag {
+		mr := vld.resources.Storage.GetMerkleRoot()
+		if !bytes.Equal(mr, proposal.MerkleRoot()) {
+			return fmt.Errorf("invalid merkle root")
+		}
 	}
 	return nil
 }

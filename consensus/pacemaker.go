@@ -96,7 +96,7 @@ func (pm *pacemaker) nextBeatTimeout() *time.Timer {
 
 func (pm *pacemaker) propose() {
 	blk := pm.hotstuff.OnPropose()
-	logger.I().Debugw("proposed block", "height", blk.Height(), "qc", qcRefHeight(blk.Justify()))
+	logger.I().Debugw("proposed block", "height", blk.Height(), "qc", qcRefHeight(blk.Justify()), "txs", len(blk.Transactions()))
 	vote := blk.(*hsBlock).block.ProposerVote()
 	pm.hotstuff.OnReceiveVote(newHsVote(vote, pm.state))
 	pm.hotstuff.Update(blk)
