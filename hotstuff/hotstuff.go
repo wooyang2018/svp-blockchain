@@ -90,7 +90,7 @@ func (hs *Hotstuff) CheckLivenessRule(bNew Block) bool {
 
 // Update perform two/three chain consensus phases
 func (hs *Hotstuff) Update(bNew Block) {
-	if PPoVFlag {
+	if TwoPhaseFlag {
 		_, b, b1 := GetJustifyBlocks(bNew)
 		hs.UpdateQCHigh(bNew.Justify()) // prepare phase for b1
 		if CmpBlockHeight(b1, hs.GetBLock()) == 1 {

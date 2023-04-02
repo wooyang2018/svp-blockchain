@@ -6,6 +6,7 @@ package testutil
 
 import (
 	"context"
+	"fmt"
 	"sync/atomic"
 	"time"
 
@@ -14,16 +15,21 @@ import (
 )
 
 type LoadGenerator struct {
-	txPerSec int
-	client   LoadClient
+	txPerSec   int
+	jobPerTick int //每一次嘀嗒需完成的任务数
+	client     LoadClient
 
 	totalSubmitted int64
 }
 
-func NewLoadGenerator(tps int, client LoadClient) *LoadGenerator {
+func NewLoadGenerator(client LoadClient, tps int, jobs int) *LoadGenerator {
+	if tps < jobs {
+		jobs = tps
+	}
 	return &LoadGenerator{
-		txPerSec: tps,
-		client:   client,
+		txPerSec:   tps,
+		jobPerTick: jobs,
+		client:     client,
 	}
 }
 
@@ -32,8 +38,7 @@ func (lg *LoadGenerator) SetupOnCluster(cls *cluster.Cluster) error {
 }
 
 func (lg *LoadGenerator) Run(ctx context.Context) {
-	jobPerTick := 20
-	delay := time.Second / time.Duration(lg.txPerSec/jobPerTick)
+	delay := time.Second / time.Duration(lg.txPerSec/lg.jobPerTick) //每一次嘀嗒的间隔时间
 	ticker := time.NewTicker(delay)
 	defer ticker.Stop()
 
@@ -48,7 +53,7 @@ func (lg *LoadGenerator) Run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			for i := 0; i < jobPerTick; i++ {
+			for i := 0; i < lg.jobPerTick; i++ {
 				jobCh <- struct{}{}
 			}
 		}
@@ -56,18 +61,20 @@ func (lg *LoadGenerator) Run(ctx context.Context) {
 }
 
 func (lg *LoadGenerator) BatchRun(ctx context.Context) {
-	jobPerTick := 30000
-	delay := time.Second / time.Duration(lg.txPerSec/jobPerTick)
+	delay := time.Second / time.Duration(lg.txPerSec/lg.jobPerTick)
 	ticker := time.NewTicker(delay)
 	defer ticker.Stop()
-	timer := time.NewTimer(30 * time.Second)
+	timer := time.NewTimer(30 * time.Second) //ExecuteTxFlag为false时的函数退出时间
 	defer timer.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			if _, txs, err := lg.client.BatchSubmitTx(jobPerTick); err == nil {
+			_, txs, err := lg.client.BatchSubmitTx(lg.jobPerTick)
+			if err != nil {
+				fmt.Printf("batch submit tx failed %+v\n", err)
+			} else {
 				lg.increaseSubmitted(int64(len(*txs)))
 			}
 		case <-timer.C:

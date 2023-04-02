@@ -210,8 +210,12 @@ func (pool *TxPool) storeTxs(txs *core.TxList) error {
 	for _, tx := range *txs {
 		if !pool.storage.HasTx(tx.Hash()) && pool.store.getTx(tx.Hash()) == nil {
 			missing = append(missing, tx)
+			if pool.broadcastTx {
+				pool.broadcaster.queue <- tx
+			}
 		}
 	}
+	logger.I().Debugw("store txs into txpool", "txs", len(missing))
 	if len(missing) == 0 {
 		return nil
 	}

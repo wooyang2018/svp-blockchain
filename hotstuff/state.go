@@ -29,7 +29,7 @@ type state struct {
 func newState(b0 Block, q0 QC) *state {
 	s := new(state)
 	s.qcHighEmitter = emitter.New()
-	if PPoVFlag {
+	if TwoPhaseFlag {
 		s.setBVote(q0.Block())
 		s.setBLock(q0.Block())
 		s.setBLeaf(q0.Block())

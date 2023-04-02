@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/wooyang2018/ppov-blockchain/consensus"
 	"github.com/wooyang2018/ppov-blockchain/node"
 	"github.com/wooyang2018/ppov-blockchain/tests/cluster"
 	"github.com/wooyang2018/ppov-blockchain/tests/experiments"
@@ -24,28 +25,28 @@ var (
 	WorkDir   = "./workdir"
 	NodeCount = 4
 
-	LoadTxPerSec     = 100
-	LoadMintAccounts = 100
-	LoadDestAccounts = 10000 // increase dest accounts for benchmark
+	LoadTxPerSec    = 100
+	LoadJobPerTick  = 1000
+	LoadSubmitNodes = []int{0}
+	LoadBatchSubmit = true //whether to enable batch transaction submission
 
+	//chaincode priority: empty > ppovcoin bincc > ppovcoin
+	EmptyChainCode = false // deploy empty chaincode instead of ppovcoin
 	PPoVCoinBinCC  = false // deploy ppovcoin chaincode as bincc type (not embeded in ppov node)
-	EmptyChainCode = true  // deploy empty chaincode instead of ppovcoin
+	CheckRotation  = true
+	BroadcastTx    = true
 
 	// run tests in remote linux cluster
 	RemoteLinuxCluster    = true // if false it'll use local cluster (running multiple nodes on single local machine)
 	RemoteSetupRequired   = true
 	RemoteInstallRequired = false // if false it will not try to install dstat on remote machine
-	RemoteLoginName       = "gdcni22"
 	RemoteKeySSH          = "~/.ssh/id_rsa"
 	RemoteHostsPath       = "hosts"
-	RemoteNetworkDevice   = "ens9f0"
 
 	// run benchmark, otherwise run experiments
-	RunBenchmark     = true
-	BenchDuration    = 5 * time.Minute
-	BenchLoads       = []int{100000, 200000, 300000}
-	BenchBatchSubmit = true //whether to enable batch transaction submission
-	BenchSubmitNodes = []int{0}
+	RunBenchmark  = true
+	BenchDuration = 5 * time.Minute
+	BenchLoads    = []int{5000, 10000, 15000}
 
 	SetupClusterTemplate = false
 )
@@ -53,8 +54,10 @@ var (
 func getNodeConfig() node.Config {
 	config := node.DefaultConfig
 	config.Debug = true
-	if RunBenchmark {
-		config.BroadcastTx = false
+	config.BroadcastTx = BroadcastTx
+	if !CheckRotation {
+		config.ConsensusConfig.ViewWidth = 1 * time.Hour
+		config.ConsensusConfig.LeaderTimeout = 1 * time.Hour
 	}
 	return config
 }
@@ -76,7 +79,7 @@ func setupExperiments() []Experiment {
 }
 
 func main() {
-	printVars()
+	printAndCheckVars()
 	os.Mkdir(WorkDir, 0755)
 	buildPPoV()
 	setupTransport()
@@ -95,31 +98,27 @@ func main() {
 			if err != nil {
 				return
 			}
+			cls.EmptyChainCode = EmptyChainCode
+			cls.CheckRotation = CheckRotation
 			fmt.Println("\nThe cluster startup command is as follows:")
 			for i := 0; i < cls.NodeCount(); i++ {
 				fmt.Println(cls.GetNode(i).PrintCmd())
 			}
 			return
 		}
-		runExperiments(testutil.NewLoadGenerator(
-			LoadTxPerSec, makeLoadClient(),
-		), cfactory)
+		runExperiments(testutil.NewLoadGenerator(makeLoadClient(),
+			LoadTxPerSec, LoadJobPerTick), cfactory)
 	}
 }
 
 func setupTransport() {
 	// to make load test http client efficient
-	transport := (http.DefaultTransport.(*http.Transport))
+	transport := http.DefaultTransport.(*http.Transport)
 	transport.MaxIdleConns = 100
 	transport.MaxIdleConnsPerHost = 100
 }
 
 func runBenchmark() {
-	if !RemoteLinuxCluster {
-		fmt.Println("mush run benchmark on remote cluster")
-		os.Exit(1)
-		return
-	}
 	bm := &Benchmark{
 		workDir:    path.Join(WorkDir, "benchmarks"),
 		duration:   BenchDuration,
@@ -140,13 +139,70 @@ func runExperiments(loadGen *testutil.LoadGenerator, cfactory cluster.ClusterFac
 	fmt.Printf("\nTotal: %d  |  Pass: %d  |  Fail: %d\n", len(r.experiments), pass, fail)
 }
 
-func printVars() {
-	fmt.Println()
+func printAndCheckVars() {
 	fmt.Println("NodeCount =", NodeCount)
-	fmt.Println("LoadTxPerSec=", LoadTxPerSec)
-	fmt.Println("RemoteCluster =", RemoteLinuxCluster)
-	fmt.Println("RunBenchmark=", RunBenchmark)
-	fmt.Println("SetupClusterTemplate=", SetupClusterTemplate)
+	fmt.Println("LoadJobPerTick =", LoadJobPerTick)
+	fmt.Println("LoadSubmitNodes =", LoadSubmitNodes)
+	fmt.Println("LoadBatchSubmit =", LoadBatchSubmit)
+	fmt.Println("EmptyChainCode =", EmptyChainCode)
+	fmt.Println("CheckRotation =", CheckRotation)
+	fmt.Println("BroadcastTx =", BroadcastTx)
+	fmt.Println("RemoteLinuxCluster =", RemoteLinuxCluster)
+	fmt.Println("RunBenchmark =", RunBenchmark)
+	fmt.Println("BenchLoads =", BenchLoads)
+	fmt.Println("SetupClusterTemplate =", SetupClusterTemplate)
+	fmt.Println("consensus.ExecuteTxFlag =", consensus.ExecuteTxFlag)
+	fmt.Println()
+	pass := true
+	if !BroadcastTx && len(LoadSubmitNodes) != 1 {
+		fmt.Println("!BroadcastTx ===> len(LoadSubmitNodes)=1")
+		pass = false
+	}
+	if !RunBenchmark && len(LoadSubmitNodes) != 0 {
+		fmt.Println("!RunBenchmark =?=> len(LoadSubmitNodes)=0")
+	}
+	if RunBenchmark && !LoadBatchSubmit {
+		fmt.Println("RunBenchmark =?=> LoadBatchSubmit")
+	}
+	if !RunBenchmark && !CheckRotation {
+		fmt.Println("!RunBenchmark ===> CheckRotation")
+		pass = false
+	}
+	if !RunBenchmark && !BroadcastTx {
+		fmt.Println("!RunBenchmark ===> BroadcastTx")
+		pass = false
+	}
+	if !consensus.ExecuteTxFlag && BroadcastTx || !BroadcastTx && consensus.ExecuteTxFlag {
+		fmt.Println("!consensus.ExecuteTxFlag <=?=> !BroadcastTx")
+	}
+	if consensus.ExecuteTxFlag && !BroadcastTx {
+		fmt.Println("consensus.ExecuteTxFlag ===> BroadcastTx")
+		pass = false
+	}
+	if RunBenchmark && !RemoteLinuxCluster {
+		fmt.Println("RunBenchmark ===> RemoteLinuxCluster")
+		pass = false
+	}
+	if SetupClusterTemplate && RunBenchmark {
+		fmt.Println("SetupClusterTemplate ===> !RunBenchmark")
+		pass = false
+	}
+	if !consensus.ExecuteTxFlag && RunBenchmark {
+		fmt.Println("!consensus.ExecuteTxFlag ===> !RunBenchmark")
+		pass = false
+	}
+	if !consensus.ExecuteTxFlag && len(BenchLoads) > 1 {
+		fmt.Println("!consensus.ExecuteTxFlag =?=> len(BenchLoads)=1")
+	}
+	if !RunBenchmark && !consensus.ExecuteTxFlag {
+		fmt.Println("!RunBenchmark ===> consensus.ExecuteTxFlag")
+		pass = false
+	}
+	if pass {
+		fmt.Println("test parameters passed verification")
+	} else {
+		os.Exit(1)
+	}
 	fmt.Println()
 }
 
@@ -164,14 +220,16 @@ func buildPPoV() {
 func makeLoadClient() testutil.LoadClient {
 	fmt.Println("Preparing load client")
 	if EmptyChainCode {
-		return testutil.NewEmptyClient(BenchSubmitNodes)
+		return testutil.NewEmptyClient(LoadSubmitNodes)
 	}
 	var binccPath string
 	if PPoVCoinBinCC {
 		buildPPoVCoinBinCC()
 		binccPath = "./ppovcoin"
 	}
-	return testutil.NewPPoVCoinClient(BenchSubmitNodes, LoadMintAccounts, LoadDestAccounts, binccPath)
+	mintAccounts := 100
+	destAccounts := 10000 // increase dest accounts for benchmark
+	return testutil.NewPPoVCoinClient(LoadSubmitNodes, mintAccounts, destAccounts, binccPath)
 }
 
 func buildPPoVCoinBinCC() {
@@ -204,12 +262,10 @@ func makeRemoteClusterFactory() *cluster.RemoteFactory {
 		WorkDir:         path.Join(WorkDir, "remote-clusters"),
 		NodeCount:       NodeCount,
 		NodeConfig:      getNodeConfig(),
-		LoginName:       RemoteLoginName,
 		KeySSH:          RemoteKeySSH,
 		HostsPath:       RemoteHostsPath,
 		SetupRequired:   RemoteSetupRequired,
 		InstallRequired: RemoteInstallRequired,
-		NetworkDevice:   RemoteNetworkDevice,
 	})
 	check(err)
 	return ftry

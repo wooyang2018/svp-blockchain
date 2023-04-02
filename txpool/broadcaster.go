@@ -24,8 +24,8 @@ type broadcaster struct {
 func newBroadcaster(msgSvc MsgService) *broadcaster {
 	b := &broadcaster{
 		msgSvc:    msgSvc,
-		queue:     make(chan *core.Transaction, 1000),
-		batchSize: 100,
+		queue:     make(chan *core.Transaction, 5000),
+		batchSize: 1000,
 		timeout:   5 * time.Millisecond,
 	}
 	b.txBatch = make([]*core.Transaction, 0, b.batchSize)

@@ -1,8 +1,8 @@
 /chain.exe
 /chain
 /tests/chain
+/tests/ppovcoin
 /tests/workdir
-/tests/hosts
 /docs
 
 ***/.DS_Store

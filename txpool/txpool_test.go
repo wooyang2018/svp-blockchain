@@ -149,7 +149,7 @@ func TestTxPool_SubscribeTxList(t *testing.T) {
 
 	txEmitter.Emit(&core.TxList{tx1, tx2, tx3})
 
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(20 * time.Millisecond)
 
 	assert.Equal(2, pool.GetStatus().Queue)
 	storage.AssertExpectations(t)

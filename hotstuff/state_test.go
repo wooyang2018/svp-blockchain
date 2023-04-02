@@ -11,8 +11,8 @@ import (
 )
 
 func Test_state_init(t *testing.T) {
-	if PPoVFlag {
-		t.Skip("skipping execution of Test_state_init because PPoVFlag is set to true")
+	if TwoPhaseFlag {
+		t.Skip("skipping execution of Test_state_init because TwoPhaseFlag is set to true")
 	}
 
 	b0 := new(MockBlock)

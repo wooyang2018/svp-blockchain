@@ -6,7 +6,7 @@ package consensus
 
 import "time"
 
-const ExecuteTxFlag = false //set to false when benchmark test
+const ExecuteTxFlag = true //set to false when benchmark test
 
 type Config struct {
 	ChainID int64
@@ -34,11 +34,11 @@ type Config struct {
 }
 
 var DefaultConfig = Config{
-	BlockTxLimit:  200000,
+	BlockTxLimit:  10000,
 	TxWaitTime:    1 * time.Second,
 	BeatTimeout:   1000 * time.Millisecond,
 	BlockDelay:    100 * time.Millisecond, // maximum block rate = 10 blk per sec
-	ViewWidth:     1 * time.Hour,
-	LeaderTimeout: 1 * time.Hour,
+	ViewWidth:     60 * time.Second,
+	LeaderTimeout: 20 * time.Second,
 	BenchmarkPath: "",
 }

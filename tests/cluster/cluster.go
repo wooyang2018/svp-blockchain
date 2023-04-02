@@ -26,8 +26,10 @@ type ClusterFactory interface {
 }
 
 type Cluster struct {
-	nodeConfig node.Config
-	nodes      []Node
+	nodeConfig     node.Config
+	nodes          []Node
+	CheckRotation  bool
+	EmptyChainCode bool
 }
 
 func (cls *Cluster) NodeConfig() node.Config {

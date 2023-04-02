@@ -12,8 +12,8 @@ import (
 )
 
 func TestHotstuff_UpdateQCHigh(t *testing.T) {
-	if PPoVFlag {
-		t.Skip("skipping execution of TestHotstuff_UpdateQCHigh because PPoVFlag is set to true")
+	if TwoPhaseFlag {
+		t.Skip("skipping execution of TestHotstuff_UpdateQCHigh because TwoPhaseFlag is set to true")
 	}
 	q0 := newMockQC(nil)
 	b0 := newMockBlock(10, nil, q0)
@@ -77,8 +77,8 @@ func TestHotstuff_UpdateQCHigh(t *testing.T) {
 }
 
 func TestHotstuff_SuccessfulPropose(t *testing.T) {
-	if PPoVFlag {
-		t.Skip("skipping execution of TestHotstuff_SuccessfulPropose because PPoVFlag is set to true")
+	if TwoPhaseFlag {
+		t.Skip("skipping execution of TestHotstuff_SuccessfulPropose because TwoPhaseFlag is set to true")
 	}
 	q0 := newMockQC(nil)
 	b0 := newMockBlock(10, nil, q0)
@@ -108,8 +108,8 @@ func TestHotstuff_SuccessfulPropose(t *testing.T) {
 }
 
 func TestHotstuff_FailedPropose(t *testing.T) {
-	if PPoVFlag {
-		t.Skip("skipping execution of TestHotstuff_FailedPropose because PPoVFlag is set to true")
+	if TwoPhaseFlag {
+		t.Skip("skipping execution of TestHotstuff_FailedPropose because TwoPhaseFlag is set to true")
 	}
 	q0 := newMockQC(nil)
 	b0 := newMockBlock(10, nil, q0)
@@ -130,8 +130,8 @@ func TestHotstuff_FailedPropose(t *testing.T) {
 }
 
 func TestHotstuff_OnReceiveVote(t *testing.T) {
-	if PPoVFlag {
-		t.Skip("skipping execution of TestHotstuff_OnReceiveVote because PPoVFlag is set to true")
+	if TwoPhaseFlag {
+		t.Skip("skipping execution of TestHotstuff_OnReceiveVote because TwoPhaseFlag is set to true")
 	}
 	q0 := newMockQC(nil)
 	b0 := newMockBlock(10, nil, q0)
@@ -223,8 +223,8 @@ func TestHotstuff_CanVote(t *testing.T) {
 }
 
 func TestHotstuff_Update(t *testing.T) {
-	if PPoVFlag {
-		t.Skip("skipping execution of TestHotstuff_Update because PPoVFlag is set to true")
+	if TwoPhaseFlag {
+		t.Skip("skipping execution of TestHotstuff_Update because TwoPhaseFlag is set to true")
 	}
 	q0 := newMockQC(nil)
 	b0 := newMockBlock(10, nil, q0) // bLock
@@ -284,7 +284,7 @@ func TestHotstuff_Update(t *testing.T) {
 	}
 	var tests []testCase
 
-	if PPoVFlag {
+	if TwoPhaseFlag {
 		tests = []testCase{
 			{"proposal 1", hs0, b1, 0, q0, b1, b0},
 			{"proposal dup", hs0, bf0, 0, q0, b1, b0},

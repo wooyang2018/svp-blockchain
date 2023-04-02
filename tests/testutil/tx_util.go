@@ -106,7 +106,7 @@ func BatchSubmitTx(cls *cluster.Cluster, retryOrder []int, txs *core.TxList) (in
 			return i, nil
 		}
 	}
-	return 0, fmt.Errorf("cannot submit txs %w", retErr)
+	return 0, retErr
 }
 
 func GetTxStatus(node cluster.Node, hash []byte) (txpool.TxStatus, error) {

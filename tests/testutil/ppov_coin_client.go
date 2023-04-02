@@ -94,6 +94,9 @@ func (client *PPoVCoinClient) BatchSubmitTx(num int) (int, *core.TxList, error) 
 			}
 		}(jobCh, out)
 	}
+	for i := 0; i < num; i++ {
+		jobCh <- struct{}{}
+	}
 	txs := make([]*core.Transaction, num)
 	for i := 0; i < num; i++ {
 		txs[i] = <-out

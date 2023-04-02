@@ -20,8 +20,8 @@ func CheckAllNodes(cls *cluster.Cluster) error {
 	hc := &checker{
 		cluster:  cls,
 		majority: false,
-		empty:    true,
-		rotate:   false,
+		empty:    cls.EmptyChainCode,
+		rotate:   cls.CheckRotation,
 	}
 	return hc.run()
 }
@@ -31,8 +31,8 @@ func CheckMajorityNodes(cls *cluster.Cluster) error {
 	hc := &checker{
 		cluster:  cls,
 		majority: true,
-		empty:    true,
-		rotate:   false,
+		empty:    cls.EmptyChainCode,
+		rotate:   cls.CheckRotation,
 	}
 	return hc.run()
 }

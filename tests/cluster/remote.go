@@ -26,20 +26,19 @@ type RemoteFactoryParams struct {
 
 	NodeConfig node.Config
 
-	LoginName string // e.g ubuntu
 	KeySSH    string
 	HostsPath string // file path to host ip addresses
 
 	SetupRequired   bool
 	InstallRequired bool
-
-	NetworkDevice string
 }
 
 type RemoteFactory struct {
 	params      RemoteFactoryParams
 	templateDir string
 	hosts       []string
+	loginNames  []string
+	netDevices  []string
 	workDirs    []string
 }
 
@@ -51,18 +50,45 @@ func NewRemoteFactory(params RemoteFactoryParams) (*RemoteFactory, error) {
 		params: params,
 	}
 	ftry.templateDir = path.Join(ftry.params.WorkDir, "cluster_template")
-	hosts, workDirs, err := ReadRemoteHosts(ftry.params.HostsPath, ftry.params.NodeCount)
+	err := ftry.ReadHosts(ftry.params.HostsPath, ftry.params.NodeCount)
 	if err != nil {
 		return nil, err
 	}
-	ftry.hosts = hosts
-	ftry.workDirs = workDirs
 	if ftry.params.SetupRequired {
 		if err := ftry.setup(); err != nil {
 			return nil, err
 		}
 	}
+	fmt.Println()
 	return ftry, nil
+}
+
+func (ftry *RemoteFactory) ReadHosts(hostsPath string, nodeCount int) error {
+	raw, err := os.ReadFile(hostsPath)
+	if err != nil {
+		return err
+	}
+	lines := strings.Split(string(raw), "\n")
+	if len(lines) < nodeCount {
+		return fmt.Errorf("not enough hosts, %d | %d",
+			len(lines), nodeCount)
+	}
+	hosts := make([]string, nodeCount)
+	loginNames := make([]string, nodeCount)
+	netDevices := make([]string, nodeCount)
+	workDirs := make([]string, nodeCount)
+	for i := 0; i < nodeCount; i++ {
+		words := strings.Split(lines[i], "\t")
+		hosts[i] = words[0]
+		loginNames[i] = words[1]
+		netDevices[i] = words[2]
+		workDirs[i] = words[3]
+	}
+	ftry.hosts = hosts
+	ftry.loginNames = loginNames
+	ftry.netDevices = netDevices
+	ftry.workDirs = workDirs
+	return nil
 }
 
 func (ftry *RemoteFactory) GetHosts() []string {
@@ -117,7 +143,7 @@ func (ftry *RemoteFactory) setupRemoteServerOne(i int) error {
 	if ftry.params.InstallRequired {
 		cmd := exec.Command("ssh",
 			"-i", ftry.params.KeySSH,
-			fmt.Sprintf("%s@%s", ftry.params.LoginName, ftry.hosts[i]),
+			fmt.Sprintf("%s@%s", ftry.loginNames[i], ftry.hosts[i]),
 			"sudo", "apt", "update", ";",
 			"sudo", "apt", "install", "-y", "dstat", ";",
 		)
@@ -128,8 +154,8 @@ func (ftry *RemoteFactory) setupRemoteServerOne(i int) error {
 	// also kills remaining effect and nodes to make sure clean environment
 	cmd := exec.Command("ssh",
 		"-i", ftry.params.KeySSH,
-		fmt.Sprintf("%s@%s", ftry.params.LoginName, ftry.hosts[i]),
-		"sudo", "tc", "qdisc", "del", "dev", ftry.params.NetworkDevice, "root", ";",
+		fmt.Sprintf("%s@%s", ftry.loginNames[i], ftry.hosts[i]),
+		"sudo", "tc", "qdisc", "del", "dev", ftry.netDevices[i], "root", ";",
 		"sudo", "killall", "chain", ";",
 		"sudo", "killall", "dstat", ";",
 		"mkdir", ftry.workDirs[i], ";",
@@ -153,7 +179,7 @@ func (ftry *RemoteFactory) sendPPoVOne(i int) error {
 	cmd := exec.Command("scp",
 		"-i", ftry.params.KeySSH,
 		ftry.params.BinPath,
-		fmt.Sprintf("%s@%s:%s", ftry.params.LoginName, ftry.hosts[i],
+		fmt.Sprintf("%s@%s:%s", ftry.loginNames[i], ftry.hosts[i],
 			ftry.workDirs[i]),
 	)
 	return RunCommand(cmd)
@@ -173,7 +199,7 @@ func (ftry *RemoteFactory) sendTemplateOne(i int) error {
 	cmd := exec.Command("scp",
 		"-i", ftry.params.KeySSH,
 		"-r", path.Join(ftry.templateDir, strconv.Itoa(i)),
-		fmt.Sprintf("%s@%s:%s", ftry.params.LoginName, ftry.hosts[i],
+		fmt.Sprintf("%s@%s:%s", ftry.loginNames[i], ftry.hosts[i],
 			path.Join(ftry.workDirs[i], "/template")),
 	)
 	return RunCommand(cmd)
@@ -189,9 +215,9 @@ func (ftry *RemoteFactory) SetupCluster(name string) (*Cluster, error) {
 		node := &RemoteNode{
 			binPath:       path.Join(ftry.workDirs[i], "chain"),
 			config:        ftry.params.NodeConfig,
-			loginName:     ftry.params.LoginName,
+			loginName:     ftry.loginNames[i],
 			keySSH:        ftry.params.KeySSH,
-			networkDevice: ftry.params.NetworkDevice,
+			networkDevice: ftry.netDevices[i],
 			host:          ftry.hosts[i],
 		}
 		node.config.Datadir = path.Join(ftry.workDirs[i], name)
@@ -216,7 +242,7 @@ func (ftry *RemoteFactory) setupClusterDir(name string) {
 func (ftry *RemoteFactory) setupClusterDirOne(i int, name string) error {
 	cmd := exec.Command("ssh",
 		"-i", ftry.params.KeySSH,
-		fmt.Sprintf("%s@%s", ftry.params.LoginName, ftry.hosts[i]),
+		fmt.Sprintf("%s@%s", ftry.loginNames[i], ftry.hosts[i]),
 		"cd", ftry.workDirs[i], ";",
 		"rm", "-r", name, ";",
 		"cp", "-r", "template", name,

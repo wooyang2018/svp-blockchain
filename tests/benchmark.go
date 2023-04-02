@@ -78,11 +78,11 @@ func (bm *Benchmark) Run() {
 }
 
 func (bm *Benchmark) runWithLoad(tps int) error {
-	bm.loadGen = testutil.NewLoadGenerator(tps, bm.loadClient)
+	bm.loadGen = testutil.NewLoadGenerator(bm.loadClient, tps, LoadJobPerTick)
 	bm.benchmarkName = fmt.Sprintf("bench_n_%d_load_%d",
 		bm.cfactory.GetParams().NodeCount, tps)
 	if PPoVCoinBinCC {
-		bm.benchmarkName += "bincc"
+		bm.benchmarkName += "_bincc"
 	}
 
 	fmt.Printf("Running benchmark %s\n", bm.benchmarkName)
@@ -148,7 +148,7 @@ func (bm *Benchmark) runAsync(loadCtx context.Context, done chan struct{}) {
 	if bm.err != nil {
 		return
 	}
-	if BenchBatchSubmit {
+	if LoadBatchSubmit {
 		go bm.loadGen.BatchRun(loadCtx)
 	} else {
 		go bm.loadGen.Run(loadCtx)

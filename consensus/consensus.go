@@ -53,7 +53,7 @@ func (cons *Consensus) GetBlock(hash []byte) *core.Block {
 func (cons *Consensus) start() {
 	cons.startTime = time.Now().UnixNano()
 	b0, q0 := cons.getInitialBlockAndQC()
-	if hotstuff.PPoVFlag {
+	if hotstuff.TwoPhaseFlag {
 		b1, _ := cons.resources.Storage.GetBlock(q0.BlockHash())
 		cons.setupState(b1)
 	} else {

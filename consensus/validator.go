@@ -274,11 +274,9 @@ func (vld *validator) verifyMerkleRoot(proposal *core.Block) error {
 	if bh != proposal.ExecHeight() {
 		return fmt.Errorf("invalid exec height")
 	}
-	if !hotstuff.PPoVFlag {
-		mr := vld.resources.Storage.GetMerkleRoot()
-		if !bytes.Equal(mr, proposal.MerkleRoot()) {
-			return fmt.Errorf("invalid merkle root")
-		}
+	mr := vld.resources.Storage.GetMerkleRoot()
+	if !bytes.Equal(mr, proposal.MerkleRoot()) {
+		return fmt.Errorf("invalid merkle root")
 	}
 	return nil
 }

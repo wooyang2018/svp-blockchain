@@ -4,7 +4,7 @@
 
 package hotstuff
 
-const PPoVFlag = true //true: 二阶段提交 false: 三阶段提交
+const TwoPhaseFlag = true //true: 二阶段提交 false: 三阶段提交
 
 // Block type
 type Block interface {

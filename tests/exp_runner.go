@@ -75,7 +75,8 @@ func (r *ExperimentRunner) runSingleExperiment(expm Experiment) error {
 		if err != nil {
 			return
 		}
-
+		cls.EmptyChainCode = EmptyChainCode
+		cls.CheckRotation = CheckRotation
 		fmt.Println("Starting cluster")
 		cls.Stop() // to make sure no existing process keeps running
 		err = cls.Start()
