@@ -32,8 +32,8 @@ func serveNodeAPI(node *Node) {
 
 	r.GET("/consensus", api.getConsensusStatus)
 	r.GET("/txpool", api.getTxPoolStatus)
-	r.POST("/transactions", api.submitTX)
-	r.POST("/transactions/batch", api.storeTxs)
+	r.POST("/transactions", api.submitTx)
+	r.POST("/transactions/batch", api.batchSubmitTxs)
 	r.GET("/transactions/:hash/status", api.getTxStatus)
 	r.GET("/transactions/:hash/commit", api.getTxCommit)
 	r.GET("/blocks/:hash", api.getBlock)
@@ -58,7 +58,7 @@ func (api *nodeAPI) getTxPoolStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, api.node.txpool.GetStatus())
 }
 
-func (api *nodeAPI) submitTX(c *gin.Context) {
+func (api *nodeAPI) submitTx(c *gin.Context) {
 	tx := core.NewTransaction()
 	if err := c.ShouldBind(tx); err != nil {
 		c.String(http.StatusBadRequest, "cannot parse tx")
@@ -72,7 +72,7 @@ func (api *nodeAPI) submitTX(c *gin.Context) {
 	c.String(http.StatusOK, "transaction accepted")
 }
 
-func (api *nodeAPI) storeTxs(c *gin.Context) {
+func (api *nodeAPI) batchSubmitTxs(c *gin.Context) {
 	txs := core.NewTxList()
 	if err := c.ShouldBind(txs); err != nil {
 		c.String(http.StatusBadRequest, "cannot parse txs")

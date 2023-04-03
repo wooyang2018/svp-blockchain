@@ -14,9 +14,9 @@ type CallContext interface {
 	SetState(key, value []byte)
 }
 
-// all chaincodes implements Chaincode interface
+// Chaincode all chaincodes implements this interface
 type Chaincode interface {
-	// called when chaincode is deployed
+	// Init is called when chaincode is deployed
 	Init(ctx CallContext) error
 
 	Invoke(ctx CallContext) error

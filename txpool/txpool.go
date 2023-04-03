@@ -117,6 +117,7 @@ func (pool *TxPool) GetStatus() Status {
 }
 
 func (pool *TxPool) submitTx(tx *core.Transaction) error {
+	pool.PutTxsToQueue([][]byte{tx.Hash()})
 	if err := pool.addNewTx(tx); err != nil {
 		return err
 	}

@@ -183,7 +183,7 @@ func (blk *Block) Marshal() ([]byte, error) {
 	return proto.Marshal(blk.data)
 }
 
-// UnmarshalBlock decodes block from bytes
+// Unmarshal decodes block from bytes
 func (blk *Block) Unmarshal(b []byte) error {
 	data := new(pb.Block)
 	if err := proto.Unmarshal(b, data); err != nil {

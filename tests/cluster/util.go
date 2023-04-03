@@ -90,15 +90,15 @@ func SetupTemplateDir(dir string, keys []*core.PrivateKey, vlds []node.Peer) err
 		genesis.Weights = append(genesis.Weights, 1)
 	}
 	for i, key := range keys {
-		dir := path.Join(dir, strconv.Itoa(i))
-		os.Mkdir(dir, 0755)
-		if err := WriteNodeKey(dir, key); err != nil {
+		d := path.Join(dir, strconv.Itoa(i))
+		os.Mkdir(d, 0755)
+		if err := WriteNodeKey(d, key); err != nil {
 			return err
 		}
-		if err := WriteGenesisFile(dir, genesis); err != nil {
+		if err := WriteGenesisFile(d, genesis); err != nil {
 			return err
 		}
-		if err := WritePeersFile(dir, vlds); err != nil {
+		if err := WritePeersFile(d, vlds); err != nil {
 			return err
 		}
 	}

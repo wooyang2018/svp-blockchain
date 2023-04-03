@@ -116,7 +116,7 @@ func (tx *Transaction) Marshal() ([]byte, error) {
 	return proto.Marshal(tx.data)
 }
 
-// UnmarshalTransaction decodes transaction from bytes
+// Unmarshal decodes transaction from bytes
 func (tx *Transaction) Unmarshal(b []byte) error {
 	data := new(pb.Transaction)
 	if err := proto.Unmarshal(b, data); err != nil {
@@ -216,7 +216,7 @@ func NewTxList() *TxList {
 	return new(TxList)
 }
 
-// UnmarshalTxList decodes tx list from bytes
+// Unmarshal decodes tx list from bytes
 func (txs *TxList) Unmarshal(b []byte) error {
 	data := new(pb.TxList)
 	if err := proto.Unmarshal(b, data); err != nil {

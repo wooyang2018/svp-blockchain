@@ -112,7 +112,7 @@ func (p *Peer) setConnecting() error {
 	defer p.mtxStatus.Unlock()
 
 	if p.status != PeerStatusDisconnected {
-		return fmt.Errorf("Status must be disconnected")
+		return fmt.Errorf("status must be disconnected")
 	}
 	p.status = PeerStatusConnecting
 	logger.I().Infow("connecting", "addr", p.addr)
