@@ -81,7 +81,7 @@ func SubmitTx(cls *cluster.Cluster, retryOrder []int, tx *core.Transaction) (int
 			return i, nil
 		}
 	}
-	return 0, fmt.Errorf("cannot submit tx %w", retErr)
+	return 0, retErr
 }
 
 func BatchSubmitTx(cls *cluster.Cluster, retryOrder []int, txs *core.TxList) (int, error) {

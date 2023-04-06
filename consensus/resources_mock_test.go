@@ -181,7 +181,8 @@ func (m *MockExecution) Execute(
 }
 
 func (m *MockExecution) MockExecute(blk *core.Block) (*core.BlockCommit, []*core.TxCommit) {
-	return nil, nil
+	args := m.Called(blk)
+	return castBlockCommit(args.Get(0)), castTxCommits(args.Get(1))
 }
 
 func castBytes(val interface{}) []byte {

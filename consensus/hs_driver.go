@@ -31,10 +31,10 @@ func (hsd *hsDriver) MajorityValidatorCount() int {
 
 func (hsd *hsDriver) CreateLeaf(parent hotstuff.Block, qc hotstuff.QC, height uint64) hotstuff.Block {
 	var txs [][]byte
-	if ExecuteTxFlag {
-		txs = hsd.resources.TxPool.PopTxsFromQueue(hsd.config.BlockTxLimit)
-	} else {
+	if PreserveTxFlag {
 		txs = hsd.resources.TxPool.GetTxsFromQueue(hsd.config.BlockTxLimit)
+	} else {
+		txs = hsd.resources.TxPool.PopTxsFromQueue(hsd.config.BlockTxLimit)
 	}
 	//core.Block的链式调用
 	blk := core.NewBlock().
@@ -68,7 +68,7 @@ func (hsd *hsDriver) BroadcastProposal(hsBlk hotstuff.Block) {
 func (hsd *hsDriver) VoteBlock(hsBlk hotstuff.Block) {
 	blk := hsBlk.(*hsBlock).block
 	vote := blk.Vote(hsd.resources.Signer)
-	if ExecuteTxFlag {
+	if !PreserveTxFlag {
 		hsd.resources.TxPool.SetTxsPending(blk.Transactions())
 	}
 	hsd.delayVoteWhenNoTxs()
@@ -143,7 +143,7 @@ func (hsd *hsDriver) Commit(hsBlk hotstuff.Block) {
 func (hsd *hsDriver) cleanStateOnCommitted(bexec *core.Block) {
 	// qc for bexec is no longer needed here after committed to storage
 	hsd.state.deleteQC(bexec.Hash())
-	if ExecuteTxFlag {
+	if !PreserveTxFlag {
 		hsd.resources.TxPool.RemoveTxs(bexec.Transactions())
 	}
 	hsd.state.setCommittedBlock(bexec)

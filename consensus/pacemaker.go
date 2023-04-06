@@ -50,8 +50,8 @@ func (pm *pacemaker) run() {
 
 	for {
 		blkDelay := time.After(pm.config.BlockDelay)
-		pm.onBeat()
-		beatT := pm.nextBeatTimeout()
+		pm.newBlock()
+		beatT := pm.nextProposeTimeout()
 
 		select {
 		case <-pm.stopCh:
@@ -71,7 +71,7 @@ func (pm *pacemaker) run() {
 	}
 }
 
-func (pm *pacemaker) onBeat() {
+func (pm *pacemaker) newBlock() {
 	pm.state.mtxUpdate.Lock()
 	defer pm.state.mtxUpdate.Unlock()
 
@@ -80,24 +80,22 @@ func (pm *pacemaker) onBeat() {
 		return
 	default:
 	}
+
 	if !pm.state.isThisNodeLeader() {
 		return
 	}
-	pm.propose()
-}
 
-func (pm *pacemaker) nextBeatTimeout() *time.Timer {
-	beatWait := pm.config.BeatTimeout
-	if pm.resources.TxPool.GetStatus().Total == 0 {
-		beatWait += pm.config.TxWaitTime
-	}
-	return time.NewTimer(beatWait)
-}
-
-func (pm *pacemaker) propose() {
 	blk := pm.hotstuff.OnPropose()
 	logger.I().Debugw("proposed block", "height", blk.Height(), "qc", qcRefHeight(blk.Justify()), "txs", len(blk.Transactions()))
 	vote := blk.(*hsBlock).block.ProposerVote()
 	pm.hotstuff.OnReceiveVote(newHsVote(vote, pm.state))
 	pm.hotstuff.Update(blk)
+}
+
+func (pm *pacemaker) nextProposeTimeout() *time.Timer {
+	beatWait := pm.config.BeatTimeout
+	if pm.resources.TxPool.GetStatus().Total == 0 {
+		beatWait += pm.config.TxWaitTime
+	}
+	return time.NewTimer(beatWait)
 }

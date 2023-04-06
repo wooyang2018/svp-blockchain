@@ -263,9 +263,6 @@ func (vld *validator) verifyProposalToVote(proposal *core.Block) error {
 			return err
 		}
 	}
-	if !ExecuteTxFlag {
-		return nil
-	}
 	return vld.verifyProposalTxs(proposal)
 }
 
@@ -284,16 +281,18 @@ func (vld *validator) verifyMerkleRoot(proposal *core.Block) error {
 }
 
 func (vld *validator) verifyProposalTxs(proposal *core.Block) error {
-	for _, hash := range proposal.Transactions() {
-		if vld.resources.Storage.HasTx(hash) {
-			return fmt.Errorf("already committed tx: %s", base64String(hash))
-		}
-		tx := vld.resources.TxPool.GetTx(hash)
-		if tx == nil {
-			return fmt.Errorf("tx not found: %s", base64String(hash))
-		}
-		if tx.Expiry() != 0 && tx.Expiry() < proposal.Height() {
-			return fmt.Errorf("expired tx: %s", base64String(hash))
+	if ExecuteTxFlag {
+		for _, hash := range proposal.Transactions() {
+			if vld.resources.Storage.HasTx(hash) {
+				return fmt.Errorf("already committed tx: %s", base64String(hash))
+			}
+			tx := vld.resources.TxPool.GetTx(hash)
+			if tx == nil {
+				return fmt.Errorf("tx not found: %s", base64String(hash))
+			}
+			if tx.Expiry() != 0 && tx.Expiry() < proposal.Height() {
+				return fmt.Errorf("expired tx: %s", base64String(hash))
+			}
 		}
 	}
 	return nil

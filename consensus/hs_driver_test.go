@@ -45,9 +45,6 @@ func TestHsDriver_TestMajorityCount(t *testing.T) {
 }
 
 func TestHsDriver_CreateLeaf(t *testing.T) {
-	if !ExecuteTxFlag {
-		t.Skip("skipping execution of TestHsDriver_CreateLeaf because ExecuteTxFlag is set to false")
-	}
 	hsd := setupTestHsDriver()
 	parent := newHsBlock(core.NewBlock().Sign(hsd.resources.Signer), hsd.state)
 	hsd.state.setBlock(parent.(*hsBlock).block)
@@ -56,7 +53,11 @@ func TestHsDriver_CreateLeaf(t *testing.T) {
 
 	txsInQ := [][]byte{[]byte("tx1"), []byte("tx2")}
 	txPool := new(MockTxPool)
-	txPool.On("PopTxsFromQueue", hsd.config.BlockTxLimit).Return(txsInQ)
+	if PreserveTxFlag {
+		txPool.On("GetTxsFromQueue", hsd.config.BlockTxLimit).Return(txsInQ)
+	} else {
+		txPool.On("PopTxsFromQueue", hsd.config.BlockTxLimit).Return(txsInQ)
+	}
 	hsd.resources.TxPool = txPool
 
 	storage := new(MockStorage)
@@ -97,7 +98,7 @@ func TestHsDriver_VoteBlock(t *testing.T) {
 
 	txPool := new(MockTxPool)
 	txPool.On("GetStatus").Return(txpool.Status{}) // no txs in the pool
-	if ExecuteTxFlag {
+	if !PreserveTxFlag {
 		txPool.On("SetTxsPending", blk.Transactions())
 	}
 	hsd.resources.TxPool = txPool
@@ -119,7 +120,7 @@ func TestHsDriver_VoteBlock(t *testing.T) {
 
 	txPool = new(MockTxPool)
 	txPool.On("GetStatus").Return(txpool.Status{Total: 1}) // one txs in the pool
-	if ExecuteTxFlag {
+	if !PreserveTxFlag {
 		txPool.On("SetTxsPending", blk.Transactions())
 	}
 	hsd.resources.TxPool = txPool
@@ -135,9 +136,6 @@ func TestHsDriver_VoteBlock(t *testing.T) {
 }
 
 func TestHsDriver_Commit(t *testing.T) {
-	if !ExecuteTxFlag {
-		t.Skip("skipping execution of TestHsDriver_Commit because ExecuteTxFlag is set to false")
-	}
 	hsd := setupTestHsDriver()
 	parent := core.NewBlock().SetHeight(10).Sign(hsd.resources.Signer)
 	bfolk := core.NewBlock().SetTransactions([][]byte{[]byte("txfromfolk")}).SetHeight(10).Sign(hsd.resources.Signer)
@@ -152,25 +150,33 @@ func TestHsDriver_Commit(t *testing.T) {
 
 	txs := []*core.Transaction{tx}
 	txPool := new(MockTxPool)
-	txPool.On("GetTxsToExecute", bexec.Transactions()).Return(txs, nil)
-	// should remove txs from pool after commit
-	txPool.On("RemoveTxs", bexec.Transactions()).Once()
-	// should put txs of folked block back to queue from pending
-	txPool.On("PutTxsToQueue", bfolk.Transactions()).Once()
+	if ExecuteTxFlag {
+		txPool.On("GetTxsToExecute", bexec.Transactions()).Return(txs, nil)
+	}
+	if !PreserveTxFlag {
+		txPool.On("RemoveTxs", bexec.Transactions()).Once() // should remove txs from pool after commit
+	}
+	txPool.On("PutTxsToQueue", bfolk.Transactions()).Once() // should put txs of folked block back to queue from pending
 	hsd.resources.TxPool = txPool
 
 	bcm := core.NewBlockCommit().SetHash(bexec.Hash())
 	txcs := []*core.TxCommit{core.NewTxCommit().SetHash(tx.Hash())}
-	execution := new(MockExecution)
-	execution.On("Execute", bexec, txs).Return(bcm, txcs)
-	hsd.resources.Execution = execution
-
 	cdata := &storage.CommitData{
 		Block:        bexec,
 		Transactions: txs,
 		BlockCommit:  bcm,
 		TxCommits:    txcs,
 	}
+
+	execution := new(MockExecution)
+	if ExecuteTxFlag {
+		execution.On("Execute", bexec, txs).Return(bcm, txcs)
+	} else {
+		cdata.Transactions = nil
+		execution.On("MockExecute", bexec).Return(bcm, txcs)
+	}
+	hsd.resources.Execution = execution
+
 	storage := new(MockStorage)
 	storage.On("Commit", cdata).Return(nil)
 	hsd.resources.Storage = storage

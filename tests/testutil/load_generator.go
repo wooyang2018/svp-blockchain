@@ -64,7 +64,7 @@ func (lg *LoadGenerator) BatchRun(ctx context.Context) {
 	delay := time.Second / time.Duration(lg.txPerSec/lg.jobPerTick)
 	ticker := time.NewTicker(delay)
 	defer ticker.Stop()
-	timer := time.NewTimer(30 * time.Second) //ExecuteTxFlag为false时的函数退出时间
+	timer := time.NewTimer(60 * time.Second) //ExecuteTxFlag为false时的函数退出时间
 	defer timer.Stop()
 	for {
 		select {
@@ -78,7 +78,7 @@ func (lg *LoadGenerator) BatchRun(ctx context.Context) {
 				lg.increaseSubmitted(int64(len(*txs)))
 			}
 		case <-timer.C:
-			if !consensus.ExecuteTxFlag {
+			if consensus.PreserveTxFlag {
 				return
 			}
 		}

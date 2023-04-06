@@ -6,7 +6,8 @@ package consensus
 
 import "time"
 
-const ExecuteTxFlag = true //set to false when benchmark test
+const ExecuteTxFlag = true   //set to false when benchmark test
+const PreserveTxFlag = false //set to true when benchmark test
 
 type Config struct {
 	ChainID int64

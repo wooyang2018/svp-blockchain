@@ -31,7 +31,7 @@ var (
 	LoadBatchSubmit = true //whether to enable batch transaction submission
 
 	//chaincode priority: empty > ppovcoin bincc > ppovcoin
-	EmptyChainCode = false // deploy empty chaincode instead of ppovcoin
+	EmptyChainCode = true  // deploy empty chaincode instead of ppovcoin
 	PPoVCoinBinCC  = false // deploy ppovcoin chaincode as bincc type (not embeded in ppov node)
 	CheckRotation  = true
 	BroadcastTx    = true
@@ -152,6 +152,7 @@ func printAndCheckVars() {
 	fmt.Println("BenchLoads =", BenchLoads)
 	fmt.Println("SetupClusterTemplate =", SetupClusterTemplate)
 	fmt.Println("consensus.ExecuteTxFlag =", consensus.ExecuteTxFlag)
+	fmt.Println("consensus.PreserveTxFlag =", consensus.PreserveTxFlag)
 	fmt.Println()
 	pass := true
 	if !BroadcastTx && len(LoadSubmitNodes) != 1 {
@@ -164,6 +165,10 @@ func printAndCheckVars() {
 	if RunBenchmark && !LoadBatchSubmit {
 		fmt.Println("RunBenchmark =?=> LoadBatchSubmit")
 	}
+	if !consensus.ExecuteTxFlag && !EmptyChainCode {
+		fmt.Println("!consensus.ExecuteTxFlag ===> EmptyChainCode")
+		pass = false
+	}
 	if !RunBenchmark && !CheckRotation {
 		fmt.Println("!RunBenchmark ===> CheckRotation")
 		pass = false
@@ -172,8 +177,8 @@ func printAndCheckVars() {
 		fmt.Println("!RunBenchmark ===> BroadcastTx")
 		pass = false
 	}
-	if !consensus.ExecuteTxFlag && BroadcastTx || !BroadcastTx && consensus.ExecuteTxFlag {
-		fmt.Println("!consensus.ExecuteTxFlag <=?=> !BroadcastTx")
+	if !consensus.ExecuteTxFlag && BroadcastTx {
+		fmt.Println("!consensus.ExecuteTxFlag =?=> !BroadcastTx")
 	}
 	if consensus.ExecuteTxFlag && !BroadcastTx {
 		fmt.Println("consensus.ExecuteTxFlag ===> BroadcastTx")
@@ -188,18 +193,19 @@ func printAndCheckVars() {
 		pass = false
 	}
 	if !consensus.ExecuteTxFlag && !RunBenchmark {
-		fmt.Println("!consensus.ExecuteTxFlag ===> RunBenchmark")
+		fmt.Println("!consensus.ExecuteTxFlag ===> RunBenchmark OR !RunBenchmark ===> consensus.ExecuteTxFlag")
 		pass = false
 	}
-	if !consensus.ExecuteTxFlag && len(BenchLoads) > 1 {
-		fmt.Println("!consensus.ExecuteTxFlag =?=> len(BenchLoads)=1")
+	if consensus.PreserveTxFlag && !RunBenchmark {
+		fmt.Println("consensus.PreserveTxFlag ===> RunBenchmark OR !RunBenchmark ===> !consensus.PreserveTxFlag")
+		pass = false
 	}
-	if !RunBenchmark && !consensus.ExecuteTxFlag {
-		fmt.Println("!RunBenchmark ===> consensus.ExecuteTxFlag")
+	if consensus.ExecuteTxFlag && consensus.PreserveTxFlag {
+		fmt.Println("consensus.ExecuteTxFlag ===> !consensus.PreserveTxFlag")
 		pass = false
 	}
 	if pass {
-		fmt.Println("test parameters passed verification")
+		fmt.Println("passed testing parameters validation")
 	} else {
 		os.Exit(1)
 	}
