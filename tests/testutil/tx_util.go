@@ -1,4 +1,3 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
@@ -15,10 +14,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/wooyang2018/ppov-blockchain/core"
-	"github.com/wooyang2018/ppov-blockchain/execution"
-	"github.com/wooyang2018/ppov-blockchain/tests/cluster"
-	"github.com/wooyang2018/ppov-blockchain/txpool"
+	"github.com/wooyang2018/posv-blockchain/core"
+	"github.com/wooyang2018/posv-blockchain/execution"
+	"github.com/wooyang2018/posv-blockchain/tests/cluster"
+	"github.com/wooyang2018/posv-blockchain/txpool"
 )
 
 func SubmitTxAndWait(cls *cluster.Cluster, tx *core.Transaction) (int, error) {

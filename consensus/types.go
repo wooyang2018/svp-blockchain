@@ -1,10 +1,7 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
-package hotstuff
-
-const TwoPhaseFlag = true //true: 二阶段提交 false: 三阶段提交
+package consensus
 
 // Block type
 type Block interface {

@@ -1,4 +1,3 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
@@ -7,16 +6,15 @@ package consensus
 import (
 	"time"
 
-	"github.com/wooyang2018/ppov-blockchain/hotstuff"
-	"github.com/wooyang2018/ppov-blockchain/logger"
+	"github.com/wooyang2018/posv-blockchain/logger"
 )
 
 type pacemaker struct {
 	resources *Resources
 	config    Config
 
-	state    *state
-	hotstuff *hotstuff.Hotstuff
+	state *state
+	posv  *posv
 
 	stopCh chan struct{}
 }
@@ -26,7 +24,7 @@ func (pm *pacemaker) start() {
 		return
 	}
 	pm.stopCh = make(chan struct{})
-	go pm.run()
+	go pm.syncStakeRun()
 	logger.I().Info("started pacemaker")
 }
 
@@ -45,7 +43,7 @@ func (pm *pacemaker) stop() {
 }
 
 func (pm *pacemaker) run() {
-	subQC := pm.hotstuff.SubscribeNewQCHigh()
+	subQC := pm.posv.SubscribeNewQCHigh()
 	defer subQC.Unsubscribe()
 
 	for {
@@ -71,6 +69,21 @@ func (pm *pacemaker) run() {
 	}
 }
 
+func (pm *pacemaker) syncStakeRun() {
+	subQC := pm.posv.SubscribeNewQCHigh()
+	defer subQC.Unsubscribe()
+
+	for {
+		pm.newBlock()
+
+		select {
+		case <-pm.stopCh:
+			return
+		case <-subQC.Events():
+		}
+	}
+}
+
 func (pm *pacemaker) newBlock() {
 	pm.state.mtxUpdate.Lock()
 	defer pm.state.mtxUpdate.Unlock()
@@ -85,11 +98,11 @@ func (pm *pacemaker) newBlock() {
 		return
 	}
 
-	blk := pm.hotstuff.OnPropose()
+	blk := pm.posv.OnPropose()
 	logger.I().Debugw("proposed block", "height", blk.Height(), "qc", qcRefHeight(blk.Justify()), "txs", len(blk.Transactions()))
-	vote := blk.(*hsBlock).block.ProposerVote()
-	pm.hotstuff.OnReceiveVote(newHsVote(vote, pm.state))
-	pm.hotstuff.Update(blk)
+	vote := blk.(*innerBlock).block.ProposerVote()
+	pm.posv.OnReceiveVote(newVote(vote, pm.state))
+	pm.posv.Update(blk)
 }
 
 func (pm *pacemaker) nextProposeTimeout() *time.Timer {

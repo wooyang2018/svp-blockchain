@@ -1,4 +1,3 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
@@ -8,9 +7,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/wooyang2018/ppov-blockchain/core"
-	"github.com/wooyang2018/ppov-blockchain/hotstuff"
-	"github.com/wooyang2018/ppov-blockchain/logger"
+	"github.com/wooyang2018/posv-blockchain/core"
+	"github.com/wooyang2018/posv-blockchain/logger"
 )
 
 type Consensus struct {
@@ -19,8 +17,8 @@ type Consensus struct {
 	startTime int64
 	logfile   *os.File
 	state     *state
-	hsDriver  *hsDriver
-	hotstuff  *hotstuff.Hotstuff
+	driver    *driver
+	posv      *posv
 	validator *validator
 	pacemaker *pacemaker
 	rotator   *rotator
@@ -53,12 +51,7 @@ func (cons *Consensus) GetBlock(hash []byte) *core.Block {
 func (cons *Consensus) start() {
 	cons.startTime = time.Now().UnixNano()
 	b0, q0 := cons.getInitialBlockAndQC()
-	if hotstuff.TwoPhaseFlag {
-		b1, _ := cons.resources.Storage.GetBlock(q0.BlockHash())
-		cons.setupState(b1)
-	} else {
-		cons.setupState(b0)
-	}
+	cons.setupState(b0)
 
 	if cons.config.BenchmarkPath != "" {
 		var err error
@@ -68,8 +61,8 @@ func (cons *Consensus) start() {
 		}
 	}
 
-	cons.setupHsDriver()
-	cons.setupHotstuff(b0, q0)
+	cons.setupDriver()
+	cons.setupPoSV(b0, q0)
 	cons.setupValidator()
 	cons.setupPacemaker()
 	cons.setupRotator()
@@ -117,8 +110,8 @@ func (cons *Consensus) getInitialBlockAndQC() (*core.Block, *core.QuorumCert) {
 	return genesis.run()
 }
 
-func (cons *Consensus) setupHsDriver() {
-	cons.hsDriver = &hsDriver{
+func (cons *Consensus) setupDriver() {
+	cons.driver = &driver{
 		resources:    cons.resources,
 		config:       cons.config,
 		checkTxDelay: 10 * time.Millisecond,
@@ -126,12 +119,12 @@ func (cons *Consensus) setupHsDriver() {
 	}
 }
 
-func (cons *Consensus) setupHotstuff(b0 *core.Block, q0 *core.QuorumCert) {
-	cons.hotstuff = hotstuff.New(
-		cons.hsDriver,
+func (cons *Consensus) setupPoSV(b0 *core.Block, q0 *core.QuorumCert) {
+	cons.posv = NewPoSV(
+		cons.driver,
 		cons.logfile,
-		newHsBlock(b0, cons.state),
-		newHsQC(q0, cons.state),
+		newBlock(b0, cons.state),
+		newQC(q0, cons.state),
 	)
 }
 
@@ -139,7 +132,7 @@ func (cons *Consensus) setupValidator() {
 	cons.validator = &validator{
 		resources: cons.resources,
 		state:     cons.state,
-		hotstuff:  cons.hotstuff,
+		posv:      cons.posv,
 	}
 }
 
@@ -148,7 +141,7 @@ func (cons *Consensus) setupPacemaker() {
 		resources: cons.resources,
 		config:    cons.config,
 		state:     cons.state,
-		hotstuff:  cons.hotstuff,
+		posv:      cons.posv,
 	}
 }
 
@@ -157,7 +150,7 @@ func (cons *Consensus) setupRotator() {
 		resources: cons.resources,
 		config:    cons.config,
 		state:     cons.state,
-		hotstuff:  cons.hotstuff,
+		posv:      cons.posv,
 	}
 }
 
@@ -173,10 +166,9 @@ func (cons *Consensus) getStatus() (status Status) {
 	status.ViewStart = cons.rotator.getViewStart()
 	status.PendingViewChange = cons.rotator.getPendingViewChange()
 
-	status.BVote = cons.hotstuff.GetBVote().Height()
-	status.BLeaf = cons.hotstuff.GetBLeaf().Height()
-	status.BLock = cons.hotstuff.GetBLock().Height()
-	status.BExec = cons.hotstuff.GetBExec().Height()
-	status.QCHigh = qcRefHeight(cons.hotstuff.GetQCHigh())
+	status.BVote = cons.posv.GetBVote().Height()
+	status.BLeaf = cons.posv.GetBLeaf().Height()
+	status.BExec = cons.posv.GetBExec().Height()
+	status.QCHigh = qcRefHeight(cons.posv.GetQCHigh())
 	return status
 }

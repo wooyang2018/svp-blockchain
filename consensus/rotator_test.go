@@ -1,4 +1,3 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
@@ -8,8 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/wooyang2018/ppov-blockchain/core"
-	"github.com/wooyang2018/ppov-blockchain/hotstuff"
+	"github.com/wooyang2018/posv-blockchain/core"
 )
 
 func setupRotator() (*rotator, *core.Block) {
@@ -30,16 +28,16 @@ func setupRotator() (*rotator, *core.Block) {
 
 	state := newState(resources)
 	state.setBlock(b0)
-	hsDriver := &hsDriver{
+	driver := &driver{
 		resources: resources,
 		state:     state,
 	}
-	hotstuff := hotstuff.New(hsDriver, nil, newHsBlock(b0, state), newHsQC(q0, state))
+	posv := NewPoSV(driver, nil, newBlock(b0, state), newQC(q0, state))
 	return &rotator{
 		resources: resources,
 		config:    DefaultConfig,
 		state:     state,
-		hotstuff:  hotstuff,
+		posv:      posv,
 	}, b0
 }
 

@@ -1,4 +1,3 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
@@ -10,15 +9,14 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/wooyang2018/ppov-blockchain/core"
-	"github.com/wooyang2018/ppov-blockchain/hotstuff"
-	"github.com/wooyang2018/ppov-blockchain/logger"
+	"github.com/wooyang2018/posv-blockchain/core"
+	"github.com/wooyang2018/posv-blockchain/logger"
 )
 
 type validator struct {
 	resources *Resources
 	state     *state
-	hotstuff  *hotstuff.Hotstuff
+	posv      *posv
 
 	mtxProposal sync.Mutex
 
@@ -114,7 +112,7 @@ func (vld *validator) onReceiveProposal(proposal *core.Block) error {
 	if err != nil {
 		return err
 	}
-	return vld.verifyWithParentAndUpdateHotstuff(
+	return vld.verifyWithParentAndUpdatePoSV(
 		proposal.Proposer(), proposal, parent, true)
 }
 
@@ -167,7 +165,7 @@ func (vld *validator) syncForwardCommittedBlocks(peer *core.PublicKey, start, en
 		if parent == nil {
 			return fmt.Errorf("cannot connect chain, parent not found")
 		}
-		err = vld.verifyWithParentAndUpdateHotstuff(peer, blk, parent, false)
+		err = vld.verifyWithParentAndUpdatePoSV(peer, blk, parent, false)
 		if err != nil {
 			return err
 		}
@@ -190,7 +188,7 @@ func (vld *validator) syncMissingParentBlocksRecursive(
 	if err != nil {
 		return nil, err
 	}
-	err = vld.verifyWithParentAndUpdateHotstuff(peer, parent, grandParent, false)
+	err = vld.verifyWithParentAndUpdatePoSV(peer, parent, grandParent, false)
 	if err != nil {
 		return nil, err
 	}
@@ -219,7 +217,7 @@ func (vld *validator) requestBlockByHeight(peer *core.PublicKey, height uint64) 
 	return blk, nil
 }
 
-func (vld *validator) verifyWithParentAndUpdateHotstuff(
+func (vld *validator) verifyWithParentAndUpdatePoSV(
 	peer *core.PublicKey, blk, parent *core.Block, voting bool,
 ) error {
 	if blk.Height() != parent.Height()+1 {
@@ -227,28 +225,28 @@ func (vld *validator) verifyWithParentAndUpdateHotstuff(
 			blk.Height(), parent.Height())
 	}
 	if ExecuteTxFlag {
-		// must sync transactions before updating block to hotstuff
+		// must sync transactions before updating block to posv
 		if err := vld.resources.TxPool.SyncTxs(peer, blk.Transactions()); err != nil {
 			return err
 		}
 	}
 	vld.state.setBlock(blk)
-	return vld.updateHotstuff(blk, voting)
+	return vld.updatePoSV(blk, voting)
 }
 
-func (vld *validator) updateHotstuff(blk *core.Block, voting bool) error {
+func (vld *validator) updatePoSV(blk *core.Block, voting bool) error {
 	vld.state.mtxUpdate.Lock()
 	defer vld.state.mtxUpdate.Unlock()
 
 	if !voting {
-		vld.hotstuff.Update(newHsBlock(blk, vld.state))
+		vld.posv.Update(newBlock(blk, vld.state))
 		return nil
 	}
 	if err := vld.verifyProposalToVote(blk); err != nil {
-		vld.hotstuff.Update(newHsBlock(blk, vld.state))
+		vld.posv.Update(newBlock(blk, vld.state))
 		return err
 	}
-	vld.hotstuff.OnReceiveProposal(newHsBlock(blk, vld.state))
+	vld.posv.OnReceiveProposal(newBlock(blk, vld.state))
 	return nil
 }
 
@@ -302,7 +300,7 @@ func (vld *validator) onReceiveVote(vote *core.Vote) error {
 	if err := vote.Validate(vld.resources.VldStore); err != nil {
 		return err
 	}
-	vld.hotstuff.OnReceiveVote(newHsVote(vote, vld.state))
+	vld.posv.OnReceiveVote(newVote(vote, vld.state))
 	return nil
 }
 
@@ -310,7 +308,7 @@ func (vld *validator) onReceiveNewView(qc *core.QuorumCert) error {
 	if err := qc.Validate(vld.resources.VldStore); err != nil {
 		return err
 	}
-	vld.hotstuff.UpdateQCHigh(newHsQC(qc, vld.state))
+	vld.posv.UpdateQCHigh(newQC(qc, vld.state))
 	return nil
 }
 

@@ -1,4 +1,3 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
@@ -14,9 +13,9 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
-	"github.com/wooyang2018/ppov-blockchain/core"
-	"github.com/wooyang2018/ppov-blockchain/logger"
-	"github.com/wooyang2018/ppov-blockchain/storage"
+	"github.com/wooyang2018/posv-blockchain/core"
+	"github.com/wooyang2018/posv-blockchain/logger"
+	"github.com/wooyang2018/posv-blockchain/storage"
 )
 
 type genesis struct {

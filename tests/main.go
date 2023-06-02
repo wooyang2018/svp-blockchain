@@ -1,4 +1,3 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
@@ -14,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/wooyang2018/ppov-blockchain/consensus"
-	"github.com/wooyang2018/ppov-blockchain/node"
-	"github.com/wooyang2018/ppov-blockchain/tests/cluster"
-	"github.com/wooyang2018/ppov-blockchain/tests/experiments"
-	"github.com/wooyang2018/ppov-blockchain/tests/testutil"
+	"github.com/wooyang2018/posv-blockchain/consensus"
+	"github.com/wooyang2018/posv-blockchain/node"
+	"github.com/wooyang2018/posv-blockchain/tests/cluster"
+	"github.com/wooyang2018/posv-blockchain/tests/experiments"
+	"github.com/wooyang2018/posv-blockchain/tests/testutil"
 )
 
 var (
@@ -30,9 +29,9 @@ var (
 	LoadSubmitNodes = []int{0}
 	LoadBatchSubmit = true //whether to enable batch transaction submission
 
-	//chaincode priority: empty > ppovcoin bincc > ppovcoin
-	EmptyChainCode = true  // deploy empty chaincode instead of ppovcoin
-	PPoVCoinBinCC  = false // deploy ppovcoin chaincode as bincc type (not embeded in ppov node)
+	//chaincode priority: empty > pcoin bincc > pcoin
+	EmptyChainCode = false // deploy empty chaincode instead of pcoin
+	PCoinBinCC     = true  // deploy pcoin chaincode as bincc type (not embeded in posv node)
 	CheckRotation  = true
 	BroadcastTx    = true
 
@@ -48,7 +47,7 @@ var (
 	BenchDuration = 5 * time.Minute
 	BenchLoads    = []int{5000, 10000, 15000}
 
-	SetupClusterTemplate = true
+	SetupClusterTemplate = false
 )
 
 func getNodeConfig() node.Config {
@@ -81,7 +80,7 @@ func setupExperiments() []Experiment {
 func main() {
 	printAndCheckVars()
 	os.Mkdir(WorkDir, 0755)
-	buildPPoV()
+	buildPoSV()
 	setupTransport()
 
 	if RunBenchmark {
@@ -212,7 +211,7 @@ func printAndCheckVars() {
 	fmt.Println()
 }
 
-func buildPPoV() {
+func buildPoSV() {
 	cmd := exec.Command("go", "build", "../cmd/chain")
 	if RemoteLinuxCluster {
 		cmd.Env = os.Environ()
@@ -229,19 +228,19 @@ func makeLoadClient() testutil.LoadClient {
 		return testutil.NewEmptyClient(LoadSubmitNodes)
 	}
 	var binccPath string
-	if PPoVCoinBinCC {
-		buildPPoVCoinBinCC()
-		binccPath = "./ppovcoin"
+	if PCoinBinCC {
+		buildPCoinBinCC()
+		binccPath = "./pcoin"
 	}
 	mintAccounts := 100
 	destAccounts := 10000 // increase dest accounts for benchmark
-	return testutil.NewPPoVCoinClient(LoadSubmitNodes, mintAccounts, destAccounts, binccPath)
+	return testutil.NewPCoinClient(LoadSubmitNodes, mintAccounts, destAccounts, binccPath)
 }
 
-func buildPPoVCoinBinCC() {
+func buildPCoinBinCC() {
 	cmd := exec.Command("go", "build")
 	cmd.Args = append(cmd.Args, "-ldflags", "-s -w")
-	cmd.Args = append(cmd.Args, "../execution/bincc/ppovcoin")
+	cmd.Args = append(cmd.Args, "../execution/bincc/pcoin")
 	if RemoteLinuxCluster {
 		cmd.Env = os.Environ()
 		cmd.Env = append(cmd.Env, "GOOS=linux")

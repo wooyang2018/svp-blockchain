@@ -1,4 +1,3 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
@@ -7,9 +6,9 @@ package experiments
 import (
 	"fmt"
 
-	"github.com/wooyang2018/ppov-blockchain/core"
-	"github.com/wooyang2018/ppov-blockchain/tests/cluster"
-	"github.com/wooyang2018/ppov-blockchain/tests/testutil"
+	"github.com/wooyang2018/posv-blockchain/core"
+	"github.com/wooyang2018/posv-blockchain/tests/cluster"
+	"github.com/wooyang2018/posv-blockchain/tests/testutil"
 )
 
 type CorrectExecution struct{}
@@ -19,10 +18,10 @@ func (expm *CorrectExecution) Name() string {
 }
 
 func (expm *CorrectExecution) Run(cls *cluster.Cluster) error {
-	jc := testutil.NewPPoVCoinClient(nil, 0, 0, "")
+	jc := testutil.NewPCoinClient(nil, 0, 0, "")
 
 	if err := jc.SetupOnCluster(cls); err != nil {
-		return fmt.Errorf("setup ppovcoin failed. %w", err)
+		return fmt.Errorf("setup pcoin failed. %w", err)
 	}
 	acc1 := core.GenerateKey(nil)
 	acc2 := core.GenerateKey(nil)

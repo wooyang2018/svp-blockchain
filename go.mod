@@ -1,4 +1,4 @@
-module github.com/wooyang2018/ppov-blockchain
+module github.com/wooyang2018/posv-blockchain
 
 go 1.18
 

@@ -1,4 +1,3 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
@@ -12,13 +11,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/wooyang2018/ppov-blockchain/chaincode/ppovcoin"
-	"github.com/wooyang2018/ppov-blockchain/core"
-	"github.com/wooyang2018/ppov-blockchain/execution"
-	"github.com/wooyang2018/ppov-blockchain/tests/cluster"
+	"github.com/wooyang2018/posv-blockchain/chaincode/pcoin"
+	"github.com/wooyang2018/posv-blockchain/core"
+	"github.com/wooyang2018/posv-blockchain/execution"
+	"github.com/wooyang2018/posv-blockchain/tests/cluster"
 )
 
-type PPoVCoinClient struct {
+type PCoinClient struct {
 	binccPath       string
 	minter          *core.PrivateKey
 	accounts        []*core.PrivateKey
@@ -31,12 +30,12 @@ type PPoVCoinClient struct {
 	nodes           []int
 }
 
-var _ LoadClient = (*PPoVCoinClient)(nil)
+var _ LoadClient = (*PCoinClient)(nil)
 
 // create and setup a LoadService
 // submit chaincode deploy tx and wait for commit
-func NewPPoVCoinClient(nodes []int, mintCount, destCount int, binccPath string) *PPoVCoinClient {
-	client := &PPoVCoinClient{
+func NewPCoinClient(nodes []int, mintCount, destCount int, binccPath string) *PCoinClient {
+	client := &PCoinClient{
 		binccPath: binccPath,
 		minter:    core.GenerateKey(nil),
 		accounts:  make([]*core.PrivateKey, mintCount),
@@ -48,7 +47,7 @@ func NewPPoVCoinClient(nodes []int, mintCount, destCount int, binccPath string) 
 	return client
 }
 
-func (client *PPoVCoinClient) generateKeyConcurrent(keys []*core.PrivateKey) {
+func (client *PCoinClient) generateKeyConcurrent(keys []*core.PrivateKey) {
 	jobs := make(chan int, 100)
 	defer close(jobs)
 	var wg sync.WaitGroup
@@ -67,21 +66,21 @@ func (client *PPoVCoinClient) generateKeyConcurrent(keys []*core.PrivateKey) {
 	wg.Wait()
 }
 
-func (client *PPoVCoinClient) SetupOnCluster(cls *cluster.Cluster) error {
+func (client *PCoinClient) SetupOnCluster(cls *cluster.Cluster) error {
 	return client.setupOnCluster(cls)
 }
 
-func (client *PPoVCoinClient) SubmitTxAndWait() (int, error) {
+func (client *PCoinClient) SubmitTxAndWait() (int, error) {
 	return SubmitTxAndWait(client.cluster, client.makeRandomTransfer())
 }
 
-func (client *PPoVCoinClient) SubmitTx() (int, *core.Transaction, error) {
+func (client *PCoinClient) SubmitTx() (int, *core.Transaction, error) {
 	tx := client.makeRandomTransfer()
 	nodeIdx, err := SubmitTx(client.cluster, client.nodes, tx)
 	return nodeIdx, tx, err
 }
 
-func (client *PPoVCoinClient) BatchSubmitTx(num int) (int, *core.TxList, error) {
+func (client *PCoinClient) BatchSubmitTx(num int) (int, *core.TxList, error) {
 	//使用100个协程快速生成num个交易
 	jobCh := make(chan struct{}, num)
 	defer close(jobCh)
@@ -106,7 +105,7 @@ func (client *PPoVCoinClient) BatchSubmitTx(num int) (int, *core.TxList, error) 
 	return nodeIdx, &txList, err
 }
 
-func (client *PPoVCoinClient) setupOnCluster(cls *cluster.Cluster) error {
+func (client *PCoinClient) setupOnCluster(cls *cluster.Cluster) error {
 	client.cluster = cls
 	if err := client.deploy(); err != nil {
 		return err
@@ -115,7 +114,7 @@ func (client *PPoVCoinClient) setupOnCluster(cls *cluster.Cluster) error {
 	return client.mintAccounts()
 }
 
-func (client *PPoVCoinClient) deploy() error {
+func (client *PCoinClient) deploy() error {
 	if client.binccPath != "" {
 		i, codeID, err := uploadBinChainCode(client.cluster, client.binccPath)
 		if err != nil {
@@ -127,13 +126,13 @@ func (client *PPoVCoinClient) deploy() error {
 	depTx := client.MakeDeploymentTx(client.minter)
 	_, err := SubmitTxAndWait(client.cluster, depTx)
 	if err != nil {
-		return fmt.Errorf("cannot deploy ppovcoin %w", err)
+		return fmt.Errorf("cannot deploy pcoin %w", err)
 	}
 	client.codeAddr = depTx.Hash()
 	return nil
 }
 
-func (client *PPoVCoinClient) mintAccounts() error {
+func (client *PCoinClient) mintAccounts() error {
 	errCh := make(chan error, len(client.accounts))
 	for _, acc := range client.accounts {
 		go func(acc *core.PublicKey) {
@@ -149,15 +148,15 @@ func (client *PPoVCoinClient) mintAccounts() error {
 	return nil
 }
 
-func (client *PPoVCoinClient) Mint(dest *core.PublicKey, value int64) error {
+func (client *PCoinClient) Mint(dest *core.PublicKey, value int64) error {
 	mintTx := client.MakeMintTx(dest, value)
 	i, err := SubmitTxAndWait(client.cluster, mintTx)
 	if err != nil {
-		return fmt.Errorf("cannot mint ppovcoin %w", err)
+		return fmt.Errorf("cannot mint pcoin %w", err)
 	}
 	balance, err := client.QueryBalance(client.cluster.GetNode(i), dest)
 	if err != nil {
-		return fmt.Errorf("cannot query ppovcoin balance %w", err)
+		return fmt.Errorf("cannot query pcoin balance %w", err)
 	}
 	if value != balance {
 		return fmt.Errorf("incorrect balance %d %d", value, balance)
@@ -165,7 +164,7 @@ func (client *PPoVCoinClient) Mint(dest *core.PublicKey, value int64) error {
 	return nil
 }
 
-func (client *PPoVCoinClient) makeRandomTransfer() *core.Transaction {
+func (client *PCoinClient) makeRandomTransfer() *core.Transaction {
 	tCount := int(atomic.AddInt64(&client.transferCount, 1))
 	accIdx := tCount % len(client.accounts)
 	destIdx := tCount % len(client.dests)
@@ -173,7 +172,7 @@ func (client *PPoVCoinClient) makeRandomTransfer() *core.Transaction {
 		client.dests[destIdx].PublicKey(), 1)
 }
 
-func (client *PPoVCoinClient) QueryBalance(node cluster.Node, dest *core.PublicKey) (int64, error) {
+func (client *PCoinClient) QueryBalance(node cluster.Node, dest *core.PublicKey) (int64, error) {
 	result, err := QueryState(node, client.MakeBalanceQuery(dest))
 	if err != nil {
 		return 0, err
@@ -182,7 +181,7 @@ func (client *PPoVCoinClient) QueryBalance(node cluster.Node, dest *core.PublicK
 	return balance, json.Unmarshal(result, &balance)
 }
 
-func (client *PPoVCoinClient) MakeDeploymentTx(minter *core.PrivateKey) *core.Transaction {
+func (client *PCoinClient) MakeDeploymentTx(minter *core.PrivateKey) *core.Transaction {
 	input := client.nativeDeploymentInput()
 	if client.binccCodeID != nil {
 		input = client.binccDeploymentInput()
@@ -194,16 +193,16 @@ func (client *PPoVCoinClient) MakeDeploymentTx(minter *core.PrivateKey) *core.Tr
 		Sign(minter)
 }
 
-func (client *PPoVCoinClient) nativeDeploymentInput() *execution.DeploymentInput {
+func (client *PCoinClient) nativeDeploymentInput() *execution.DeploymentInput {
 	return &execution.DeploymentInput{
 		CodeInfo: execution.CodeInfo{
 			DriverType: execution.DriverTypeNative,
-			CodeID:     execution.NativeCodeIDPPoVCoin,
+			CodeID:     execution.NativeCodeIDPCoin,
 		},
 	}
 }
 
-func (client *PPoVCoinClient) binccDeploymentInput() *execution.DeploymentInput {
+func (client *PCoinClient) binccDeploymentInput() *execution.DeploymentInput {
 	return &execution.DeploymentInput{
 		CodeInfo: execution.CodeInfo{
 			DriverType: execution.DriverTypeBincc,
@@ -216,8 +215,8 @@ func (client *PPoVCoinClient) binccDeploymentInput() *execution.DeploymentInput 
 	}
 }
 
-func (client *PPoVCoinClient) MakeMintTx(dest *core.PublicKey, value int64) *core.Transaction {
-	input := &ppovcoin.Input{
+func (client *PCoinClient) MakeMintTx(dest *core.PublicKey, value int64) *core.Transaction {
+	input := &pcoin.Input{
 		Method: "mint",
 		Dest:   dest.Bytes(),
 		Value:  value,
@@ -230,10 +229,10 @@ func (client *PPoVCoinClient) MakeMintTx(dest *core.PublicKey, value int64) *cor
 		Sign(client.minter)
 }
 
-func (client *PPoVCoinClient) MakeTransferTx(
+func (client *PCoinClient) MakeTransferTx(
 	sender *core.PrivateKey, dest *core.PublicKey, value int64,
 ) *core.Transaction {
-	input := &ppovcoin.Input{
+	input := &pcoin.Input{
 		Method: "transfer",
 		Dest:   dest.Bytes(),
 		Value:  value,
@@ -246,8 +245,8 @@ func (client *PPoVCoinClient) MakeTransferTx(
 		Sign(sender)
 }
 
-func (client *PPoVCoinClient) MakeBalanceQuery(dest *core.PublicKey) *execution.QueryData {
-	input := &ppovcoin.Input{
+func (client *PCoinClient) MakeBalanceQuery(dest *core.PublicKey) *execution.QueryData {
+	input := &pcoin.Input{
 		Method: "balance",
 		Dest:   dest.Bytes(),
 	}

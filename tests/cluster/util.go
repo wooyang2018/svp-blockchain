@@ -1,4 +1,3 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
@@ -14,9 +13,10 @@ import (
 	"strings"
 
 	"github.com/multiformats/go-multiaddr"
+	"github.com/wooyang2018/posv-blockchain/consensus"
 
-	"github.com/wooyang2018/ppov-blockchain/core"
-	"github.com/wooyang2018/ppov-blockchain/node"
+	"github.com/wooyang2018/posv-blockchain/core"
+	"github.com/wooyang2018/posv-blockchain/node"
 )
 
 func WriteNodeKey(datadir string, key *core.PrivateKey) error {
@@ -111,48 +111,51 @@ func RunCommand(cmd *exec.Cmd) error {
 	return cmd.Run()
 }
 
-func AddPPoVFlags(cmd *exec.Cmd, config *node.Config) {
+func AddPoSVFlags(cmd *exec.Cmd, config *node.Config) {
 	cmd.Args = append(cmd.Args, "-d", config.Datadir)
 	cmd.Args = append(cmd.Args, "-p", strconv.Itoa(config.Port))
 	cmd.Args = append(cmd.Args, "-P", strconv.Itoa(config.APIPort))
 
 	if config.Debug {
-		cmd.Args = append(cmd.Args, "--debug")
+		cmd.Args = append(cmd.Args, "--"+consensus.FlagDebug)
 	}
 	if config.BroadcastTx {
-		cmd.Args = append(cmd.Args, "--broadcast-tx")
+		cmd.Args = append(cmd.Args, "--"+consensus.FlagBroadcastTx)
 	}
 
-	cmd.Args = append(cmd.Args, "--storage-merkleBranchFactor",
+	cmd.Args = append(cmd.Args, "--"+consensus.FlagMerkleBranchFactor,
 		strconv.Itoa(int(config.StorageConfig.MerkleBranchFactor)))
 
-	cmd.Args = append(cmd.Args, "--execution-txExecTimeout",
+	cmd.Args = append(cmd.Args, "--"+consensus.FlagTxExecTimeout,
 		config.ExecutionConfig.TxExecTimeout.String(),
 	)
-	cmd.Args = append(cmd.Args, "--execution-concurrentLimit",
+	cmd.Args = append(cmd.Args, "--"+consensus.FlagExecConcurrentLimit,
 		strconv.Itoa(config.ExecutionConfig.ConcurrentLimit))
 
-	cmd.Args = append(cmd.Args, "--chainID",
+	cmd.Args = append(cmd.Args, "--"+consensus.FlagChainID,
 		strconv.Itoa(int(config.ConsensusConfig.ChainID)))
 
-	cmd.Args = append(cmd.Args, "--consensus-blockTxLimit",
+	cmd.Args = append(cmd.Args, "--"+consensus.FlagBlockTxLimit,
 		strconv.Itoa(config.ConsensusConfig.BlockTxLimit))
 
-	cmd.Args = append(cmd.Args, "--consensus-txWaitTime",
+	cmd.Args = append(cmd.Args, "--"+consensus.FlagTxWaitTime,
 		config.ConsensusConfig.TxWaitTime.String())
 
-	cmd.Args = append(cmd.Args, "--consensus-beatTimeout",
+	cmd.Args = append(cmd.Args, "--"+consensus.FlagBeatTimeout,
 		config.ConsensusConfig.BeatTimeout.String())
 
-	cmd.Args = append(cmd.Args, "--consensus-blockDelay",
+	cmd.Args = append(cmd.Args, "--"+consensus.FlagBlockDelay,
 		config.ConsensusConfig.BlockDelay.String())
 
-	cmd.Args = append(cmd.Args, "--consensus-viewWidth",
+	cmd.Args = append(cmd.Args, "--"+consensus.FlagViewWidth,
 		config.ConsensusConfig.ViewWidth.String())
 
-	cmd.Args = append(cmd.Args, "--consensus-leaderTimeout",
+	cmd.Args = append(cmd.Args, "--"+consensus.FlagLeaderTimeout,
 		config.ConsensusConfig.LeaderTimeout.String())
 
-	cmd.Args = append(cmd.Args, "--consensus-benchmarkPath",
+	cmd.Args = append(cmd.Args, "--"+consensus.FlagDelta,
+		config.ConsensusConfig.Delta.String())
+
+	cmd.Args = append(cmd.Args, "--"+consensus.FlagBenchmarkPath,
 		config.ConsensusConfig.BenchmarkPath)
 }

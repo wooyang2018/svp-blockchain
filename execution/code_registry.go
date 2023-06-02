@@ -1,4 +1,3 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
@@ -9,7 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/wooyang2018/ppov-blockchain/execution/chaincode"
+	"github.com/wooyang2018/posv-blockchain/execution/chaincode"
 )
 
 var codeRegistryAddr = bytes.Repeat([]byte{0}, 32)

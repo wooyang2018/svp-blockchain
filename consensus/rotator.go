@@ -1,4 +1,3 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
@@ -8,19 +7,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/wooyang2018/ppov-blockchain/hotstuff"
-	"github.com/wooyang2018/ppov-blockchain/logger"
+	"github.com/wooyang2018/posv-blockchain/logger"
 )
 
 type rotator struct {
 	resources *Resources
 	config    Config
+	state     *state
+	posv      *posv
 
-	state    *state
-	hotstuff *hotstuff.Hotstuff
-
-	leaderTimer *time.Timer
-	viewTimer   *time.Timer
+	leaderTimer        *time.Timer
+	viewTimer          *time.Timer
+	leaderTimeoutCount int
 
 	// start timestamp in second of current view
 	viewStart int64
@@ -29,8 +27,6 @@ type rotator struct {
 	// true when view changed before the next leader is approved
 	pendingViewChange bool
 	mtxPVC            sync.RWMutex
-
-	leaderTimeoutCount int
 
 	stopCh chan struct{}
 }
@@ -60,7 +56,7 @@ func (rot *rotator) stop() {
 }
 
 func (rot *rotator) run() {
-	subQC := rot.hotstuff.SubscribeNewQCHigh()
+	subQC := rot.posv.SubscribeNewQCHigh()
 	defer subQC.Unsubscribe()
 
 	rot.viewTimer = time.NewTimer(rot.config.ViewWidth)
@@ -81,7 +77,7 @@ func (rot *rotator) run() {
 			rot.onLeaderTimeout()
 
 		case e := <-subQC.Events():
-			rot.onNewQCHigh(e.(hotstuff.QC))
+			rot.onNewQCHigh(e.(QC))
 		}
 	}
 }
@@ -126,9 +122,9 @@ func (rot *rotator) changeView() {
 	rot.setPendingViewChange(true)
 	rot.setViewStart()
 	leader := rot.resources.VldStore.GetWorker(rot.state.getLeaderIndex())
-	rot.resources.MsgSvc.SendNewView(leader, rot.hotstuff.GetQCHigh().(*hsQC).qc)
+	rot.resources.MsgSvc.SendNewView(leader, rot.posv.GetQCHigh().(*innerQC).qc)
 	logger.I().Infow("view changed",
-		"leader", leaderIdx, "qc", qcRefHeight(rot.hotstuff.GetQCHigh()))
+		"leader", leaderIdx, "qc", qcRefHeight(rot.posv.GetQCHigh()))
 }
 
 func (rot *rotator) nextLeader() int {
@@ -139,8 +135,8 @@ func (rot *rotator) nextLeader() int {
 	return leaderIdx
 }
 
-func (rot *rotator) onNewQCHigh(qc hotstuff.QC) {
-	rot.state.setQC(qc.(*hsQC).qc)
+func (rot *rotator) onNewQCHigh(qc QC) {
+	rot.state.setQC(qc.(*innerQC).qc)
 	proposer := rot.resources.VldStore.GetWorkerIndex(qcRefProposer(qc))
 	logger.I().Debugw("updated qc", "proposer", proposer, "qc", qcRefHeight(qc))
 	var ltreset, vtreset bool

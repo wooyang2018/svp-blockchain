@@ -1,13 +1,12 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
 package node
 
 import (
-	"github.com/wooyang2018/ppov-blockchain/consensus"
-	"github.com/wooyang2018/ppov-blockchain/execution"
-	"github.com/wooyang2018/ppov-blockchain/storage"
+	"github.com/wooyang2018/posv-blockchain/consensus"
+	"github.com/wooyang2018/posv-blockchain/execution"
+	"github.com/wooyang2018/posv-blockchain/storage"
 )
 
 type Config struct {

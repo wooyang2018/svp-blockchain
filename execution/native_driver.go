@@ -1,4 +1,3 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
@@ -8,14 +7,14 @@ import (
 	"bytes"
 	"errors"
 
-	"github.com/wooyang2018/ppov-blockchain/chaincode/empty"
-	"github.com/wooyang2018/ppov-blockchain/chaincode/ppovcoin"
-	"github.com/wooyang2018/ppov-blockchain/execution/chaincode"
+	"github.com/wooyang2018/posv-blockchain/chaincode/empty"
+	"github.com/wooyang2018/posv-blockchain/chaincode/pcoin"
+	"github.com/wooyang2018/posv-blockchain/execution/chaincode"
 )
 
 var (
-	NativeCodeIDEmpty    = bytes.Repeat([]byte{1}, 32)
-	NativeCodeIDPPoVCoin = bytes.Repeat([]byte{2}, 32)
+	NativeCodeIDEmpty = bytes.Repeat([]byte{1}, 32)
+	NativeCodeIDPCoin = bytes.Repeat([]byte{2}, 32)
 )
 
 type nativeCodeDriver struct{}
@@ -35,8 +34,8 @@ func (drv *nativeCodeDriver) GetInstance(codeID []byte) (chaincode.Chaincode, er
 	switch string(codeID) {
 	case string(NativeCodeIDEmpty):
 		return new(empty.Empty), nil
-	case string(NativeCodeIDPPoVCoin):
-		return new(ppovcoin.PPoVCoin), nil
+	case string(NativeCodeIDPCoin):
+		return new(pcoin.PCoin), nil
 	default:
 		return nil, errors.New("unknown native chaincode id")
 	}

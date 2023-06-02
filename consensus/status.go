@@ -1,4 +1,3 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
@@ -20,7 +19,7 @@ type Status struct {
 	PendingViewChange bool
 	LeaderIndex       int
 
-	// hotstuff state (block heights)
+	// posv innerState (block heights)
 	BVote  uint64
 	BLock  uint64
 	BExec  uint64

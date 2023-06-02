@@ -4,7 +4,7 @@
 package empty
 
 import (
-	"github.com/wooyang2018/ppov-blockchain/execution/chaincode"
+	"github.com/wooyang2018/posv-blockchain/execution/chaincode"
 )
 
 // Empty chaincode

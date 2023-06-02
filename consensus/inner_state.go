@@ -1,20 +1,18 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
-package hotstuff
+package consensus
 
 import (
 	"fmt"
 	"sync"
 	"sync/atomic"
 
-	"github.com/wooyang2018/ppov-blockchain/emitter"
+	"github.com/wooyang2018/posv-blockchain/emitter"
 )
 
-type state struct {
+type innerState struct {
 	bVote  atomic.Value
-	bLock  atomic.Value
 	bExec  atomic.Value
 	qcHigh atomic.Value
 	bLeaf  atomic.Value
@@ -26,61 +24,49 @@ type state struct {
 	qcHighEmitter *emitter.Emitter
 }
 
-func newState(b0 Block, q0 QC) *state {
-	s := new(state)
+func newInnerState(b0 Block, q0 QC) *innerState {
+	s := new(innerState)
 	s.qcHighEmitter = emitter.New()
-	if TwoPhaseFlag {
-		s.setBVote(q0.Block())
-		s.setBLock(q0.Block())
-		s.setBLeaf(q0.Block())
-	} else {
-		s.setBVote(b0)
-		s.setBLock(b0)
-		s.setBLeaf(b0)
-	}
+	s.setBVote(b0)
+	s.setBLeaf(b0)
 	s.setBExec(b0)
 	s.setQCHigh(q0)
 	return s
 }
 
-func (s *state) setBVote(b Block)    { s.bVote.Store(b) }
-func (s *state) setBLock(b Block)    { s.bLock.Store(b) }
-func (s *state) setBExec(b Block)    { s.bExec.Store(b) }
-func (s *state) setBLeaf(bNew Block) { s.bLeaf.Store(bNew) }
-func (s *state) setQCHigh(qcHigh QC) { s.qcHigh.Store(qcHigh) }
+func (s *innerState) setBVote(b Block)    { s.bVote.Store(b) }
+func (s *innerState) setBExec(b Block)    { s.bExec.Store(b) }
+func (s *innerState) setBLeaf(bNew Block) { s.bLeaf.Store(bNew) }
+func (s *innerState) setQCHigh(qcHigh QC) { s.qcHigh.Store(qcHigh) }
 
-func (s *state) SubscribeNewQCHigh() *emitter.Subscription {
+func (s *innerState) SubscribeNewQCHigh() *emitter.Subscription {
 	return s.qcHighEmitter.Subscribe(10)
 }
 
-func (s *state) GetBVote() Block {
+func (s *innerState) GetBVote() Block {
 	return s.bVote.Load().(Block)
 }
 
-func (s *state) GetBLock() Block {
-	return s.bLock.Load().(Block)
-}
-
-func (s *state) GetBExec() Block {
+func (s *innerState) GetBExec() Block {
 	return s.bExec.Load().(Block)
 }
 
-func (s *state) GetBLeaf() Block {
+func (s *innerState) GetBLeaf() Block {
 	return s.bLeaf.Load().(Block)
 }
 
-func (s *state) GetQCHigh() QC {
+func (s *innerState) GetQCHigh() QC {
 	return s.qcHigh.Load().(QC)
 }
 
-func (s *state) IsProposing() bool {
+func (s *innerState) IsProposing() bool {
 	s.pMtx.RLock()
 	defer s.pMtx.RUnlock()
 
 	return s.proposal != nil
 }
 
-func (s *state) startProposal(b Block) {
+func (s *innerState) startProposal(b Block) {
 	s.pMtx.Lock()
 	defer s.pMtx.Unlock()
 
@@ -88,7 +74,7 @@ func (s *state) startProposal(b Block) {
 	s.votes = make(map[string]Vote)
 }
 
-func (s *state) endProposal() {
+func (s *innerState) endProposal() {
 	s.pMtx.Lock()
 	defer s.pMtx.Unlock()
 
@@ -96,7 +82,7 @@ func (s *state) endProposal() {
 	s.votes = nil
 }
 
-func (s *state) addVote(v Vote) error {
+func (s *innerState) addVote(v Vote) error {
 	s.pMtx.Lock()
 	defer s.pMtx.Unlock()
 
@@ -114,14 +100,14 @@ func (s *state) addVote(v Vote) error {
 	return nil
 }
 
-func (s *state) GetVoteCount() int {
+func (s *innerState) GetVoteCount() int {
 	s.pMtx.RLock()
 	defer s.pMtx.RUnlock()
 
 	return len(s.votes)
 }
 
-func (s *state) GetVotes() []Vote {
+func (s *innerState) GetVotes() []Vote {
 	s.pMtx.RLock()
 	defer s.pMtx.RUnlock()
 

@@ -1,4 +1,3 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
@@ -16,7 +15,7 @@ import (
 
 	"github.com/multiformats/go-multiaddr"
 
-	"github.com/wooyang2018/ppov-blockchain/node"
+	"github.com/wooyang2018/posv-blockchain/node"
 )
 
 type RemoteFactoryParams struct {
@@ -113,7 +112,7 @@ func (ftry *RemoteFactory) setup() error {
 	if err := ftry.setupRemoteServers(); err != nil {
 		return err
 	}
-	if err := ftry.sendPPoV(); err != nil {
+	if err := ftry.sendPoSV(); err != nil {
 		return err
 	}
 	return ftry.sendTemplate()
@@ -166,9 +165,9 @@ func (ftry *RemoteFactory) setupRemoteServerOne(i int) error {
 	return RunCommand(cmd)
 }
 
-func (ftry *RemoteFactory) sendPPoV() error {
+func (ftry *RemoteFactory) sendPoSV() error {
 	for i := 0; i < ftry.params.NodeCount; i++ {
-		err := ftry.sendPPoVOne(i)
+		err := ftry.sendPoSVOne(i)
 		if err != nil {
 			return err
 		}
@@ -176,7 +175,7 @@ func (ftry *RemoteFactory) sendPPoV() error {
 	return nil
 }
 
-func (ftry *RemoteFactory) sendPPoVOne(i int) error {
+func (ftry *RemoteFactory) sendPoSVOne(i int) error {
 	cmd := exec.Command("scp",
 		"-i", ftry.params.KeySSH,
 		ftry.params.BinPath,
@@ -274,7 +273,7 @@ func (node *RemoteNode) Start() error {
 		fmt.Sprintf("%s@%s", node.loginName, node.host),
 		"nohup", node.binPath,
 	)
-	AddPPoVFlags(cmd, &node.config)
+	AddPoSVFlags(cmd, &node.config)
 	cmd.Args = append(cmd.Args,
 		">>", path.Join(node.config.Datadir, "log.txt"), "2>&1", "&",
 	)
@@ -387,6 +386,6 @@ func (node *RemoteNode) GetEndpoint() string {
 
 func (node *RemoteNode) PrintCmd() string {
 	cmd := exec.Command(node.binPath)
-	AddPPoVFlags(cmd, &node.config)
+	AddPoSVFlags(cmd, &node.config)
 	return cmd.String()
 }

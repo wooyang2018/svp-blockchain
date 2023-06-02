@@ -1,4 +1,3 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
@@ -10,62 +9,61 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/wooyang2018/ppov-blockchain/core"
-	"github.com/wooyang2018/ppov-blockchain/hotstuff"
-	"github.com/wooyang2018/ppov-blockchain/storage"
-	"github.com/wooyang2018/ppov-blockchain/txpool"
+	"github.com/wooyang2018/posv-blockchain/core"
+	"github.com/wooyang2018/posv-blockchain/storage"
+	"github.com/wooyang2018/posv-blockchain/txpool"
 )
 
-func setupTestHsDriver() *hsDriver {
+func setupTestDriver() *driver {
 	resources := &Resources{
 		Signer: core.GenerateKey(nil),
 	}
 	state := newState(resources)
-	return &hsDriver{
+	return &driver{
 		resources: resources,
 		config:    DefaultConfig,
 		state:     state,
 	}
 }
 
-func TestHsDriver_TestMajorityCount(t *testing.T) {
-	hsd := setupTestHsDriver()
+func TestDriver_TestMajorityCount(t *testing.T) {
+	d := setupTestDriver()
 	validators := []string{
 		core.GenerateKey(nil).PublicKey().String(),
 		core.GenerateKey(nil).PublicKey().String(),
 		core.GenerateKey(nil).PublicKey().String(),
 		core.GenerateKey(nil).PublicKey().String(),
 	}
-	hsd.resources.VldStore = core.NewValidatorStore(validators, []int{1, 1, 1, 1}, validators)
+	d.resources.VldStore = core.NewValidatorStore(validators, []int{1, 1, 1, 1}, validators)
 
-	res := hsd.MajorityValidatorCount()
+	res := d.MajorityValidatorCount()
 
 	assert := assert.New(t)
-	assert.Equal(hsd.resources.VldStore.MajorityValidatorCount(), res)
+	assert.Equal(d.resources.VldStore.MajorityValidatorCount(), res)
 }
 
-func TestHsDriver_CreateLeaf(t *testing.T) {
-	hsd := setupTestHsDriver()
-	parent := newHsBlock(core.NewBlock().Sign(hsd.resources.Signer), hsd.state)
-	hsd.state.setBlock(parent.(*hsBlock).block)
-	qc := newHsQC(core.NewQuorumCert(), hsd.state)
+func TestDriver_CreateLeaf(t *testing.T) {
+	d := setupTestDriver()
+	parent := newBlock(core.NewBlock().Sign(d.resources.Signer), d.state)
+	d.state.setBlock(parent.(*innerBlock).block)
+	qc := newQC(core.NewQuorumCert(), d.state)
 	height := uint64(5)
 
 	txsInQ := [][]byte{[]byte("tx1"), []byte("tx2")}
 	txPool := new(MockTxPool)
 	if PreserveTxFlag {
-		txPool.On("GetTxsFromQueue", hsd.config.BlockTxLimit).Return(txsInQ)
+		txPool.On("GetTxsFromQueue", d.config.BlockTxLimit).Return(txsInQ)
 	} else {
-		txPool.On("PopTxsFromQueue", hsd.config.BlockTxLimit).Return(txsInQ)
+		txPool.On("PopTxsFromQueue", d.config.BlockTxLimit).Return(txsInQ)
 	}
-	hsd.resources.TxPool = txPool
+	d.resources.TxPool = txPool
 
 	storage := new(MockStorage)
 	storage.On("GetBlockHeight").Return(2) // driver should get bexec height from storage
 	storage.On("GetMerkleRoot").Return([]byte("merkle-root"))
-	hsd.resources.Storage = storage
+	d.resources.Storage = storage
 
-	leaf := hsd.CreateLeaf(parent, qc, height)
+	leaf := d.CreateLeaf(parent, qc, height)
 
 	txPool.AssertExpectations(t)
 	storage.AssertExpectations(t)
@@ -76,77 +74,77 @@ func TestHsDriver_CreateLeaf(t *testing.T) {
 	assert.Equal(qc, leaf.Justify(), "should add qc")
 	assert.Equal(height, leaf.Height())
 
-	blk := leaf.(*hsBlock).block
+	blk := leaf.(*innerBlock).block
 	assert.Equal(txsInQ, blk.Transactions())
 	assert.EqualValues(2, blk.ExecHeight())
 	assert.Equal([]byte("merkle-root"), blk.MerkleRoot())
 	assert.NotEmpty(blk.Timestamp(), "should add timestamp")
 
-	assert.NotNil(hsd.state.getBlock(blk.Hash()), "should store leaf block in state")
+	assert.NotNil(d.state.getBlock(blk.Hash()), "should store leaf block in innerState")
 }
 
-func TestHsDriver_VoteBlock(t *testing.T) {
-	hsd := setupTestHsDriver()
-	hsd.checkTxDelay = time.Millisecond
-	hsd.config.TxWaitTime = 20 * time.Millisecond
+func TestDriver_VoteBlock(t *testing.T) {
+	d := setupTestDriver()
+	d.checkTxDelay = time.Millisecond
+	d.config.TxWaitTime = 20 * time.Millisecond
 
 	proposer := core.GenerateKey(nil)
 	blk := core.NewBlock().Sign(proposer)
 
 	validators := []string{blk.Proposer().String()}
-	hsd.resources.VldStore = core.NewValidatorStore(validators, []int{1}, validators)
+	d.resources.VldStore = core.NewValidatorStore(validators, []int{1}, validators)
 
 	txPool := new(MockTxPool)
 	txPool.On("GetStatus").Return(txpool.Status{}) // no txs in the pool
 	if !PreserveTxFlag {
 		txPool.On("SetTxsPending", blk.Transactions())
 	}
-	hsd.resources.TxPool = txPool
+	d.resources.TxPool = txPool
 
 	// should sign block and send vote
 	msgSvc := new(MockMsgService)
-	msgSvc.On("SendVote", proposer.PublicKey(), blk.Vote(hsd.resources.Signer)).Return(nil)
-	hsd.resources.MsgSvc = msgSvc
+	msgSvc.On("SendVote", proposer.PublicKey(), blk.Vote(d.resources.Signer)).Return(nil)
+	d.resources.MsgSvc = msgSvc
 
 	start := time.Now()
-	hsd.VoteBlock(newHsBlock(blk, hsd.state))
+	d.VoteBlock(newBlock(blk, d.state))
 	elapsed := time.Since(start)
 
 	txPool.AssertExpectations(t)
 	msgSvc.AssertExpectations(t)
 
 	assert := assert.New(t)
-	assert.GreaterOrEqual(elapsed, hsd.config.TxWaitTime, "should delay if no txs in the pool")
+	assert.GreaterOrEqual(elapsed, d.config.TxWaitTime, "should delay if no txs in the pool")
 
 	txPool = new(MockTxPool)
 	txPool.On("GetStatus").Return(txpool.Status{Total: 1}) // one txs in the pool
 	if !PreserveTxFlag {
 		txPool.On("SetTxsPending", blk.Transactions())
 	}
-	hsd.resources.TxPool = txPool
+	d.resources.TxPool = txPool
 
 	start = time.Now()
-	hsd.VoteBlock(newHsBlock(blk, hsd.state))
+	d.VoteBlock(newBlock(blk, d.state))
 	elapsed = time.Since(start)
 
 	txPool.AssertExpectations(t)
 	msgSvc.AssertExpectations(t)
 
-	assert.Less(elapsed, hsd.config.TxWaitTime, "should not delay if txs in the pool")
+	assert.Less(elapsed, d.config.TxWaitTime, "should not delay if txs in the pool")
 }
 
-func TestHsDriver_Commit(t *testing.T) {
-	hsd := setupTestHsDriver()
-	parent := core.NewBlock().SetHeight(10).Sign(hsd.resources.Signer)
-	bfolk := core.NewBlock().SetTransactions([][]byte{[]byte("txfromfolk")}).SetHeight(10).Sign(hsd.resources.Signer)
+func TestDriver_Commit(t *testing.T) {
+	d := setupTestDriver()
+	parent := core.NewBlock().SetHeight(10).Sign(d.resources.Signer)
+	bfolk := core.NewBlock().SetTransactions([][]byte{[]byte("txfromfolk")}).SetHeight(10).Sign(d.resources.Signer)
 
-	tx := core.NewTransaction().Sign(hsd.resources.Signer)
+	tx := core.NewTransaction().Sign(d.resources.Signer)
 	bexec := core.NewBlock().SetTransactions([][]byte{tx.Hash()}).
-		SetParentHash(parent.Hash()).SetHeight(11).Sign(hsd.resources.Signer)
-	hsd.state.setBlock(parent)
-	hsd.state.setCommittedBlock(parent)
-	hsd.state.setBlock(bfolk)
-	hsd.state.setBlock(bexec)
+		SetParentHash(parent.Hash()).SetHeight(11).Sign(d.resources.Signer)
+	d.state.setBlock(parent)
+	d.state.setCommittedBlock(parent)
+	d.state.setBlock(bfolk)
+	d.state.setBlock(bexec)
 
 	txs := []*core.Transaction{tx}
 	txPool := new(MockTxPool)
@@ -157,7 +155,7 @@ func TestHsDriver_Commit(t *testing.T) {
 		txPool.On("RemoveTxs", bexec.Transactions()).Once() // should remove txs from pool after commit
 	}
 	txPool.On("PutTxsToQueue", bfolk.Transactions()).Once() // should put txs of folked block back to queue from pending
-	hsd.resources.TxPool = txPool
+	d.resources.TxPool = txPool
 
 	bcm := core.NewBlockCommit().SetHash(bexec.Hash())
 	txcs := []*core.TxCommit{core.NewTxCommit().SetHash(tx.Hash())}
@@ -175,49 +173,49 @@ func TestHsDriver_Commit(t *testing.T) {
 		cdata.Transactions = nil
 		execution.On("MockExecute", bexec).Return(bcm, txcs)
 	}
-	hsd.resources.Execution = execution
+	d.resources.Execution = execution
 
 	storage := new(MockStorage)
 	storage.On("Commit", cdata).Return(nil)
-	hsd.resources.Storage = storage
+	d.resources.Storage = storage
 
-	hsd.Commit(newHsBlock(bexec, hsd.state))
+	d.Commit(newBlock(bexec, d.state))
 
 	txPool.AssertExpectations(t)
 	execution.AssertExpectations(t)
 	storage.AssertExpectations(t)
 
 	assert := assert.New(t)
-	assert.NotNil(hsd.state.getBlockFromState(bexec.Hash()),
-		"should not delete bexec from state")
-	assert.Nil(hsd.state.getBlockFromState(bfolk.Hash()),
-		"should delete folked block from state")
+	assert.NotNil(d.state.getBlockFromState(bexec.Hash()),
+		"should not delete bexec from innerState")
+	assert.Nil(d.state.getBlockFromState(bfolk.Hash()),
+		"should delete folked block from innerState")
 }
 
-func TestHsDriver_CreateQC(t *testing.T) {
-	hsd := setupTestHsDriver()
-	blk := core.NewBlock().Sign(hsd.resources.Signer)
-	hsd.state.setBlock(blk)
-	votes := []hotstuff.Vote{
-		newHsVote(blk.ProposerVote(), hsd.state),
-		newHsVote(blk.Vote(core.GenerateKey(nil)), hsd.state),
+func TestDriver_CreateQC(t *testing.T) {
+	d := setupTestDriver()
+	blk := core.NewBlock().Sign(d.resources.Signer)
+	d.state.setBlock(blk)
+	votes := []Vote{
+		newVote(blk.ProposerVote(), d.state),
+		newVote(blk.Vote(core.GenerateKey(nil)), d.state),
 	}
-	qc := hsd.CreateQC(votes)
+	qc := d.CreateQC(votes)
 
 	assert := assert.New(t)
-	assert.Equal(blk, qc.Block().(*hsBlock).block, "should get qc reference block")
+	assert.Equal(blk, qc.Block().(*innerBlock).block, "should get qc reference block")
 }
 
-func TestHsDriver_BroadcastProposal(t *testing.T) {
-	hsd := setupTestHsDriver()
-	blk := core.NewBlock().Sign(hsd.resources.Signer)
-	hsd.state.setBlock(blk)
+func TestDriver_BroadcastProposal(t *testing.T) {
+	d := setupTestDriver()
+	blk := core.NewBlock().Sign(d.resources.Signer)
+	d.state.setBlock(blk)
 
 	msgSvc := new(MockMsgService)
 	msgSvc.On("BroadcastProposal", blk).Return(nil)
-	hsd.resources.MsgSvc = msgSvc
+	d.resources.MsgSvc = msgSvc
 
-	hsd.BroadcastProposal(newHsBlock(blk, hsd.state))
+	d.BroadcastProposal(newBlock(blk, d.state))
 
 	msgSvc.AssertExpectations(t)
 }

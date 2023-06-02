@@ -1,4 +1,3 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
@@ -8,6 +7,34 @@ import "time"
 
 const ExecuteTxFlag = true   //set to false when benchmark test
 const PreserveTxFlag = false //set to true when benchmark test
+
+const (
+	FlagDebug   = "debug"
+	FlagDataDir = "dataDir"
+
+	FlagPort    = "port"
+	FlagAPIPort = "apiPort"
+
+	FlagBroadcastTx = "broadcastTx"
+
+	// storage
+	FlagMerkleBranchFactor = "storage-merkleBranchFactor"
+
+	// execution
+	FlagTxExecTimeout       = "execution-txExecTimeout"
+	FlagExecConcurrentLimit = "execution-concurrentLimit"
+
+	// consensus
+	FlagChainID       = "consensus-chainID"
+	FlagBlockTxLimit  = "consensus-blockTxLimit"
+	FlagTxWaitTime    = "consensus-txWaitTime"
+	FlagBeatTimeout   = "consensus-beatTimeout"
+	FlagBlockDelay    = "consensus-blockDelay"
+	FlagViewWidth     = "consensus-viewWidth"
+	FlagLeaderTimeout = "consensus-leaderTimeout"
+	FlagDelta         = "consensus-delta"
+	FlagBenchmarkPath = "consensus-benchmarkPath"
+)
 
 type Config struct {
 	ChainID int64
@@ -30,6 +57,9 @@ type Config struct {
 	// leader must create next qc within this duration
 	LeaderTimeout time.Duration
 
+	// upper bound of message latency in a synchronous network
+	Delta time.Duration
+
 	// path to save the benchmark log of the consensus algorithm (it will not be saved if blank)
 	BenchmarkPath string
 }
@@ -41,5 +71,6 @@ var DefaultConfig = Config{
 	BlockDelay:    100 * time.Millisecond, // maximum block rate = 10 blk per sec
 	ViewWidth:     60 * time.Second,
 	LeaderTimeout: 20 * time.Second,
+	Delta:         3 * time.Second,
 	BenchmarkPath: "",
 }

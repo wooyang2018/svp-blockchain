@@ -5,7 +5,7 @@ core.pb.go: core.proto
 	--proto_path=../..:. \
 	--go_out=./ \
 	--go_opt=paths=source_relative \
-	--go_opt=Mcore.proto=github.com/wooyang2018/ppov-blockchain/pb \
+	--go_opt=Mcore.proto=github.com/wooyang2018/posv-blockchain/pb \
 	core.proto
 
 p2p.pb.go: p2p.proto
@@ -13,7 +13,7 @@ p2p.pb.go: p2p.proto
 	--proto_path=../..:. \
 	--go_out=./ \
 	--go_opt=paths=source_relative \
-	--go_opt=Mp2p.proto=github.com/wooyang2018/ppov-blockchain/pb \
+	--go_opt=Mp2p.proto=github.com/wooyang2018/posv-blockchain/pb \
 	p2p.proto
 
 clean:

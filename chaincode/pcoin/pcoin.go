@@ -1,8 +1,7 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
-package ppovcoin
+package pcoin
 
 import (
 	"bytes"
@@ -10,7 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/wooyang2018/ppov-blockchain/execution/chaincode"
+	"github.com/wooyang2018/posv-blockchain/execution/chaincode"
 )
 
 type Input struct {
@@ -24,17 +23,17 @@ var (
 	keyTotal  = []byte("total")
 )
 
-// PPoVCoin chaincode
-type PPoVCoin struct{}
+// PCoin chaincode
+type PCoin struct{}
 
-var _ chaincode.Chaincode = (*PPoVCoin)(nil)
+var _ chaincode.Chaincode = (*PCoin)(nil)
 
-func (c *PPoVCoin) Init(ctx chaincode.CallContext) error {
+func (c *PCoin) Init(ctx chaincode.CallContext) error {
 	ctx.SetState(keyMinter, ctx.Sender())
 	return nil
 }
 
-func (c *PPoVCoin) Invoke(ctx chaincode.CallContext) error {
+func (c *PCoin) Invoke(ctx chaincode.CallContext) error {
 	input, err := parseInput(ctx.Input())
 	if err != nil {
 		return err
@@ -55,7 +54,7 @@ func (c *PPoVCoin) Invoke(ctx chaincode.CallContext) error {
 	}
 }
 
-func (c *PPoVCoin) Query(ctx chaincode.CallContext) ([]byte, error) {
+func (c *PCoin) Query(ctx chaincode.CallContext) ([]byte, error) {
 	input, err := parseInput(ctx.Input())
 	if err != nil {
 		return nil, err

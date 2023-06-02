@@ -1,8 +1,7 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
-package hotstuff
+package consensus
 
 import (
 	"testing"
@@ -10,31 +9,23 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_state_init(t *testing.T) {
-	if TwoPhaseFlag {
-		t.Skip("skipping execution of Test_state_init because TwoPhaseFlag is set to true")
-	}
-
+func TestStateInit(t *testing.T) {
 	b0 := new(MockBlock)
 	q0 := new(MockQC)
-
 	b0.On("Height").Return(10)
-	s := newState(b0, q0)
+	s := newInnerState(b0, q0)
 
 	assert := assert.New(t)
 	assert.Equal(b0, s.GetBExec())
-	assert.Equal(b0, s.GetBLock())
 	assert.Equal(b0, s.GetBLeaf())
 	assert.Equal(b0, s.GetBVote())
 	assert.Equal(q0, s.GetQCHigh())
 }
 
-func Test_state_GetVotes(t *testing.T) {
-	s := &state{}
-
+func TestStateGetVotes(t *testing.T) {
+	s := &innerState{}
 	assert := assert.New(t)
 	assert.Equal([]Vote{}, s.GetVotes())
-
 	v0 := new(MockVote)
 	s.votes = map[string]Vote{"r0": v0}
 	assert.Equal([]Vote{v0}, s.GetVotes())

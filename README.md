@@ -1,10 +1,4 @@
-# PPoV Blockchain
-
-Our PPoV blockchain is based on [Juria](https://aungmawjj.github.io/juria-blockchain) which is a high-performance consortium blockchain with [Hotstuff](https://arxiv.org/abs/1803.05069) consensus mechanism and a transaction-based state machine.
-
-Hotstuff provides a mechanism to rotate leader (block maker) efficiently among the validator nodes. Hence it is not required to have a single trusted leader in the network.
-
-With the use of Hotstuff three-chain commit rule, Juria blockchain ensures that the same history of blocks is committed on all nodes despite network and machine failures.
+# PoSV Blockchain
 
 ## Getting Started
 
@@ -46,14 +40,7 @@ Then execute the following command to generate the configuration files and start
 cd tests && go run .
 ```
 
-The start command for each local node is displayed directly to the console as follows.
-
-```bash
-./chain -d workdir/local-clusters/cluster_template/0 -p 15150 -P 9040 --debug --storage-merkleBranchFactor 8 --execution-txExecTimeout 10s --execution-concurrentLimit 20 --chainID 0 --consensus-batchTxLimit 5000 --consensus-blockBatchLimit 4 --consensus-voteBatchLimit 4 --consensus-txWaitTime 1s --consensus-batchWaitTime 3s --consensus-proposeTimeout 1.5s --consensus-batchTimeout 1s --consensus-blockDelay 100ms --consensus-viewWidth 1m0s --consensus-leaderTimeout 20s
-...
-```
-
-Now, you can open 4 Shell windows and start each node in turn. 
+The start command for each local node is displayed directly to the console as follows. Now, you can open 4 Shell windows and start each node in turn. 
 
 ### Remote Mode
 

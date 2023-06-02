@@ -1,4 +1,3 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
@@ -8,7 +7,7 @@ import (
 	"bytes"
 	"encoding/binary"
 
-	"github.com/wooyang2018/ppov-blockchain/core"
+	"github.com/wooyang2018/posv-blockchain/core"
 )
 
 type chainStore struct {
@@ -122,7 +121,7 @@ func (cs *chainStore) setBlock(blk *core.Block) []updateFunc {
 
 func (cs *chainStore) setLastQC(qc *core.QuorumCert) updateFunc {
 	return func(setter setter) error {
-		if qc == nil { // some blocks may not have qc (hotstuff nature)
+		if qc == nil { // some blocks may not have qc (posv nature)
 			return nil
 		}
 		val, err := qc.Marshal()

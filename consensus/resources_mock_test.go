@@ -1,4 +1,3 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
@@ -6,10 +5,10 @@ package consensus
 
 import (
 	"github.com/stretchr/testify/mock"
-	"github.com/wooyang2018/ppov-blockchain/core"
-	"github.com/wooyang2018/ppov-blockchain/emitter"
-	"github.com/wooyang2018/ppov-blockchain/storage"
-	"github.com/wooyang2018/ppov-blockchain/txpool"
+	"github.com/wooyang2018/posv-blockchain/core"
+	"github.com/wooyang2018/posv-blockchain/emitter"
+	"github.com/wooyang2018/posv-blockchain/storage"
+	"github.com/wooyang2018/posv-blockchain/txpool"
 )
 
 type MockTxPool struct {
@@ -93,12 +92,12 @@ func (m *MockStorage) Commit(data *storage.CommitData) error {
 
 func (m *MockStorage) GetBlock(hash []byte) (*core.Block, error) {
 	args := m.Called(hash)
-	return castBlock(args.Get(0)), args.Error(1)
+	return castCoreBlock(args.Get(0)), args.Error(1)
 }
 
 func (m *MockStorage) GetLastBlock() (*core.Block, error) {
 	args := m.Called()
-	return castBlock(args.Get(0)), args.Error(1)
+	return castCoreBlock(args.Get(0)), args.Error(1)
 }
 
 func (m *MockStorage) GetLastQC() (*core.QuorumCert, error) {
@@ -139,12 +138,12 @@ func (m *MockMsgService) SendVote(pubKey *core.PublicKey, vote *core.Vote) error
 
 func (m *MockMsgService) RequestBlock(pubKey *core.PublicKey, hash []byte) (*core.Block, error) {
 	args := m.Called(pubKey, hash)
-	return castBlock(args.Get(0)), args.Error(1)
+	return castCoreBlock(args.Get(0)), args.Error(1)
 }
 
 func (m *MockMsgService) RequestBlockByHeight(pubKey *core.PublicKey, height uint64) (*core.Block, error) {
 	args := m.Called(pubKey, height)
-	return castBlock(args.Get(0)), args.Error(1)
+	return castCoreBlock(args.Get(0)), args.Error(1)
 }
 
 func (m *MockMsgService) SendNewView(pubKey *core.PublicKey, qc *core.QuorumCert) error {
@@ -199,7 +198,7 @@ func castBytesBytes(val interface{}) [][]byte {
 	return val.([][]byte)
 }
 
-func castBlock(val interface{}) *core.Block {
+func castCoreBlock(val interface{}) *core.Block {
 	if val == nil {
 		return nil
 	}

@@ -1,4 +1,3 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
@@ -9,9 +8,9 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/wooyang2018/ppov-blockchain/tests/cluster"
-	"github.com/wooyang2018/ppov-blockchain/tests/health"
-	"github.com/wooyang2018/ppov-blockchain/tests/testutil"
+	"github.com/wooyang2018/posv-blockchain/tests/cluster"
+	"github.com/wooyang2018/posv-blockchain/tests/health"
+	"github.com/wooyang2018/posv-blockchain/tests/testutil"
 )
 
 type NetworkDelay struct {

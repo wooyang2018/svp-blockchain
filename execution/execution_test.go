@@ -1,4 +1,3 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
@@ -10,7 +9,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/wooyang2018/ppov-blockchain/core"
+	"github.com/wooyang2018/posv-blockchain/core"
 )
 
 func TestExecution(t *testing.T) {
@@ -32,7 +31,7 @@ func TestExecution(t *testing.T) {
 
 	cinfo := CodeInfo{
 		DriverType: DriverTypeNative,
-		CodeID:     []byte(NativeCodeIDPPoVCoin),
+		CodeID:     []byte(NativeCodeIDPCoin),
 	}
 	cinfo2 := CodeInfo{
 		DriverType: DriverTypeNative,

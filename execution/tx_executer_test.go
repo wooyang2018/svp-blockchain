@@ -1,4 +1,3 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
@@ -10,8 +9,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/wooyang2018/ppov-blockchain/chaincode/ppovcoin"
-	"github.com/wooyang2018/ppov-blockchain/core"
+	"github.com/wooyang2018/posv-blockchain/chaincode/pcoin"
+	"github.com/wooyang2018/posv-blockchain/core"
 )
 
 func TestTxExecuter(t *testing.T) {
@@ -21,7 +20,7 @@ func TestTxExecuter(t *testing.T) {
 	depInput := &DeploymentInput{
 		CodeInfo: CodeInfo{
 			DriverType: DriverTypeNative,
-			CodeID:     []byte(NativeCodeIDPPoVCoin),
+			CodeID:     []byte(NativeCodeIDPCoin),
 		},
 	}
 	b, _ := json.Marshal(depInput)
@@ -60,7 +59,7 @@ func TestTxExecuter(t *testing.T) {
 	assert.NoError(err)
 	assert.NotNil(cc)
 
-	ccInput := &ppovcoin.Input{
+	ccInput := &pcoin.Input{
 		Method: "minter",
 	}
 	b, _ = json.Marshal(ccInput)

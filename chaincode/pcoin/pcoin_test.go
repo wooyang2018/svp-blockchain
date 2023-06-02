@@ -1,21 +1,20 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
-package ppovcoin
+package pcoin
 
 import (
 	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/wooyang2018/ppov-blockchain/execution/chaincode"
+	"github.com/wooyang2018/posv-blockchain/execution/chaincode"
 )
 
-func TestPPoVCoin_Init(t *testing.T) {
+func TestPCoin_Init(t *testing.T) {
 	assert := assert.New(t)
 	state := chaincode.NewMockState()
-	jctx := new(PPoVCoin)
+	jctx := new(PCoin)
 
 	ctx := new(chaincode.MockCallContext)
 	ctx.MockState = state
@@ -39,10 +38,10 @@ func TestPPoVCoin_Init(t *testing.T) {
 	}
 }
 
-func TestPPoVCoin_SetMinter(t *testing.T) {
+func TestPCoin_SetMinter(t *testing.T) {
 	assert := assert.New(t)
 	state := chaincode.NewMockState()
-	jctx := new(PPoVCoin)
+	jctx := new(PCoin)
 
 	ctx := new(chaincode.MockCallContext)
 	ctx.MockState = state
@@ -74,10 +73,10 @@ func TestPPoVCoin_SetMinter(t *testing.T) {
 	assert.Equal([]byte{2, 2, 2}, minter)
 }
 
-func TestPPoVCoin_Mint(t *testing.T) {
+func TestPCoin_Mint(t *testing.T) {
 	assert := assert.New(t)
 	state := chaincode.NewMockState()
-	jctx := new(PPoVCoin)
+	jctx := new(PCoin)
 
 	ctx := new(chaincode.MockCallContext)
 	ctx.MockState = state
@@ -130,10 +129,10 @@ func TestPPoVCoin_Mint(t *testing.T) {
 	assert.EqualValues(100, balance)
 }
 
-func TestPPoVCoin_Transfer(t *testing.T) {
+func TestPCoin_Transfer(t *testing.T) {
 	assert := assert.New(t)
 	state := chaincode.NewMockState()
-	jctx := new(PPoVCoin)
+	jctx := new(PCoin)
 
 	ctx := new(chaincode.MockCallContext)
 	ctx.MockState = state
@@ -160,7 +159,7 @@ func TestPPoVCoin_Transfer(t *testing.T) {
 	ctx.MockInput = b
 	err := jctx.Invoke(ctx)
 
-	assert.Error(err, "not enough coin error")
+	assert.Error(err, "not enough pcoin error")
 
 	// transfer 222 -> 333, value = 100
 	input.Value = 100

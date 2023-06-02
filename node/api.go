@@ -1,4 +1,3 @@
-// Copyright (C) 2021 Aung Maw
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
@@ -12,10 +11,10 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/wooyang2018/ppov-blockchain/core"
-	"github.com/wooyang2018/ppov-blockchain/execution"
-	"github.com/wooyang2018/ppov-blockchain/execution/bincc"
-	"github.com/wooyang2018/ppov-blockchain/logger"
+	"github.com/wooyang2018/posv-blockchain/core"
+	"github.com/wooyang2018/posv-blockchain/execution"
+	"github.com/wooyang2018/posv-blockchain/execution/bincc"
+	"github.com/wooyang2018/posv-blockchain/logger"
 )
 
 type nodeAPI struct {
