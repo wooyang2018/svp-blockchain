@@ -32,8 +32,8 @@ func TestTree_Root(t *testing.T) {
 	store := NewMapStore()
 	tree := NewTree(store, Config{Hash: crypto.SHA1, BranchFactor: 2})
 
-	assert := assert.New(t)
-	assert.Nil(tree.Root())
+	asrt := assert.New(t)
+	asrt.Nil(tree.Root())
 
 	upd := &UpdateResult{
 		LeafCount: big.NewInt(2),
@@ -51,11 +51,11 @@ func TestTree_Root(t *testing.T) {
 	}
 	store.CommitUpdate(upd)
 
-	assert.Equal(upd.Branches[2], tree.Root())
+	asrt.Equal(upd.Branches[2], tree.Root())
 }
 
 func TestTree_Update(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 
 	store := NewMapStore()
 	tree := NewTree(store, Config{Hash: crypto.SHA1, BranchFactor: 3})
@@ -66,7 +66,7 @@ func TestTree_Update(t *testing.T) {
 	}
 
 	res := tree.Update(leaves, big.NewInt(7))
-	assert.EqualValues(3, res.Height)
+	asrt.EqualValues(3, res.Height)
 
 	store.CommitUpdate(res)
 
@@ -75,10 +75,10 @@ func TestTree_Update(t *testing.T) {
 	n12 := sha1Sum([]byte{6})
 	n20 := sha1Sum(append(n10, append(n11, n12...)...))
 
-	assert.Equal(11, len(store.nodes))
-	assert.Equal(n10, store.GetNode(NewPosition(1, big.NewInt(0))))
-	assert.Equal(n11, store.GetNode(NewPosition(1, big.NewInt(1))))
-	assert.Equal(n20, store.GetNode(NewPosition(2, big.NewInt(0))))
+	asrt.Equal(11, len(store.nodes))
+	asrt.Equal(n10, store.GetNode(NewPosition(1, big.NewInt(0))))
+	asrt.Equal(n11, store.GetNode(NewPosition(1, big.NewInt(1))))
+	asrt.Equal(n20, store.GetNode(NewPosition(2, big.NewInt(0))))
 
 	upd := []*Node{
 		{NewPosition(0, big.NewInt(2)), []byte{1}},
@@ -88,7 +88,7 @@ func TestTree_Update(t *testing.T) {
 		{NewPosition(0, big.NewInt(9)), []byte{1}},
 	}
 	res = tree.Update(upd, big.NewInt(10))
-	assert.EqualValues(4, res.Height)
+	asrt.EqualValues(4, res.Height)
 
 	store.CommitUpdate(res)
 
@@ -100,14 +100,14 @@ func TestTree_Update(t *testing.T) {
 	n21 := sha1Sum(n13)
 	n30 := sha1Sum(append(n20, n21...))
 
-	assert.Equal(17, len(store.nodes))
-	assert.Equal(n10, store.GetNode(NewPosition(1, big.NewInt(0))))
-	assert.Equal(n11, store.GetNode(NewPosition(1, big.NewInt(1))))
-	assert.Equal(n12, store.GetNode(NewPosition(1, big.NewInt(2))))
-	assert.Equal(n13, store.GetNode(NewPosition(1, big.NewInt(3))))
-	assert.Equal(n20, store.GetNode(NewPosition(2, big.NewInt(0))))
-	assert.Equal(n21, store.GetNode(NewPosition(2, big.NewInt(1))))
-	assert.Equal(n30, store.GetNode(NewPosition(3, big.NewInt(0))))
+	asrt.Equal(17, len(store.nodes))
+	asrt.Equal(n10, store.GetNode(NewPosition(1, big.NewInt(0))))
+	asrt.Equal(n11, store.GetNode(NewPosition(1, big.NewInt(1))))
+	asrt.Equal(n12, store.GetNode(NewPosition(1, big.NewInt(2))))
+	asrt.Equal(n13, store.GetNode(NewPosition(1, big.NewInt(3))))
+	asrt.Equal(n20, store.GetNode(NewPosition(2, big.NewInt(0))))
+	asrt.Equal(n21, store.GetNode(NewPosition(2, big.NewInt(1))))
+	asrt.Equal(n30, store.GetNode(NewPosition(3, big.NewInt(0))))
 
 	upd = []*Node{
 		{NewPosition(0, big.NewInt(6)), []byte{2}},
@@ -115,15 +115,15 @@ func TestTree_Update(t *testing.T) {
 
 	// delete last 3 nodes
 	res = tree.Update(upd, big.NewInt(7))
-	assert.EqualValues(3, res.Height)
+	asrt.EqualValues(3, res.Height)
 
 	store.CommitUpdate(res)
 
 	n12 = sha1Sum([]byte{2})
 	n20 = sha1Sum(append(n10, append(n11, n12...)...))
 
-	assert.Equal(n12, store.GetNode(NewPosition(1, big.NewInt(2))))
-	assert.Equal(n20, store.GetNode(NewPosition(2, big.NewInt(0))))
+	asrt.Equal(n12, store.GetNode(NewPosition(1, big.NewInt(2))))
+	asrt.Equal(n20, store.GetNode(NewPosition(2, big.NewInt(0))))
 }
 
 func TestTree_Verify(t *testing.T) {
@@ -135,27 +135,27 @@ func TestTree_Verify(t *testing.T) {
 		leaves[i] = &Node{NewPosition(0, big.NewInt(int64(i))), []byte{uint8(i)}}
 	}
 
-	assert := assert.New(t)
-	assert.False(tree.Verify(leaves)) // no root in tree
+	asrt := assert.New(t)
+	asrt.False(tree.Verify(leaves)) // no root in tree
 
 	res := tree.Update(leaves, big.NewInt(7))
 	store.CommitUpdate(res)
 
-	assert.False(tree.Verify([]*Node{})) // no leaves to verify
-	assert.False(tree.Verify([]*Node{
+	asrt.False(tree.Verify([]*Node{})) // no leaves to verify
+	asrt.False(tree.Verify([]*Node{
 		{NewPosition(1, big.NewInt(0)), []byte{1}}, // invalid level
 	}))
-	assert.False(tree.Verify([]*Node{
+	asrt.False(tree.Verify([]*Node{
 		{NewPosition(0, big.NewInt(7)), []byte{7}}, // unbounded leaf
 	}))
-	assert.True(tree.Verify(leaves)) // verify all leaves
-	assert.True(tree.Verify([]*Node{leaves[2]}))
-	assert.True(tree.Verify([]*Node{leaves[1], leaves[5]}))
-	assert.False(tree.Verify([]*Node{
+	asrt.True(tree.Verify(leaves)) // verify all leaves
+	asrt.True(tree.Verify([]*Node{leaves[2]}))
+	asrt.True(tree.Verify([]*Node{leaves[1], leaves[5]}))
+	asrt.False(tree.Verify([]*Node{
 		{leaves[1].Position, []byte{4}}, // one node invalid
 		leaves[5],
 	}))
-	assert.False(tree.Verify([]*Node{ // multiple node invalid
+	asrt.False(tree.Verify([]*Node{ // multiple node invalid
 		{leaves[1].Position, []byte{4}},
 		{leaves[5].Position, []byte{1}},
 	}))

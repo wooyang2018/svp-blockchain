@@ -39,7 +39,7 @@ func (hdlr *TxListReqHandler) HandleReq(sender *core.PublicKey, data []byte) ([]
 }
 
 type BlockReqHandler struct {
-	GetBlock func(hash []byte) (*core.Block, error)
+	GetBlock func(hash []byte) (*core.Proposal, error)
 }
 
 var _ ReqHandler = (*BlockReqHandler)(nil)
@@ -57,7 +57,7 @@ func (hdlr *BlockReqHandler) HandleReq(sender *core.PublicKey, data []byte) ([]b
 }
 
 type BlockByHeightReqHandler struct {
-	GetBlockByHeight func(height uint64) (*core.Block, error)
+	GetBlockByHeight func(height uint64) (*core.Proposal, error)
 }
 
 var _ ReqHandler = (*BlockByHeightReqHandler)(nil)

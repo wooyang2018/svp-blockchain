@@ -197,7 +197,7 @@ func (client *PCoinClient) nativeDeploymentInput() *execution.DeploymentInput {
 	return &execution.DeploymentInput{
 		CodeInfo: execution.CodeInfo{
 			DriverType: execution.DriverTypeNative,
-			CodeID:     execution.NativeCodeIDPCoin,
+			CodeID:     execution.NativeCodePCoin,
 		},
 	}
 }

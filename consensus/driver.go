@@ -35,16 +35,19 @@ func (d *driver) CreateLeaf(parent Block, qc QC, height uint64) Block {
 	//core.Block的链式调用
 	blk := core.NewBlock().
 		SetParentHash(parent.(*innerBlock).block.Hash()).
-		SetQuorumCert(qc.(*innerQC).qc).
 		SetHeight(height).
 		SetTransactions(txs).
 		SetExecHeight(d.resources.Storage.GetBlockHeight()).
 		SetMerkleRoot(d.resources.Storage.GetMerkleRoot()).
 		SetTimestamp(time.Now().UnixNano()).
 		Sign(d.resources.Signer)
+	pro := core.NewProposal().
+		SetBlock(blk).
+		SetQuorumCert(qc.(*innerQC).qc).
+		Sign(d.resources.Signer)
 
-	d.state.setBlock(blk)
-	return newBlock(blk, d.state)
+	d.state.setBlock(pro)
+	return newBlock(pro, d.state)
 }
 
 func (d *driver) CreateQC(innerVotes []Vote) QC {
@@ -65,7 +68,7 @@ func (d *driver) VoteBlock(iBlk Block) {
 	blk := iBlk.(*innerBlock).block
 	vote := blk.Vote(d.resources.Signer)
 	if !PreserveTxFlag {
-		d.resources.TxPool.SetTxsPending(blk.Transactions())
+		d.resources.TxPool.SetTxsPending(blk.Block().Transactions())
 	}
 	d.delayVoteWhenNoTxs()
 	proposer := d.resources.VldStore.GetWorkerIndex(blk.Proposer())
@@ -95,14 +98,14 @@ func (d *driver) delayVoteWhenNoTxs() {
 func (d *driver) Commit(iBlk Block) {
 	bexe := iBlk.(*innerBlock).block
 	start := time.Now()
-	rawTxs := bexe.Transactions()
+	rawTxs := bexe.Block().Transactions()
 	var txCount int
 	var data *storage.CommitData
 	if ExecuteTxFlag {
 		txs, old := d.resources.TxPool.GetTxsToExecute(rawTxs)
 		txCount = len(txs)
-		logger.I().Debugw("committing block", "height", bexe.Height(), "txs", txCount)
-		bcm, txcs := d.resources.Execution.Execute(bexe, txs)
+		logger.I().Debugw("committing block", "height", bexe.Block().Height(), "txs", txCount)
+		bcm, txcs := d.resources.Execution.Execute(bexe.Block(), txs)
 		bcm.SetOldBlockTxs(old)
 		data = &storage.CommitData{
 			Block:        bexe,
@@ -113,8 +116,8 @@ func (d *driver) Commit(iBlk Block) {
 		}
 	} else {
 		txCount = len(rawTxs)
-		logger.I().Debugw("committing block", "height", bexe.Height(), "txs", txCount)
-		bcm, txcs := d.resources.Execution.MockExecute(bexe)
+		logger.I().Debugw("committing block", "height", bexe.Block().Height(), "txs", txCount)
+		bcm, txcs := d.resources.Execution.MockExecute(bexe.Block())
 		bcm.SetOldBlockTxs(rawTxs)
 		data = &storage.CommitData{
 			Block:        bexe,
@@ -131,31 +134,31 @@ func (d *driver) Commit(iBlk Block) {
 	d.state.addCommittedTxCount(txCount)
 	d.cleanStateOnCommitted(bexe)
 	logger.I().Debugw("committed bock",
-		"height", bexe.Height(),
+		"height", bexe.Block().Height(),
 		"txs", txCount,
 		"elapsed", time.Since(start))
 }
 
-func (d *driver) cleanStateOnCommitted(bexec *core.Block) {
+func (d *driver) cleanStateOnCommitted(bexec *core.Proposal) {
 	// qc for bexec is no longer needed here after committed to storage
 	d.state.deleteQC(bexec.Hash())
 	if !PreserveTxFlag {
-		d.resources.TxPool.RemoveTxs(bexec.Transactions())
+		d.resources.TxPool.RemoveTxs(bexec.Block().Transactions())
 	}
 	d.state.setCommittedBlock(bexec)
 
 	blks := d.state.getUncommittedOlderBlocks(bexec)
 	for _, blk := range blks {
 		// put transactions from forked block back to queue
-		d.resources.TxPool.PutTxsToQueue(blk.Transactions())
+		d.resources.TxPool.PutTxsToQueue(blk.Block().Transactions())
 		d.state.deleteBlock(blk.Hash())
 		d.state.deleteQC(blk.Hash())
 	}
 	d.deleteCommittedOlderBlocks(bexec)
 }
 
-func (d *driver) deleteCommittedOlderBlocks(bexec *core.Block) {
-	height := int64(bexec.Height()) - 20
+func (d *driver) deleteCommittedOlderBlocks(bexec *core.Proposal) {
+	height := int64(bexec.Block().Height()) - 20
 	if height < 0 {
 		return
 	}

@@ -46,12 +46,12 @@ func TestCallData(t *testing.T) {
 	go r.sendCallData(CallTypeInit)
 	c.loadCallData()
 
-	assert := assert.New(t)
-	assert.Equal(CallTypeInit, c.callData.CallType)
-	assert.Equal(mctx.Input(), c.Input())
-	assert.Equal(mctx.Sender(), c.Sender())
-	assert.Equal(mctx.BlockHash(), c.BlockHash())
-	assert.Equal(mctx.BlockHeight(), c.BlockHeight())
+	asrt := assert.New(t)
+	asrt.Equal(CallTypeInit, c.callData.CallType)
+	asrt.Equal(mctx.Input(), c.Input())
+	asrt.Equal(mctx.Sender(), c.Sender())
+	asrt.Equal(mctx.BlockHash(), c.BlockHash())
+	asrt.Equal(mctx.BlockHeight(), c.BlockHeight())
 }
 
 func TestGetState(t *testing.T) {
@@ -67,8 +67,7 @@ func TestGetState(t *testing.T) {
 	go r.serveStateAndGetResult()
 	res := c.GetState(key)
 
-	assert := assert.New(t)
-	assert.Equal(value, res)
+	assert.Equal(t, value, res)
 }
 
 func TestSetState(t *testing.T) {
@@ -83,8 +82,7 @@ func TestSetState(t *testing.T) {
 	go r.serveStateAndGetResult()
 	c.SetState(key, value)
 
-	assert := assert.New(t)
-	assert.Equal(value, mctx.GetState(key))
+	assert.Equal(t, value, mctx.GetState(key))
 }
 
 func TestResult(t *testing.T) {
@@ -95,15 +93,15 @@ func TestResult(t *testing.T) {
 	go c.sendResult(value, nil)
 	res, err := r.serveStateAndGetResult()
 
-	assert := assert.New(t)
-	assert.NoError(err)
-	assert.Equal(value, res)
+	asrt := assert.New(t)
+	asrt.NoError(err)
+	asrt.Equal(value, res)
 
 	resErr := errors.New("run chaincode error")
 	go c.sendResult(value, resErr)
 	res, err = r.serveStateAndGetResult()
 
-	assert.Error(err)
-	assert.Equal(resErr.Error(), err.Error())
-	assert.Nil(res)
+	asrt.Error(err)
+	asrt.Equal(resErr.Error(), err.Error())
+	asrt.Nil(res)
 }

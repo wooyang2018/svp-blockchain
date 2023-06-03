@@ -74,7 +74,7 @@ func (svc *MsgService) SubscribeTxList(buffer int) *emitter.Subscription {
 	return svc.txListEmitter.Subscribe(buffer)
 }
 
-func (svc *MsgService) BroadcastProposal(blk *core.Block) error {
+func (svc *MsgService) BroadcastProposal(blk *core.Proposal) error {
 	data, err := blk.Marshal()
 	if err != nil {
 		return err
@@ -114,12 +114,12 @@ func (svc *MsgService) BroadcastTxList(txList *core.TxList) error {
 	return svc.broadcastData(MsgTypeTxList, data)
 }
 
-func (svc *MsgService) RequestBlock(pubKey *core.PublicKey, hash []byte) (*core.Block, error) {
+func (svc *MsgService) RequestBlock(pubKey *core.PublicKey, hash []byte) (*core.Proposal, error) {
 	respData, err := svc.requestData(pubKey, pb.Request_Block, hash)
 	if err != nil {
 		return nil, err
 	}
-	blk := core.NewBlock()
+	blk := core.NewProposal()
 	if err := blk.Unmarshal(respData); err != nil {
 		return nil, err
 	}
@@ -128,14 +128,14 @@ func (svc *MsgService) RequestBlock(pubKey *core.PublicKey, hash []byte) (*core.
 
 func (svc *MsgService) RequestBlockByHeight(
 	pubKey *core.PublicKey, height uint64,
-) (*core.Block, error) {
+) (*core.Proposal, error) {
 	buf := bytes.NewBuffer(nil)
 	binary.Write(buf, binary.BigEndian, height)
 	respData, err := svc.requestData(pubKey, pb.Request_BlockByHeight, buf.Bytes())
 	if err != nil {
 		return nil, err
 	}
-	blk := core.NewBlock()
+	blk := core.NewProposal()
 	if err := blk.Unmarshal(respData); err != nil {
 		return nil, err
 	}
@@ -195,7 +195,7 @@ func (svc *MsgService) listenPeer(peer *Peer) {
 }
 
 func (svc *MsgService) onReceiveProposal(peer *Peer, data []byte) {
-	blk := core.NewBlock()
+	blk := core.NewProposal()
 	if err := blk.Unmarshal(data); err != nil {
 		return
 	}

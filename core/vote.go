@@ -18,7 +18,7 @@ var (
 // Vote type
 type Vote struct {
 	data  *pb.Vote
-	voter *PublicKey
+	voter *Signature
 }
 
 func NewVote() *Vote {
@@ -47,16 +47,16 @@ func (vote *Vote) Validate(vs ValidatorStore) error {
 
 func (vote *Vote) setData(data *pb.Vote) error {
 	vote.data = data
-	sig, err := newSignature(vote.data.Signature)
+	sig, err := newSignature(data.Signature)
 	if err != nil {
 		return err
 	}
-	vote.voter = sig.pubKey
+	vote.voter = sig
 	return nil
 }
 
 func (vote *Vote) BlockHash() []byte { return vote.data.BlockHash }
-func (vote *Vote) Voter() *PublicKey { return vote.voter }
+func (vote *Vote) Voter() *PublicKey { return vote.voter.pubKey }
 
 // Marshal encodes vote as bytes
 func (vote *Vote) Marshal() ([]byte, error) {

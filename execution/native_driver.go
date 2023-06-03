@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	NativeCodeIDEmpty = bytes.Repeat([]byte{1}, 32)
-	NativeCodeIDPCoin = bytes.Repeat([]byte{2}, 32)
+	NativeCodeEmpty = bytes.Repeat([]byte{1}, 32)
+	NativeCodePCoin = bytes.Repeat([]byte{2}, 32)
 )
 
 type nativeCodeDriver struct{}
@@ -32,9 +32,9 @@ func (drv *nativeCodeDriver) Install(codeID, data []byte) error {
 
 func (drv *nativeCodeDriver) GetInstance(codeID []byte) (chaincode.Chaincode, error) {
 	switch string(codeID) {
-	case string(NativeCodeIDEmpty):
+	case string(NativeCodeEmpty):
 		return new(empty.Empty), nil
-	case string(NativeCodeIDPCoin):
+	case string(NativeCodePCoin):
 		return new(pcoin.PCoin), nil
 	default:
 		return nil, errors.New("unknown native chaincode id")

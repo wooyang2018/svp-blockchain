@@ -44,7 +44,7 @@ func (cons *Consensus) GetStatus() Status {
 	return cons.getStatus()
 }
 
-func (cons *Consensus) GetBlock(hash []byte) *core.Block {
+func (cons *Consensus) GetBlock(hash []byte) *core.Proposal {
 	return cons.state.getBlock(hash)
 }
 
@@ -87,18 +87,18 @@ func (cons *Consensus) stop() {
 	}
 }
 
-func (cons *Consensus) setupState(b0 *core.Block) {
+func (cons *Consensus) setupState(b0 *core.Proposal) {
 	cons.state = newState(cons.resources)
 	cons.state.setBlock(b0)
 	cons.state.setLeaderIndex(cons.resources.VldStore.GetWorkerIndex(b0.Proposer()))
 }
 
-func (cons *Consensus) getInitialBlockAndQC() (*core.Block, *core.QuorumCert) {
+func (cons *Consensus) getInitialBlockAndQC() (*core.Proposal, *core.QuorumCert) {
 	b0, err := cons.resources.Storage.GetLastBlock()
 	if err == nil {
 		q0, err := cons.resources.Storage.GetLastQC()
 		if err != nil {
-			logger.I().Fatalf("cannot get last qc %d", b0.Height())
+			logger.I().Fatalf("cannot get last qc %d", b0.Block().Height())
 		}
 		return b0, q0
 	}
@@ -119,7 +119,7 @@ func (cons *Consensus) setupDriver() {
 	}
 }
 
-func (cons *Consensus) setupPoSV(b0 *core.Block, q0 *core.QuorumCert) {
+func (cons *Consensus) setupPoSV(b0 *core.Proposal, q0 *core.QuorumCert) {
 	cons.posv = NewPoSV(
 		cons.driver,
 		cons.logfile,
@@ -163,6 +163,7 @@ func (cons *Consensus) getStatus() (status Status) {
 	status.BlockPoolSize = cons.state.getBlockPoolSize()
 	status.QCPoolSize = cons.state.getQCPoolSize()
 	status.LeaderIndex = cons.state.getLeaderIndex()
+	status.ViewNum = cons.state.getViewNum()
 	status.ViewStart = cons.rotator.getViewStart()
 	status.PendingViewChange = cons.rotator.getPendingViewChange()
 

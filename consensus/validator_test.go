@@ -65,20 +65,20 @@ func TestValidator_verifyProposalToVote(t *testing.T) {
 	type testCase struct {
 		name     string
 		valid    bool
-		proposal *core.Block
+		proposal *core.Proposal
 	}
 	tests := []testCase{
-		{"valid", true, core.NewBlock().
+		{"valid", true, core.NewProposal().
 			SetHeight(14).SetExecHeight(10).SetMerkleRoot(mRoot).
 			SetTransactions([][]byte{tx1.Hash(), tx4.Hash()}).
 			Sign(priv1),
 		},
-		{"proposer is not leader", false, core.NewBlock().
+		{"proposer is not leader", false, core.NewProposal().
 			SetHeight(14).SetExecHeight(10).SetMerkleRoot(mRoot).
 			SetTransactions([][]byte{tx1.Hash(), tx4.Hash()}).
 			Sign(priv0),
 		},
-		{"different exec height", false, core.NewBlock().
+		{"different exec height", false, core.NewProposal().
 			SetHeight(14).SetExecHeight(9).SetMerkleRoot(mRoot).
 			SetTransactions([][]byte{tx1.Hash(), tx4.Hash()}).
 			Sign(priv1),
@@ -86,22 +86,22 @@ func TestValidator_verifyProposalToVote(t *testing.T) {
 	}
 	if ExecuteTxFlag {
 		tests = append(tests, []testCase{
-			{"different merkle root", false, core.NewBlock().
+			{"different merkle root", false, core.NewProposal().
 				SetHeight(14).SetExecHeight(10).SetMerkleRoot([]byte("different")).
 				SetTransactions([][]byte{tx1.Hash(), tx4.Hash()}).
 				Sign(priv1),
 			},
-			{"committed tx", false, core.NewBlock().
+			{"committed tx", false, core.NewProposal().
 				SetHeight(14).SetExecHeight(10).SetMerkleRoot(mRoot).
 				SetTransactions([][]byte{tx1.Hash(), tx2.Hash(), tx4.Hash()}).
 				Sign(priv1),
 			},
-			{"expired tx", false, core.NewBlock().
+			{"expired tx", false, core.NewProposal().
 				SetHeight(14).SetExecHeight(10).SetMerkleRoot(mRoot).
 				SetTransactions([][]byte{tx1.Hash(), tx3.Hash(), tx4.Hash()}).
 				Sign(priv1),
 			},
-			{"not found tx", false, core.NewBlock().
+			{"not found tx", false, core.NewProposal().
 				SetHeight(14).SetExecHeight(10).SetMerkleRoot(mRoot).
 				SetTransactions([][]byte{tx1.Hash(), tx5.Hash(), tx4.Hash()}).
 				Sign(priv1),

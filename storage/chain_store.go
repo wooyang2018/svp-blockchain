@@ -14,7 +14,7 @@ type chainStore struct {
 	getter getter
 }
 
-func (cs *chainStore) getLastBlock() (*core.Block, error) {
+func (cs *chainStore) getLastBlock() (*core.Proposal, error) {
 	height, err := cs.getBlockHeight()
 	if err != nil {
 		return nil, err
@@ -30,7 +30,7 @@ func (cs *chainStore) getBlockHeight() (uint64, error) {
 	return binary.BigEndian.Uint64(b), nil
 }
 
-func (cs *chainStore) getBlockByHeight(height uint64) (*core.Block, error) {
+func (cs *chainStore) getBlockByHeight(height uint64) (*core.Proposal, error) {
 	hash, err := cs.getBlockHashByHeight(height)
 	if err != nil {
 		return nil, err
@@ -42,12 +42,12 @@ func (cs *chainStore) getBlockHashByHeight(height uint64) ([]byte, error) {
 	return cs.getter.Get(concatBytes([]byte{colBlockHashByHeight}, uint64BEBytes(height)))
 }
 
-func (cs *chainStore) getBlock(hash []byte) (*core.Block, error) {
+func (cs *chainStore) getBlock(hash []byte) (*core.Proposal, error) {
 	b, err := cs.getter.Get(concatBytes([]byte{colBlockByHash}, hash))
 	if err != nil {
 		return nil, err
 	}
-	blk := core.NewBlock()
+	blk := core.NewProposal()
 	if err := blk.Unmarshal(b); err != nil {
 		return nil, err
 	}

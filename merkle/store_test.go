@@ -11,13 +11,13 @@ import (
 )
 
 func TestMapStore(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 
 	ms := NewMapStore()
-	assert.Equal(uint8(0), ms.GetHeight())
-	assert.Equal(big.NewInt(0), ms.GetLeafCount())
+	asrt.Equal(uint8(0), ms.GetHeight())
+	asrt.Equal(big.NewInt(0), ms.GetLeafCount())
 
-	assert.Nil(ms.GetNode(NewPosition(0, big.NewInt(0))))
+	asrt.Nil(ms.GetNode(NewPosition(0, big.NewInt(0))))
 
 	upd := &UpdateResult{
 		LeafCount: big.NewInt(2),
@@ -33,9 +33,9 @@ func TestMapStore(t *testing.T) {
 
 	ms.CommitUpdate(upd)
 
-	assert.Equal(upd.Height, ms.GetHeight())
-	assert.Equal(upd.LeafCount, ms.GetLeafCount())
-	assert.Equal([]byte{1, 1}, ms.GetNode(NewPosition(0, big.NewInt(0))))
-	assert.Equal([]byte{2, 2}, ms.GetNode(NewPosition(0, big.NewInt(1))))
-	assert.Equal([]byte{3, 3}, ms.GetNode(NewPosition(1, big.NewInt(0))))
+	asrt.Equal(upd.Height, ms.GetHeight())
+	asrt.Equal(upd.LeafCount, ms.GetLeafCount())
+	asrt.Equal([]byte{1, 1}, ms.GetNode(NewPosition(0, big.NewInt(0))))
+	asrt.Equal([]byte{2, 2}, ms.GetNode(NewPosition(0, big.NewInt(1))))
+	asrt.Equal([]byte{3, 3}, ms.GetNode(NewPosition(1, big.NewInt(0))))
 }

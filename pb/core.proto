@@ -5,17 +5,23 @@ syntax = "proto3";
 
 package core.pb;
 
+message Proposal{
+  bytes hash = 1;
+  Block block = 2;
+  QuorumCert quorumCert = 3;
+  uint32 viewNum = 4;
+  Signature signature  = 5; // signature of proposer
+}
+
 message Block {
   bytes hash = 1;
   uint64 height = 2;
   bytes parentHash = 3;
-  bytes proposer = 4;
-  QuorumCert quorumCert = 5;
-  uint64 execHeight = 6;
-  bytes merkleRoot = 7;
-  int64 timestamp = 8;
-  repeated bytes transactions = 9; // transaction hashes
-  bytes signature = 10; // signature of proposer
+  uint64 execHeight = 4;
+  bytes merkleRoot = 5;
+  int64 timestamp = 6;
+  repeated bytes transactions = 7; // transaction hashes
+  Signature signature = 8;
 }
 
 message BlockCommit {
@@ -36,11 +42,14 @@ message Signature {
 message QuorumCert {
   bytes blockHash = 1;
   repeated Signature signatures = 2;
+  uint32 viewNum = 3;
 }
 
 message Vote {
   bytes blockHash = 1;
-  Signature signature = 2;
+  double Quota = 2;
+  uint32 viewNum = 3;
+  Signature signature = 4;
 }
 
 message Transaction {

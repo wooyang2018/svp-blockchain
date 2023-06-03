@@ -23,9 +23,8 @@ var (
 
 // Block type
 type Block struct {
-	data       *pb.Block
-	proposer   *PublicKey
-	quorumCert *QuorumCert
+	data      *pb.Block
+	signature *Signature
 }
 
 var _ json.Marshaler = (*Block)(nil)
@@ -42,10 +41,6 @@ func (blk *Block) Sum() []byte {
 	h := sha3.New256()
 	binary.Write(h, binary.BigEndian, blk.data.Height)
 	h.Write(blk.data.ParentHash)
-	h.Write(blk.data.Proposer)
-	if blk.data.QuorumCert != nil {
-		h.Write(blk.data.QuorumCert.BlockHash) // qc reference block hash
-	}
 	binary.Write(h, binary.BigEndian, blk.data.ExecHeight)
 	h.Write(blk.data.MerkleRoot)
 	binary.Write(h, binary.BigEndian, blk.data.Timestamp)
@@ -60,23 +55,15 @@ func (blk *Block) Validate(vs ValidatorStore) error {
 	if blk.data == nil {
 		return ErrNilBlock
 	}
-	if !blk.IsGenesis() { // skip quorum cert validation for genesis block
-		if err := blk.quorumCert.Validate(vs); err != nil {
-			return err
-		}
-	}
 	if !bytes.Equal(blk.Sum(), blk.Hash()) {
 		return ErrInvalidBlockHash
 	}
-	sig, err := newSignature(&pb.Signature{
-		PubKey: blk.data.Proposer,
-		Value:  blk.data.Signature,
-	})
-	if !vs.IsWorker(sig.PublicKey()) {
-		return ErrInvalidValidator
-	}
+	sig, err := newSignature(blk.data.Signature)
 	if err != nil {
 		return err
+	}
+	if !vs.IsVoter(sig.PublicKey()) && !vs.IsWorker(sig.PublicKey()) {
+		return ErrInvalidValidator
 	}
 	if !sig.Verify(blk.data.Hash) {
 		return ErrInvalidSig
@@ -84,41 +71,13 @@ func (blk *Block) Validate(vs ValidatorStore) error {
 	return nil
 }
 
-// Vote creates a vote for block
-func (blk *Block) Vote(signer Signer) *Vote {
-	vote := NewVote()
-	vote.setData(&pb.Vote{
-		BlockHash: blk.data.Hash,
-		Signature: signer.Sign(blk.data.Hash).data,
-	})
-	return vote
-}
-
-func (blk *Block) ProposerVote() *Vote {
-	vote := NewVote()
-	vote.setData(&pb.Vote{
-		BlockHash: blk.data.Hash,
-		Signature: &pb.Signature{
-			PubKey: blk.data.Proposer,
-			Value:  blk.data.Signature,
-		},
-	})
-	return vote
-}
-
 func (blk *Block) setData(data *pb.Block) error {
 	blk.data = data
-	if !blk.IsGenesis() { // every block contains qc except for genesis
-		blk.quorumCert = NewQuorumCert()
-		if err := blk.quorumCert.setData(data.QuorumCert); err != nil {
-			return err
-		}
-	}
-	proposer, err := NewPublicKey(blk.data.Proposer)
+	sig, err := newSignature(blk.data.Signature)
 	if err != nil {
 		return err
 	}
-	blk.proposer = proposer
+	blk.signature = sig
 	return nil
 }
 
@@ -129,12 +88,6 @@ func (blk *Block) SetHeight(val uint64) *Block {
 
 func (blk *Block) SetParentHash(val []byte) *Block {
 	blk.data.ParentHash = val
-	return blk
-}
-
-func (blk *Block) SetQuorumCert(val *QuorumCert) *Block {
-	blk.quorumCert = val
-	blk.data.QuorumCert = val.data
 	return blk
 }
 
@@ -159,25 +112,23 @@ func (blk *Block) SetTransactions(val [][]byte) *Block {
 }
 
 func (blk *Block) Sign(signer Signer) *Block {
-	blk.proposer = signer.PublicKey()
-	blk.data.Proposer = signer.PublicKey().key
 	blk.data.Hash = blk.Sum()
-	blk.data.Signature = signer.Sign(blk.data.Hash).data.Value
+	blk.signature = signer.Sign(blk.data.Hash)
+	blk.data.Signature = blk.signature.data
 	return blk
 }
 
-func (blk *Block) Hash() []byte            { return blk.data.Hash }
-func (blk *Block) Height() uint64          { return blk.data.Height }
-func (blk *Block) ParentHash() []byte      { return blk.data.ParentHash }
-func (blk *Block) Proposer() *PublicKey    { return blk.proposer }
-func (blk *Block) QuorumCert() *QuorumCert { return blk.quorumCert }
-func (blk *Block) ExecHeight() uint64      { return blk.data.ExecHeight }
-func (blk *Block) MerkleRoot() []byte      { return blk.data.MerkleRoot }
-func (blk *Block) Timestamp() int64        { return blk.data.Timestamp }
-func (blk *Block) Transactions() [][]byte  { return blk.data.Transactions }
-func (blk *Block) IsGenesis() bool         { return blk.Height() == 0 }
+func (blk *Block) Hash() []byte           { return blk.data.Hash }
+func (blk *Block) Height() uint64         { return blk.data.Height }
+func (blk *Block) ParentHash() []byte     { return blk.data.ParentHash }
+func (blk *Block) ExecHeight() uint64     { return blk.data.ExecHeight }
+func (blk *Block) MerkleRoot() []byte     { return blk.data.MerkleRoot }
+func (blk *Block) Timestamp() int64       { return blk.data.Timestamp }
+func (blk *Block) Transactions() [][]byte { return blk.data.Transactions }
+func (blk *Block) Proposer() *PublicKey   { return blk.signature.pubKey }
+func (blk *Block) IsGenesis() bool        { return blk.Height() == 0 }
 
-// Marshal encodes blk as bytes
+// Marshal encodes block as bytes
 func (blk *Block) Marshal() ([]byte, error) {
 	return proto.Marshal(blk.data)
 }

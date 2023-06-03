@@ -105,7 +105,7 @@ func (client *EmptyClient) nativeDeploymentInput() *execution.DeploymentInput {
 	return &execution.DeploymentInput{
 		CodeInfo: execution.CodeInfo{
 			DriverType: execution.DriverTypeNative,
-			CodeID:     execution.NativeCodeIDEmpty,
+			CodeID:     execution.NativeCodeEmpty,
 		},
 	}
 }
@@ -113,7 +113,7 @@ func (client *EmptyClient) nativeDeploymentInput() *execution.DeploymentInput {
 func (client *EmptyClient) MakeTx() *core.Transaction {
 	codeAddr := client.codeAddr
 	if codeAddr == nil {
-		codeAddr = execution.NativeCodeIDEmpty
+		codeAddr = execution.NativeCodeEmpty
 	}
 	return core.NewTransaction().
 		SetCodeAddr(codeAddr).

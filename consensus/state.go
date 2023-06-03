@@ -13,7 +13,7 @@ import (
 type state struct {
 	resources *Resources
 
-	blocks    map[string]*core.Block
+	blocks    map[string]*core.Proposal
 	mtxBlocks sync.RWMutex
 
 	committed    map[string]struct{}
@@ -25,10 +25,10 @@ type state struct {
 	mtxUpdate sync.Mutex // lock for posv update call
 
 	leaderIndex int64
+	viewNum     uint32
 
 	// committed block height. on node restart, it's zero until a block is committed
 	committedHeight uint64
-
 	// committed tx count, since last node start
 	committedTxCount uint64
 }
@@ -36,7 +36,7 @@ type state struct {
 func newState(resources *Resources) *state {
 	return &state{
 		resources: resources,
-		blocks:    make(map[string]*core.Block),
+		blocks:    make(map[string]*core.Proposal),
 		committed: make(map[string]struct{}),
 		qcs:       make(map[string]*core.QuorumCert),
 	}
@@ -48,13 +48,13 @@ func (state *state) getBlockPoolSize() int {
 	return len(state.blocks)
 }
 
-func (state *state) setBlock(blk *core.Block) {
+func (state *state) setBlock(blk *core.Proposal) {
 	state.mtxBlocks.Lock()
 	defer state.mtxBlocks.Unlock()
 	state.blocks[string(blk.Hash())] = blk
 }
 
-func (state *state) getBlock(hash []byte) *core.Block {
+func (state *state) getBlock(hash []byte) *core.Proposal {
 	blk := state.getBlockFromState(hash)
 	if blk != nil {
 		return blk
@@ -67,7 +67,7 @@ func (state *state) getBlock(hash []byte) *core.Block {
 	return blk
 }
 
-func (state *state) getBlockFromState(hash []byte) *core.Block {
+func (state *state) getBlockFromState(hash []byte) *core.Proposal {
 	state.mtxBlocks.RLock()
 	defer state.mtxBlocks.RUnlock()
 	return state.blocks[string(hash)]
@@ -103,11 +103,11 @@ func (state *state) deleteQC(blkHash []byte) {
 	delete(state.qcs, string(blkHash))
 }
 
-func (state *state) setCommittedBlock(blk *core.Block) {
+func (state *state) setCommittedBlock(blk *core.Proposal) {
 	state.mtxCommitted.Lock()
 	defer state.mtxCommitted.Unlock()
 	state.committed[string(blk.Hash())] = struct{}{}
-	atomic.StoreUint64(&state.committedHeight, blk.Height())
+	atomic.StoreUint64(&state.committedHeight, blk.Block().Height())
 }
 
 func (state *state) deleteCommitted(blkhash []byte) {
@@ -116,28 +116,28 @@ func (state *state) deleteCommitted(blkhash []byte) {
 	delete(state.committed, string(blkhash))
 }
 
-func (state *state) getOlderBlocks(height uint64) []*core.Block {
+func (state *state) getOlderBlocks(height uint64) []*core.Proposal {
 	state.mtxBlocks.RLock()
 	defer state.mtxBlocks.RUnlock()
-	ret := make([]*core.Block, 0)
+	ret := make([]*core.Proposal, 0)
 	for _, b := range state.blocks {
-		if b.Height() < height {
+		if b.Block().Height() < height {
 			ret = append(ret, b)
 		}
 	}
 	return ret
 }
 
-func (state *state) getUncommittedOlderBlocks(bexec *core.Block) []*core.Block {
+func (state *state) getUncommittedOlderBlocks(bexec *core.Proposal) []*core.Proposal {
 	state.mtxBlocks.RLock()
 	defer state.mtxBlocks.RUnlock()
 
 	state.mtxCommitted.RLock()
 	defer state.mtxCommitted.RUnlock()
 
-	ret := make([]*core.Block, 0)
+	ret := make([]*core.Proposal, 0)
 	for _, b := range state.blocks {
-		if b.Height() < bexec.Height() {
+		if b.Block().Height() < bexec.Block().Height() {
 			if _, committed := state.committed[string(b.Hash())]; !committed {
 				ret = append(ret, b)
 			}
@@ -179,6 +179,14 @@ func (state *state) setLeaderIndex(idx int) {
 
 func (state *state) getLeaderIndex() int {
 	return int(atomic.LoadInt64(&state.leaderIndex))
+}
+
+func (state *state) setViewNum(num int) {
+	atomic.StoreUint32(&state.viewNum, uint32(num))
+}
+
+func (state *state) getViewNum() uint32 {
+	return atomic.LoadUint32(&state.viewNum)
 }
 
 func (state *state) getFaultyCount() int {

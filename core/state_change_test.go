@@ -10,8 +10,7 @@ import (
 )
 
 func TestStateChange(t *testing.T) {
-	assert := assert.New(t)
-
+	asrt := assert.New(t)
 	sc := NewStateChange().
 		SetKey([]byte("key")).
 		SetValue([]byte("value")).
@@ -20,15 +19,14 @@ func TestStateChange(t *testing.T) {
 		SetPrevTreeIndex(nil)
 
 	b, err := sc.Marshal()
-	assert.NoError(err)
-
+	asrt.NoError(err)
 	sc = NewStateChange()
 	err = sc.Unmarshal(b)
-	assert.NoError(err)
+	asrt.NoError(err)
 
-	assert.Equal([]byte("key"), sc.Key())
-	assert.Equal([]byte("value"), sc.Value())
-	assert.Equal([]byte("prevValue"), sc.PrevValue())
-	assert.Equal([]byte{1}, sc.TreeIndex())
-	assert.Nil(sc.PrevTreeIndex())
+	asrt.Equal([]byte("key"), sc.Key())
+	asrt.Equal([]byte("value"), sc.Value())
+	asrt.Equal([]byte("prevValue"), sc.PrevValue())
+	asrt.Equal([]byte{1}, sc.TreeIndex())
+	asrt.Nil(sc.PrevTreeIndex())
 }

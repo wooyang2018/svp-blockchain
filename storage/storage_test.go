@@ -33,7 +33,7 @@ func TestStorage_Commit(t *testing.T) {
 
 	strg := newTestStorage()
 	priv := core.GenerateKey(nil)
-	b0 := core.NewBlock().SetHeight(0).Sign(priv)
+	b0 := core.NewProposal().SetHeight(0).Sign(priv)
 	bcmInput := core.NewBlockCommit().
 		SetHash(b0.Hash()).
 		SetStateChanges([]*core.StateChange{
@@ -81,7 +81,7 @@ func TestStorage_Commit(t *testing.T) {
 	assert.Equal([]byte{20}, strg.GetState([]byte{2}))
 
 	qc := core.NewQuorumCert().Build([]*core.Vote{b0.ProposerVote()})
-	b1 := core.NewBlock().
+	b1 := core.NewProposal().
 		SetHeight(1).
 		SetQuorumCert(qc).
 		SetParentHash(b0.Hash()).

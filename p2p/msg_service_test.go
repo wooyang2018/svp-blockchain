@@ -53,18 +53,17 @@ func TestMsgService_BroadcastProposal(t *testing.T) {
 
 	svc, raws, _ := setupMsgServiceWithLoopBackPeers()
 	sub := svc.SubscribeProposal(5)
-	var recvBlk *core.Block
+	var recvBlk *core.Proposal
 	var recvCount int
 	go func() {
 		for e := range sub.Events() {
 			recvCount++
-			recvBlk = e.(*core.Block)
+			recvBlk = e.(*core.Proposal)
 		}
 	}()
 
-	qc := core.NewQuorumCert().Build(
-		[]*core.Vote{core.NewBlock().SetHeight(9).Vote(core.GenerateKey(nil))})
-	blk := core.NewBlock().SetHeight(10).SetQuorumCert(qc).Sign(core.GenerateKey(nil))
+	qc := core.NewQuorumCert().Build(nil)
+	blk := core.NewProposal().SetQuorumCert(qc).Sign(core.GenerateKey(nil))
 	err := svc.BroadcastProposal(blk)
 
 	if !assert.NoError(err) {
@@ -80,7 +79,7 @@ func TestMsgService_BroadcastProposal(t *testing.T) {
 
 	assert.Equal(2, recvCount)
 	if assert.NotNil(recvBlk) {
-		assert.Equal(blk.Height(), recvBlk.Height())
+		assert.Equal(blk.Block().Height(), recvBlk.Block().Height())
 	}
 }
 
@@ -98,7 +97,7 @@ func TestMsgService_SendVote(t *testing.T) {
 	}()
 
 	validator := core.GenerateKey(nil)
-	vote := core.NewBlock().Sign(core.GenerateKey(nil)).Vote(validator)
+	vote := core.NewProposal().Sign(core.GenerateKey(nil)).Vote(validator)
 	err := svc.SendVote(peers[0].PublicKey(), vote)
 
 	if !assert.NoError(err) {
@@ -129,7 +128,7 @@ func TestMsgService_SendNewView(t *testing.T) {
 		}
 	}()
 
-	vote := core.NewBlock().Sign(core.GenerateKey(nil)).Vote(core.GenerateKey(nil))
+	vote := core.NewProposal().Sign(core.GenerateKey(nil)).Vote(core.GenerateKey(nil))
 	qc := core.NewQuorumCert().Build([]*core.Vote{vote})
 	err := svc.SendNewView(peers[0].PublicKey(), qc)
 
@@ -189,11 +188,11 @@ func TestMsgService_RequestBlock(t *testing.T) {
 	assert := assert.New(t)
 
 	qc := core.NewQuorumCert().Build(
-		[]*core.Vote{core.NewBlock().SetHeight(9).Vote(core.GenerateKey(nil))})
-	blk := core.NewBlock().SetHeight(10).SetQuorumCert(qc).Sign(core.GenerateKey(nil))
+		[]*core.Vote{core.NewProposal().SetHeight(9).Vote(core.GenerateKey(nil))})
+	blk := core.NewProposal().SetHeight(10).SetQuorumCert(qc).Sign(core.GenerateKey(nil))
 
 	blkReqHandler := &BlockReqHandler{
-		GetBlock: func(hash []byte) (*core.Block, error) {
+		GetBlock: func(hash []byte) (*core.Proposal, error) {
 			if bytes.Equal(blk.Hash(), hash) {
 				return blk, nil
 			}

@@ -9,11 +9,12 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/wooyang2018/posv-blockchain/chaincode/pcoin"
 	"github.com/wooyang2018/posv-blockchain/core"
 )
 
 func TestExecution(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 
 	state := newMapStateStore()
 	reg := newCodeRegistry()
@@ -31,7 +32,7 @@ func TestExecution(t *testing.T) {
 
 	cinfo := CodeInfo{
 		DriverType: DriverTypeNative,
-		CodeID:     []byte(NativeCodeIDPCoin),
+		CodeID:     NativeCodePCoin,
 	}
 	cinfo2 := CodeInfo{
 		DriverType: DriverTypeNative,
@@ -50,47 +51,41 @@ func TestExecution(t *testing.T) {
 
 	bcm, txcs := execution.Execute(blk, []*core.Transaction{tx1, tx2, tx3})
 
-	assert.Equal(blk.Hash(), bcm.Hash())
-	assert.EqualValues(3, len(txcs))
-	assert.NotEmpty(bcm.StateChanges())
+	asrt.Equal(blk.Hash(), bcm.Hash())
+	asrt.EqualValues(3, len(txcs))
+	asrt.NotEmpty(bcm.StateChanges())
 
-	// assert.Equal(tx1.Hash(), txcs[0].Hash())
-	// assert.Equal(tx2.Hash(), txcs[1].Hash())
-	// assert.Equal(tx3.Hash(), txcs[2].Hash())
+	asrt.Equal(tx1.Hash(), txcs[0].Hash())
+	asrt.Equal(tx2.Hash(), txcs[1].Hash())
+	asrt.Equal(tx3.Hash(), txcs[2].Hash())
 
-	// for _, sc := range bcm.StateChanges() {
-	// 	state.SetState(sc.Key(), sc.Value())
-	// }
+	for _, sc := range bcm.StateChanges() {
+		state.SetState(sc.Key(), sc.Value())
+	}
 
-	// regTrk := newStateTracker(state, codeRegistryAddr)
-	// resci, err := reg.getCodeInfo(tx1.Hash(), regTrk)
+	regTrk := newStateTracker(state, codeRegistryAddr)
+	resci, err := reg.getCodeInfo(tx1.Hash(), regTrk)
+	asrt.NoError(err)
+	asrt.Equal(&cinfo, resci)
 
-	// assert.NoError(err)
-	// assert.Equal(&cinfo, resci)
+	resci, err = reg.getCodeInfo(tx2.Hash(), regTrk)
+	asrt.Error(err)
+	asrt.Nil(resci)
 
-	// resci, err = reg.getCodeInfo(tx2.Hash(), regTrk)
+	resci, err = reg.getCodeInfo(tx3.Hash(), regTrk)
+	asrt.NoError(err)
+	asrt.Equal(&cinfo, resci)
 
-	// assert.Error(err)
-	// assert.Nil(resci)
+	ccInput, _ := json.Marshal(pcoin.Input{Method: "minter"})
+	minter, err := execution.Query(&QueryData{tx1.Hash(), ccInput})
+	asrt.NoError(err)
+	asrt.Equal(priv.PublicKey().Bytes(), minter)
 
-	// resci, err = reg.getCodeInfo(tx3.Hash(), regTrk)
+	minter, err = execution.Query(&QueryData{tx2.Hash(), ccInput})
+	asrt.Error(err)
+	asrt.Nil(minter)
 
-	// assert.NoError(err)
-	// assert.Equal(&cinfo, resci)
-
-	// ccInput, _ := json.Marshal(juriacoin.Input{Method: "minter"})
-	// minter, err := execution.Query(&QueryData{tx1.Hash(), ccInput})
-
-	// assert.NoError(err)
-	// assert.Equal(priv.PublicKey().Bytes(), minter)
-
-	// minter, err = execution.Query(&QueryData{tx2.Hash(), ccInput})
-
-	// assert.Error(err)
-	// assert.Nil(minter)
-
-	// minter, err = execution.Query(&QueryData{tx3.Hash(), ccInput})
-
-	// assert.NoError(err)
-	// assert.Equal(priv.PublicKey().Bytes(), minter)
+	minter, err = execution.Query(&QueryData{tx3.Hash(), ccInput})
+	asrt.NoError(err)
+	asrt.Equal(priv.PublicKey().Bytes(), minter)
 }

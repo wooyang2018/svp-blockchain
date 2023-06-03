@@ -14,13 +14,13 @@ import (
 )
 
 func TestTxExecuter(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 
 	priv := core.GenerateKey(nil)
 	depInput := &DeploymentInput{
 		CodeInfo: CodeInfo{
 			DriverType: DriverTypeNative,
-			CodeID:     []byte(NativeCodeIDPCoin),
+			CodeID:     []byte(NativeCodePCoin),
 		},
 	}
 	b, _ := json.Marshal(depInput)
@@ -39,25 +39,25 @@ func TestTxExecuter(t *testing.T) {
 	}
 	txc := texe.execute()
 
-	assert.NotEqual("", txc.Error(), "code driver not registered")
+	asrt.NotEqual("", txc.Error(), "code driver not registered")
 
 	reg.registerDriver(DriverTypeNative, newNativeCodeDriver())
 	txc = texe.execute()
 
-	assert.Equal("", txc.Error())
-	assert.Equal(blk.Hash(), txc.BlockHash())
-	assert.Equal(blk.Height(), txc.BlockHeight())
+	asrt.Equal("", txc.Error())
+	asrt.Equal(blk.Hash(), txc.BlockHash())
+	asrt.Equal(blk.Height(), txc.BlockHeight())
 
 	// codeinfo must be saved by key (transaction hash)
 	cinfo, err := reg.getCodeInfo(txDep.Hash(), trk.spawn(codeRegistryAddr))
 
-	assert.NoError(err)
-	assert.Equal(*cinfo, depInput.CodeInfo)
+	asrt.NoError(err)
+	asrt.Equal(*cinfo, depInput.CodeInfo)
 
 	cc, err := reg.getInstance(txDep.Hash(), trk.spawn(codeRegistryAddr))
 
-	assert.NoError(err)
-	assert.NotNil(cc)
+	asrt.NoError(err)
+	asrt.NotNil(cc)
 
 	ccInput := &pcoin.Input{
 		Method: "minter",
@@ -68,8 +68,8 @@ func TestTxExecuter(t *testing.T) {
 		stateTracker: trk.spawn(txDep.Hash()),
 	})
 
-	assert.NoError(err)
-	assert.Equal(priv.PublicKey().Bytes(), minter, "deployer must be set as minter")
+	asrt.NoError(err)
+	asrt.Equal(priv.PublicKey().Bytes(), minter, "deployer must be set as minter")
 
 	ccInput.Method = "mint"
 	ccInput.Dest = priv.PublicKey().Bytes()
@@ -81,7 +81,7 @@ func TestTxExecuter(t *testing.T) {
 	texe.tx = txInvoke
 	txc = texe.execute()
 
-	assert.Equal("", txc.Error())
+	asrt.Equal("", txc.Error())
 
 	ccInput.Method = "balance"
 	ccInput.Value = 0
@@ -95,6 +95,6 @@ func TestTxExecuter(t *testing.T) {
 	var balance int64
 	json.Unmarshal(b, &balance)
 
-	assert.NoError(err)
-	assert.EqualValues(100, balance)
+	asrt.NoError(err)
+	asrt.EqualValues(100, balance)
 }

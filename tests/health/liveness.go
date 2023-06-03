@@ -44,26 +44,25 @@ func (hc *checker) getMinimumBexec(sMap map[int]*consensus.Status) (uint64, erro
 	return ret, nil
 }
 
-func (hc *checker) shouldGetBlockByHeight(height uint64) (map[int]*core.Block, error) {
+func (hc *checker) shouldGetBlockByHeight(height uint64) (map[int]*core.Proposal, error) {
 	ret := testutil.GetBlockByHeightAll(hc.cluster, height)
 	min := hc.minimumHealthyNode()
 	if len(ret) < min {
-		return nil, fmt.Errorf("failed to get block %d from %d nodes",
-			height, min-len(ret))
+		return nil, fmt.Errorf("failed to get block %d from %d nodes", height, min-len(ret))
 	}
 	return ret, nil
 }
 
-func (hc *checker) shouldEqualMerkleRoot(blocks map[int]*core.Block) error {
+func (hc *checker) shouldEqualMerkleRoot(blocks map[int]*core.Proposal) error {
 	var height uint64
 	equalCount := make(map[string]int)
 	for i, blk := range blocks {
-		if !hc.cluster.EmptyChainCode && blk.MerkleRoot() == nil {
-			return fmt.Errorf("nil merkle root at node %d, block %d", i, blk.Height())
+		if !hc.cluster.EmptyChainCode && blk.Block().MerkleRoot() == nil {
+			return fmt.Errorf("nil merkle root at node %d, block %d", i, blk.Block().Height())
 		}
-		equalCount[string(blk.MerkleRoot())]++
+		equalCount[string(blk.Block().MerkleRoot())]++
 		if height == 0 {
-			height = blk.Height()
+			height = blk.Block().Height()
 		}
 	}
 	for _, count := range equalCount {

@@ -12,7 +12,7 @@ import (
 )
 
 func TestQuorumCert(t *testing.T) {
-
+	asrt := assert.New(t)
 	privKeys := make([]*PrivateKey, 5)
 
 	vs := new(MockValidatorStore)
@@ -43,12 +43,6 @@ func TestQuorumCert(t *testing.T) {
 		votes[i] = vote
 	}
 
-	nilSigVote := NewVote()
-	nilSigVote.setData(&pb.Vote{
-		BlockHash: blockHash,
-		Signature: nil,
-	})
-
 	invalidSigVote := NewVote()
 	invalidSigVote.setData(&pb.Vote{
 		BlockHash: blockHash,
@@ -57,16 +51,13 @@ func TestQuorumCert(t *testing.T) {
 
 	qc := NewQuorumCert().Build([]*Vote{votes[2], votes[1], votes[0]})
 	qcValid, err := qc.Marshal()
-	assert.NoError(t, err)
+	asrt.NoError(err)
 
 	qc = NewQuorumCert().Build([]*Vote{votes[2], votes[1], votes[0], votes[3]})
 	qcValidFull, _ := qc.Marshal()
 
 	qc = NewQuorumCert().Build([]*Vote{votes[1], votes[0]})
 	qcNotEnoughSig, _ := qc.Marshal()
-
-	qc = NewQuorumCert().Build([]*Vote{votes[2], votes[3], nilSigVote, votes[0]})
-	qcNilSig, _ := qc.Marshal()
 
 	qc = NewQuorumCert().Build([]*Vote{votes[2], votes[3], votes[0], votes[2]})
 	qcDuplicateKey, _ := qc.Marshal()
@@ -88,27 +79,26 @@ func TestQuorumCert(t *testing.T) {
 		{"valid full", qcValidFull, false, false},
 		{"nil qc", nil, false, true},
 		{"not enough sig", qcNotEnoughSig, false, true},
-		{"nil sig", qcNilSig, true, true},
 		{"duplicate key", qcDuplicateKey, false, true},
 		{"invalid validator", qcInvalidValidator, false, true},
 		{"invalid sig", qcInvalidSig, false, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert := assert.New(t)
+			asrt := assert.New(t)
 
 			qc := NewQuorumCert()
 			err := qc.Unmarshal(tt.b)
 			if tt.unmarshalErr {
-				assert.Error(err)
+				asrt.Error(err)
 				return
 			}
-			assert.NoError(err)
+			asrt.NoError(err)
 			err = qc.Validate(vs)
 			if tt.validateErr {
-				assert.Error(err)
+				asrt.Error(err)
 			} else {
-				assert.NoError(err)
+				asrt.NoError(err)
 			}
 		})
 	}

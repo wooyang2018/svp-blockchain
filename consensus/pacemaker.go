@@ -4,8 +4,6 @@
 package consensus
 
 import (
-	"time"
-
 	"github.com/wooyang2018/posv-blockchain/logger"
 )
 
@@ -24,7 +22,7 @@ func (pm *pacemaker) start() {
 		return
 	}
 	pm.stopCh = make(chan struct{})
-	go pm.syncStakeRun()
+	go pm.run()
 	logger.I().Info("started pacemaker")
 }
 
@@ -43,33 +41,6 @@ func (pm *pacemaker) stop() {
 }
 
 func (pm *pacemaker) run() {
-	subQC := pm.posv.SubscribeNewQCHigh()
-	defer subQC.Unsubscribe()
-
-	for {
-		blkDelay := time.After(pm.config.BlockDelay)
-		pm.newBlock()
-		beatT := pm.nextProposeTimeout()
-
-		select {
-		case <-pm.stopCh:
-			return
-
-		// either beatdelay timeout or I'm able to create qc
-		case <-beatT.C:
-		case <-subQC.Events():
-		}
-		beatT.Stop()
-
-		select {
-		case <-pm.stopCh:
-			return
-		case <-blkDelay:
-		}
-	}
-}
-
-func (pm *pacemaker) syncStakeRun() {
 	subQC := pm.posv.SubscribeNewQCHigh()
 	defer subQC.Unsubscribe()
 
@@ -100,15 +71,7 @@ func (pm *pacemaker) newBlock() {
 
 	blk := pm.posv.OnPropose()
 	logger.I().Debugw("proposed block", "height", blk.Height(), "qc", qcRefHeight(blk.Justify()), "txs", len(blk.Transactions()))
-	vote := blk.(*innerBlock).block.ProposerVote()
+	vote := blk.(*innerBlock).block.Vote(pm.resources.Signer)
 	pm.posv.OnReceiveVote(newVote(vote, pm.state))
 	pm.posv.Update(blk)
-}
-
-func (pm *pacemaker) nextProposeTimeout() *time.Timer {
-	beatWait := pm.config.BeatTimeout
-	if pm.resources.TxPool.GetStatus().Total == 0 {
-		beatWait += pm.config.TxWaitTime
-	}
-	return time.NewTimer(beatWait)
 }

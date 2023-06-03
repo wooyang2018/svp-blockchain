@@ -11,7 +11,7 @@ import (
 )
 
 func TestCodeRegistry(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 
 	trk := newStateTracker(newMapStateStore(), codeRegistryAddr)
 	reg := newCodeRegistry()
@@ -20,37 +20,37 @@ func TestCodeRegistry(t *testing.T) {
 	dep := &DeploymentInput{
 		CodeInfo: CodeInfo{
 			DriverType: DriverTypeNative,
-			CodeID:     []byte(NativeCodeIDPCoin),
+			CodeID:     []byte(NativeCodePCoin),
 		},
 	}
 
 	cc, err := reg.getInstance(codeAddr, trk)
 
-	assert.Error(err, "code not deployed yet")
-	assert.Nil(cc)
+	asrt.Error(err, "code not deployed yet")
+	asrt.Nil(cc)
 
 	cc, err = reg.deploy(codeAddr, dep, trk)
 
-	assert.Error(err, "native driver not registered yet")
-	assert.Nil(cc)
+	asrt.Error(err, "native driver not registered yet")
+	asrt.Nil(cc)
 
 	reg.registerDriver(DriverTypeNative, newNativeCodeDriver())
 	cc, err = reg.deploy(codeAddr, dep, trk)
 
-	assert.NoError(err)
-	assert.NotNil(cc)
+	asrt.NoError(err)
+	asrt.NotNil(cc)
 
 	err = reg.registerDriver(DriverTypeNative, newNativeCodeDriver())
 
-	assert.Error(err, "registered driver twice")
+	asrt.Error(err, "registered driver twice")
 
 	cc, err = reg.getInstance(codeAddr, trk)
 
-	assert.NoError(err)
-	assert.NotNil(cc)
+	asrt.NoError(err)
+	asrt.NotNil(cc)
 
 	cc, err = reg.getInstance(bytes.Repeat([]byte{2}, 32), trk)
 
-	assert.Error(err, "wrong code address")
-	assert.Nil(cc)
+	asrt.Error(err, "wrong code address")
+	asrt.Nil(cc)
 }

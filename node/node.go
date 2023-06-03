@@ -162,7 +162,7 @@ func (node *Node) setReqHandlers() {
 	})
 }
 
-func (node *Node) GetBlock(hash []byte) (*core.Block, error) {
+func (node *Node) GetBlock(hash []byte) (*core.Proposal, error) {
 	if blk := node.consensus.GetBlock(hash); blk != nil {
 		return blk, nil
 	}

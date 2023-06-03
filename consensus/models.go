@@ -10,7 +10,7 @@ import (
 )
 
 type blockStore interface {
-	getBlock(hash []byte) *core.Block
+	getBlock(hash []byte) *core.Proposal
 }
 
 type innerVote struct {
@@ -67,13 +67,13 @@ func (q *innerQC) Block() Block {
 }
 
 type innerBlock struct {
-	block *core.Block
+	block *core.Proposal
 	store blockStore
 }
 
 var _ Block = (*innerBlock)(nil)
 
-func newBlock(coreBlock *core.Block, store blockStore) Block {
+func newBlock(coreBlock *core.Proposal, store blockStore) Block {
 	return &innerBlock{
 		block: coreBlock,
 		store: store,
@@ -81,19 +81,19 @@ func newBlock(coreBlock *core.Block, store blockStore) Block {
 }
 
 func (b *innerBlock) Height() uint64 {
-	return b.block.Height()
+	return b.block.Block().Height()
 }
 
 func (b *innerBlock) Timestamp() int64 {
-	return b.block.Timestamp()
+	return b.block.Block().Timestamp()
 }
 
 func (b *innerBlock) Transactions() [][]byte {
-	return b.block.Transactions()
+	return b.block.Block().Transactions()
 }
 
 func (b *innerBlock) Parent() Block {
-	blk := b.store.getBlock(b.block.ParentHash())
+	blk := b.store.getBlock(b.block.Block().ParentHash())
 	if blk == nil {
 		return nil
 	}
@@ -109,7 +109,7 @@ func (b *innerBlock) Equal(iBlk Block) bool {
 }
 
 func (b *innerBlock) Justify() QC {
-	if b.block.IsGenesis() { // genesis block doesn't have qc
+	if b.block.Block().IsGenesis() { // genesis block doesn't have qc
 		return newQC(nil, b.store)
 	}
 	return newQC(b.block.QuorumCert(), b.store)

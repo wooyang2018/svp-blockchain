@@ -10,13 +10,13 @@ import (
 )
 
 func TestSignVerify(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 	privKey := GenerateKey(nil)
-	assert.Equal(privKey.PublicKey(), privKey.PublicKey())
+	asrt.Equal(privKey.PublicKey(), privKey.PublicKey())
 	msg := []byte("message to be signed")
 	sig := privKey.Sign(msg)
-	assert.NotNil(sig)
-	assert.True(sig.Verify(msg))
-	assert.False(sig.Verify([]byte("tampered message")))
-	assert.Equal(privKey.PublicKey(), sig.PublicKey())
+	asrt.NotNil(sig)
+	asrt.True(sig.Verify(msg))
+	asrt.False(sig.Verify([]byte("tampered message")))
+	asrt.Equal(privKey.PublicKey(), sig.PublicKey())
 }

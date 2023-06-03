@@ -44,7 +44,7 @@ func TestDriver_TestMajorityCount(t *testing.T) {
 
 func TestDriver_CreateLeaf(t *testing.T) {
 	d := setupTestDriver()
-	parent := newBlock(core.NewBlock().Sign(d.resources.Signer), d.state)
+	parent := newBlock(core.NewProposal().Sign(d.resources.Signer), d.state)
 	d.state.setBlock(parent.(*innerBlock).block)
 	qc := newQC(core.NewQuorumCert(), d.state)
 	height := uint64(5)
@@ -89,7 +89,7 @@ func TestDriver_VoteBlock(t *testing.T) {
 	d.config.TxWaitTime = 20 * time.Millisecond
 
 	proposer := core.GenerateKey(nil)
-	blk := core.NewBlock().Sign(proposer)
+	blk := core.NewProposal().Sign(proposer)
 
 	validators := []string{blk.Proposer().String()}
 	d.resources.VldStore = core.NewValidatorStore(validators, []int{1}, validators)
@@ -135,11 +135,11 @@ func TestDriver_VoteBlock(t *testing.T) {
 
 func TestDriver_Commit(t *testing.T) {
 	d := setupTestDriver()
-	parent := core.NewBlock().SetHeight(10).Sign(d.resources.Signer)
-	bfolk := core.NewBlock().SetTransactions([][]byte{[]byte("txfromfolk")}).SetHeight(10).Sign(d.resources.Signer)
+	parent := core.NewProposal().SetHeight(10).Sign(d.resources.Signer)
+	bfolk := core.NewProposal().SetTransactions([][]byte{[]byte("txfromfolk")}).SetHeight(10).Sign(d.resources.Signer)
 
 	tx := core.NewTransaction().Sign(d.resources.Signer)
-	bexec := core.NewBlock().SetTransactions([][]byte{tx.Hash()}).
+	bexec := core.NewProposal().SetTransactions([][]byte{tx.Hash()}).
 		SetParentHash(parent.Hash()).SetHeight(11).Sign(d.resources.Signer)
 	d.state.setBlock(parent)
 	d.state.setCommittedBlock(parent)
@@ -194,7 +194,7 @@ func TestDriver_Commit(t *testing.T) {
 
 func TestDriver_CreateQC(t *testing.T) {
 	d := setupTestDriver()
-	blk := core.NewBlock().Sign(d.resources.Signer)
+	blk := core.NewProposal().Sign(d.resources.Signer)
 	d.state.setBlock(blk)
 	votes := []Vote{
 		newVote(blk.ProposerVote(), d.state),
@@ -208,7 +208,7 @@ func TestDriver_CreateQC(t *testing.T) {
 
 func TestDriver_BroadcastProposal(t *testing.T) {
 	d := setupTestDriver()
-	blk := core.NewBlock().Sign(d.resources.Signer)
+	blk := core.NewProposal().Sign(d.resources.Signer)
 	d.state.setBlock(blk)
 
 	msgSvc := new(MockMsgService)

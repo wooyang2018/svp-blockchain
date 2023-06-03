@@ -22,8 +22,8 @@ func TestChainStore(t *testing.T) {
 
 	priv := core.GenerateKey(nil)
 	qc := core.NewQuorumCert().Build(
-		[]*core.Vote{core.NewBlock().SetHeight(9).Vote(core.GenerateKey(nil))})
-	blk := core.NewBlock().SetQuorumCert(qc).SetHeight(10).Sign(priv)
+		[]*core.Vote{core.NewProposal().SetHeight(9).Vote(core.GenerateKey(nil))})
+	blk := core.NewProposal().SetQuorumCert(qc).SetHeight(10).Sign(priv)
 
 	bcm := core.NewBlockCommit().
 		SetHash(blk.Hash()).

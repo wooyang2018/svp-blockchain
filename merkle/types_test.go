@@ -26,16 +26,16 @@ func TestPosition(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert := assert.New(t)
+			asrt := assert.New(t)
 			p := NewPosition(tt.level, tt.index)
 
-			assert.EqualValues(tt.want, p.Bytes())
-			assert.Equal(string(tt.want), p.String())
+			asrt.EqualValues(tt.want, p.Bytes())
+			asrt.Equal(string(tt.want), p.String())
 
 			p1 := UnmarshalPosition(p.Bytes())
 
-			assert.Equal(p.Level(), p1.Level())
-			assert.Equal(0, p.Index().Cmp(p1.Index()))
+			asrt.Equal(p.Level(), p1.Level())
+			asrt.Equal(0, p.Index().Cmp(p1.Index()))
 		})
 	}
 }
@@ -57,15 +57,15 @@ func TestGroup_Load_Sum(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert := assert.New(t)
+			asrt := assert.New(t)
 
 			b := NewGroup(crypto.SHA1, NewTreeCalc(tt.bfactor), tt.store, tt.parentPosition)
 			b.Load(big.NewInt(100))
 
-			assert.EqualValues(tt.bfactor, len(b.nodes))
-			assert.Equal(tt.empty, b.IsEmpty())
+			asrt.EqualValues(tt.bfactor, len(b.nodes))
+			asrt.Equal(tt.empty, b.IsEmpty())
 
-			assert.Equal(tt.store.GetNode(tt.parentPosition), b.MakeParent().Data)
+			asrt.Equal(tt.store.GetNode(tt.parentPosition), b.MakeParent().Data)
 		})
 	}
 }
@@ -80,9 +80,9 @@ func TestGroup_SetNode(t *testing.T) {
 		Data:     []byte{3, 3},
 	})
 
-	assert := assert.New(t)
-	assert.False(b.IsEmpty())
-	assert.Equal(sha1Sum([]byte{1, 1, 3, 3}), b.MakeParent().Data)
+	asrt := assert.New(t)
+	asrt.False(b.IsEmpty())
+	asrt.Equal(sha1Sum([]byte{1, 1, 3, 3}), b.MakeParent().Data)
 }
 
 //	h(1,1,2,2)

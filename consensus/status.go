@@ -18,6 +18,7 @@ type Status struct {
 	// set to false once the view leader created the first qc
 	PendingViewChange bool
 	LeaderIndex       int
+	ViewNum           uint32
 
 	// posv innerState (block heights)
 	BVote  uint64

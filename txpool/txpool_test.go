@@ -63,7 +63,7 @@ func (m *MockMsgService) RequestTxList(pubKey *core.PublicKey, hashes [][]byte) 
 }
 
 func TestTxPool_SubmitTx(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 
 	priv := core.GenerateKey(nil)
 
@@ -88,7 +88,7 @@ func TestTxPool_SubmitTx(t *testing.T) {
 	execution.On("VerifyTx", tx1).Return(nil)
 	err := pool.SubmitTx(tx1)
 
-	assert.NoError(err)
+	asrt.NoError(err)
 	storage.AssertExpectations(t)
 	execution.AssertExpectations(t)
 
@@ -97,7 +97,7 @@ func TestTxPool_SubmitTx(t *testing.T) {
 	execution.On("VerifyTx", tx2).Return(fmt.Errorf("invalid tx"))
 	err = pool.SubmitTx(tx2)
 
-	assert.Error(err, "verify should failed for executed tx")
+	asrt.Error(err, "verify should failed for executed tx")
 	storage.AssertExpectations(t)
 
 	// tx3 is already executed
@@ -105,20 +105,20 @@ func TestTxPool_SubmitTx(t *testing.T) {
 	msgSvc.On("BroadcastTxList", &core.TxList{tx1, tx3}).Return(nil)
 	err = pool.SubmitTx(tx3)
 
-	assert.NoError(err)
+	asrt.NoError(err)
 	storage.AssertExpectations(t)
 	execution.AssertExpectations(t)
 
 	time.Sleep(time.Millisecond)
 	msgSvc.AssertExpectations(t)
-	assert.Empty(pool.broadcaster.txBatch, "batch should be reset after broadcast")
+	asrt.Empty(pool.broadcaster.txBatch, "batch should be reset after broadcast")
 
 	// only tx1 should be added to pool
-	assert.Equal(1, pool.GetStatus().Queue)
+	asrt.Equal(1, pool.GetStatus().Queue)
 }
 
 func TestTxPool_SubscribeTxList(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 
 	priv := core.GenerateKey(nil)
 
@@ -150,12 +150,12 @@ func TestTxPool_SubscribeTxList(t *testing.T) {
 
 	time.Sleep(20 * time.Millisecond)
 
-	assert.Equal(2, pool.GetStatus().Queue)
+	asrt.Equal(2, pool.GetStatus().Queue)
 	storage.AssertExpectations(t)
 }
 
 func TestTxPool_Sync(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 
 	priv := core.GenerateKey(nil)
 
@@ -184,7 +184,7 @@ func TestTxPool_Sync(t *testing.T) {
 
 	err := pool.SyncTxs(priv.PublicKey(), [][]byte{tx2.Hash()})
 
-	assert.NoError(err, "tx2 found in storage")
+	asrt.NoError(err, "tx2 found in storage")
 
 	pool.SubmitTx(tx1)
 
@@ -192,27 +192,27 @@ func TestTxPool_Sync(t *testing.T) {
 		Return(nil, errors.New("tx request failed"))
 	err = pool.SyncTxs(priv.PublicKey(), [][]byte{tx1.Hash(), tx2.Hash(), tx3.Hash()})
 
-	assert.Error(err, "tx request failed")
+	asrt.Error(err, "tx request failed")
 	msgSvc.AssertExpectations(t)
 
 	msgSvc.On("RequestTxList", priv.PublicKey(), [][]byte{tx3.Hash()}).Once().
 		Return(&core.TxList{tx2}, nil)
 	err = pool.SyncTxs(priv.PublicKey(), [][]byte{tx1.Hash(), tx2.Hash(), tx3.Hash()})
 
-	assert.Error(err, "wrong tx response")
+	asrt.Error(err, "wrong tx response")
 	msgSvc.AssertExpectations(t)
 
 	msgSvc.On("RequestTxList", priv.PublicKey(), [][]byte{tx3.Hash()}).Once().
 		Return(&core.TxList{tx3}, nil)
 	err = pool.SyncTxs(priv.PublicKey(), [][]byte{tx1.Hash(), tx2.Hash(), tx3.Hash()})
 
-	assert.NoError(err)
+	asrt.NoError(err)
 	msgSvc.AssertExpectations(t)
 	storage.AssertExpectations(t)
 }
 
 func TestTxPool_GetTxsToExecute(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 
 	priv := core.GenerateKey(nil)
 
@@ -243,10 +243,10 @@ func TestTxPool_GetTxsToExecute(t *testing.T) {
 	pool.SubmitTx(tx3)
 	txs, old := pool.GetTxsToExecute([][]byte{tx1.Hash(), tx2.Hash(), tx3.Hash()})
 
-	assert.Equal(2, len(txs))
-	assert.Equal(tx1, txs[0])
-	assert.Equal(tx3, txs[1])
+	asrt.Equal(2, len(txs))
+	asrt.Equal(tx1, txs[0])
+	asrt.Equal(tx3, txs[1])
 
-	assert.Equal(1, len(old))
-	assert.Equal(tx2.Hash(), old[0])
+	asrt.Equal(1, len(old))
+	asrt.Equal(tx2.Hash(), old[0])
 }

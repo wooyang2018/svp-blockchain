@@ -10,7 +10,7 @@ import (
 	"github.com/wooyang2018/posv-blockchain/core"
 )
 
-func setupRotator() (*rotator, *core.Block) {
+func setupRotator() (*rotator, *core.Proposal) {
 	key1 := core.GenerateKey(nil)
 	key2 := core.GenerateKey(nil)
 	workers := []string{
@@ -22,8 +22,8 @@ func setupRotator() (*rotator, *core.Block) {
 		VldStore: core.NewValidatorStore(workers, weights, workers),
 	}
 
-	b0 := core.NewBlock().Sign(key1)
-	q0 := core.NewQuorumCert().Build([]*core.Vote{b0.ProposerVote()})
+	b0 := core.NewProposal().Sign(key1)
+	q0 := core.NewQuorumCert().Build([]*core.Vote{b0.Vote(key1)})
 	b0.SetQuorumCert(q0)
 
 	state := newState(resources)

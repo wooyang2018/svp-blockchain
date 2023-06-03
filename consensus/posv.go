@@ -87,8 +87,7 @@ func (posv *posv) onCommit(b Block) {
 		posv.onCommit(b.Parent())
 		posv.driver.Commit(b)
 	} else if !posv.GetBExec().Equal(b) {
-		logger.I().Warnf("posv safety breached b-recurrsive: %+v\n bexec: %d",
-			b, posv.GetBExec().Height())
+		logger.I().Warnf("safety breached b-recurrsive: %+v, bexec: %d", b, posv.GetBExec().Height())
 	}
 }
 

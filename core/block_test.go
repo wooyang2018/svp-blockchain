@@ -8,60 +8,37 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/wooyang2018/posv-blockchain/pb"
 )
 
 func TestBlock(t *testing.T) {
-	assertt := assert.New(t)
-
+	asrt := assert.New(t)
 	privKey := GenerateKey(nil)
-
-	qc := NewQuorumCert().Build([]*Vote{
-		{data: &pb.Vote{
-			BlockHash: []byte{0},
-			Signature: privKey.Sign([]byte{0}).data,
-		}},
-	})
-
 	blk := NewBlock().
 		SetHeight(4).
 		SetParentHash([]byte{1}).
 		SetExecHeight(0).
-		SetQuorumCert(qc).
 		SetMerkleRoot([]byte{1}).
 		SetTransactions([][]byte{{1}}).
 		Sign(privKey)
 
-	assertt.Equal(uint64(4), blk.Height())
-	assertt.Equal([]byte{1}, blk.ParentHash())
-	assertt.Equal(privKey.PublicKey(), blk.Proposer())
-	assertt.Equal(privKey.PublicKey().Bytes(), blk.data.Proposer)
-	assertt.Equal(uint64(0), blk.ExecHeight())
-	assertt.Equal(qc, blk.QuorumCert())
-	assertt.Equal([]byte{1}, blk.MerkleRoot())
-	assertt.Equal([][]byte{{1}}, blk.Transactions())
+	asrt.Equal(uint64(4), blk.Height())
+	asrt.Equal([]byte{1}, blk.ParentHash())
+	asrt.Equal(privKey.PublicKey().Bytes(), blk.data.Signature.PubKey)
+	asrt.Equal(uint64(0), blk.ExecHeight())
+	asrt.Equal([]byte{1}, blk.MerkleRoot())
+	asrt.Equal([][]byte{{1}}, blk.Transactions())
 
 	vs := new(MockValidatorStore)
-	vs.On("VoterCount").Return(1)
-	vs.On("MajorityValidatorCount").Return(1)
 	vs.On("IsVoter", privKey.PublicKey()).Return(true)
 	vs.On("IsVoter", mock.Anything).Return(false)
 	vs.On("IsWorker", privKey.PublicKey()).Return(true)
 	vs.On("IsWorker", mock.Anything).Return(false)
 
 	bOk, err := blk.Marshal()
-	assertt.NoError(err)
+	asrt.NoError(err)
 
-	blk.data.Signature = []byte("invalid sig")
-	bInvalidSig, _ := blk.Marshal()
-
-	privKey1 := GenerateKey(nil)
-	bInvalidValidator, _ := blk.Sign(privKey1).Marshal()
-
-	bNilQC, _ := blk.
-		SetQuorumCert(NewQuorumCert()).
-		Sign(privKey).
-		Marshal()
+	privKey = GenerateKey(nil)
+	bInvalidValidator, _ := blk.Sign(privKey).Marshal()
 
 	blk.data.Hash = []byte("invalid hash")
 	bInvalidHash, _ := blk.Marshal()
@@ -69,45 +46,27 @@ func TestBlock(t *testing.T) {
 	// test validate
 	tests := []struct {
 		name    string
-		b       []byte
+		data    []byte
 		wantErr bool
 	}{
 		{"valid", bOk, false},
-		{"invalid sig", bInvalidSig, true},
 		{"invalid validator", bInvalidValidator, true},
-		{"nil qc", bNilQC, true},
-		{"invalid", bInvalidHash, true},
+		{"invalid hash", bInvalidHash, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert := assert.New(t)
+			asrt := assert.New(t)
 
 			blk := NewBlock()
-			err := blk.Unmarshal(tt.b)
-			assert.NoError(err)
+			err := blk.Unmarshal(tt.data)
+			asrt.NoError(err)
 
 			err = blk.Validate(vs)
-
 			if tt.wantErr {
-				assert.Error(err)
+				asrt.Error(err)
 			} else {
-				assert.NoError(err)
+				asrt.NoError(err)
 			}
 		})
 	}
-}
-
-func TestBlock_Vote(t *testing.T) {
-	assert := assert.New(t)
-	privKey := GenerateKey(nil)
-	blk := NewBlock().Sign(privKey)
-	vote := blk.Vote(privKey)
-	assert.Equal(blk.Hash(), vote.BlockHash())
-
-	vs := new(MockValidatorStore)
-	vs.On("IsVoter", privKey.PublicKey()).Return(true)
-
-	err := vote.Validate(vs)
-	assert.NoError(err)
-	vs.AssertExpectations(t)
 }
