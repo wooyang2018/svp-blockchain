@@ -10,7 +10,7 @@ import (
 )
 
 type blockStore interface {
-	getBlock(hash []byte) *core.Proposal
+	getBlock(hash []byte) *core.Block
 }
 
 type innerVote struct {
@@ -48,6 +48,8 @@ type innerQC struct {
 	store blockStore
 }
 
+var _ QC = (*innerQC)(nil)
+
 func newQC(coreQC *core.QuorumCert, store blockStore) QC {
 	return &innerQC{
 		qc:    coreQC,
@@ -66,34 +68,42 @@ func (q *innerQC) Block() Block {
 	return newBlock(blk, q.store)
 }
 
+func (q *innerQC) View() uint32 {
+	return q.qc.ViewNum()
+}
+
 type innerBlock struct {
-	block *core.Proposal
+	block *core.Block
 	store blockStore
 }
 
 var _ Block = (*innerBlock)(nil)
 
-func newBlock(coreBlock *core.Proposal, store blockStore) Block {
+func newBlock(coreBlock *core.Block, store blockStore) Block {
 	return &innerBlock{
 		block: coreBlock,
 		store: store,
 	}
 }
 
+func (b *innerBlock) Hash() []byte {
+	return b.block.Hash()
+}
+
 func (b *innerBlock) Height() uint64 {
-	return b.block.Block().Height()
+	return b.block.Height()
 }
 
 func (b *innerBlock) Timestamp() int64 {
-	return b.block.Block().Timestamp()
+	return b.block.Timestamp()
 }
 
 func (b *innerBlock) Transactions() [][]byte {
-	return b.block.Block().Transactions()
+	return b.block.Transactions()
 }
 
 func (b *innerBlock) Parent() Block {
-	blk := b.store.getBlock(b.block.Block().ParentHash())
+	blk := b.store.getBlock(b.block.ParentHash())
 	if blk == nil {
 		return nil
 	}
@@ -108,11 +118,33 @@ func (b *innerBlock) Equal(iBlk Block) bool {
 	return bytes.Equal(b.block.Hash(), b2.block.Hash())
 }
 
-func (b *innerBlock) Justify() QC {
-	if b.block.Block().IsGenesis() { // genesis block doesn't have qc
-		return newQC(nil, b.store)
+type innerProposal struct {
+	proposal *core.Proposal
+	store    blockStore
+}
+
+var _ Proposal = (*innerProposal)(nil)
+
+func newProposal(coreBlock *core.Proposal, store blockStore) Proposal {
+	return &innerProposal{
+		proposal: coreBlock,
+		store:    store,
 	}
-	return newQC(b.block.QuorumCert(), b.store)
+}
+
+func (p *innerProposal) Justify() QC {
+	if p.proposal.Block().IsGenesis() { // genesis block doesn't have qc
+		return newQC(nil, p.store)
+	}
+	return newQC(p.proposal.QuorumCert(), p.store)
+}
+
+func (p *innerProposal) Block() Block {
+	return newBlock(p.proposal.Block(), p.store)
+}
+
+func (p *innerProposal) View() uint32 {
+	return p.proposal.ViewNum()
 }
 
 func qcRefHeight(qc QC) (height uint64) {

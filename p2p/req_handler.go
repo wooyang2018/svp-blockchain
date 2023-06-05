@@ -39,7 +39,7 @@ func (hdlr *TxListReqHandler) HandleReq(sender *core.PublicKey, data []byte) ([]
 }
 
 type BlockReqHandler struct {
-	GetBlock func(hash []byte) (*core.Proposal, error)
+	GetBlock func(hash []byte) (*core.Block, error)
 }
 
 var _ ReqHandler = (*BlockReqHandler)(nil)
@@ -56,8 +56,26 @@ func (hdlr *BlockReqHandler) HandleReq(sender *core.PublicKey, data []byte) ([]b
 	return block.Marshal()
 }
 
+type QCReqHandler struct {
+	GetQC func(blkHash []byte) (*core.QuorumCert, error)
+}
+
+var _ ReqHandler = (*QCReqHandler)(nil)
+
+func (hdlr *QCReqHandler) Type() pb.Request_Type {
+	return pb.Request_QC
+}
+
+func (hdlr *QCReqHandler) HandleReq(sender *core.PublicKey, data []byte) ([]byte, error) {
+	block, err := hdlr.GetQC(data)
+	if err != nil {
+		return nil, err
+	}
+	return block.Marshal()
+}
+
 type BlockByHeightReqHandler struct {
-	GetBlockByHeight func(height uint64) (*core.Proposal, error)
+	GetBlockByHeight func(height uint64) (*core.Block, error)
 }
 
 var _ ReqHandler = (*BlockByHeightReqHandler)(nil)

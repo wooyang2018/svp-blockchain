@@ -41,7 +41,7 @@ func (pm *pacemaker) stop() {
 }
 
 func (pm *pacemaker) run() {
-	subQC := pm.posv.SubscribeNewQCHigh()
+	subQC := pm.posv.posvState.SubscribeNewQCHigh()
 	defer subQC.Unsubscribe()
 
 	for {
@@ -70,8 +70,8 @@ func (pm *pacemaker) newBlock() {
 	}
 
 	blk := pm.posv.OnPropose()
-	logger.I().Debugw("proposed block", "height", blk.Height(), "qc", qcRefHeight(blk.Justify()), "txs", len(blk.Transactions()))
-	vote := blk.(*innerBlock).block.Vote(pm.resources.Signer)
+	logger.I().Debugw("proposed block", "height", blk.Block().Height(), "qc", qcRefHeight(blk.Justify()), "txs", len(blk.Block().Transactions()))
+	vote := blk.(*innerProposal).proposal.Vote(pm.resources.Signer)
 	pm.posv.OnReceiveVote(newVote(vote, pm.state))
 	pm.posv.Update(blk)
 }

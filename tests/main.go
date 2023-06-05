@@ -26,7 +26,7 @@ var (
 
 	LoadTxPerSec    = 100
 	LoadJobPerTick  = 1000
-	LoadSubmitNodes = []int{0}
+	LoadSubmitNodes = []int{}
 	LoadBatchSubmit = true //whether to enable batch transaction submission
 
 	//chaincode priority: empty > pcoin bincc > pcoin

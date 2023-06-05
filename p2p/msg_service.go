@@ -13,6 +13,7 @@ import (
 
 	"github.com/wooyang2018/posv-blockchain/core"
 	"github.com/wooyang2018/posv-blockchain/emitter"
+	"github.com/wooyang2018/posv-blockchain/logger"
 	"github.com/wooyang2018/posv-blockchain/pb"
 	"google.golang.org/protobuf/proto"
 )
@@ -114,12 +115,12 @@ func (svc *MsgService) BroadcastTxList(txList *core.TxList) error {
 	return svc.broadcastData(MsgTypeTxList, data)
 }
 
-func (svc *MsgService) RequestBlock(pubKey *core.PublicKey, hash []byte) (*core.Proposal, error) {
+func (svc *MsgService) RequestBlock(pubKey *core.PublicKey, hash []byte) (*core.Block, error) {
 	respData, err := svc.requestData(pubKey, pb.Request_Block, hash)
 	if err != nil {
 		return nil, err
 	}
-	blk := core.NewProposal()
+	blk := core.NewBlock()
 	if err := blk.Unmarshal(respData); err != nil {
 		return nil, err
 	}
@@ -128,14 +129,26 @@ func (svc *MsgService) RequestBlock(pubKey *core.PublicKey, hash []byte) (*core.
 
 func (svc *MsgService) RequestBlockByHeight(
 	pubKey *core.PublicKey, height uint64,
-) (*core.Proposal, error) {
+) (*core.Block, error) {
 	buf := bytes.NewBuffer(nil)
 	binary.Write(buf, binary.BigEndian, height)
 	respData, err := svc.requestData(pubKey, pb.Request_BlockByHeight, buf.Bytes())
 	if err != nil {
 		return nil, err
 	}
-	blk := core.NewProposal()
+	blk := core.NewBlock()
+	if err := blk.Unmarshal(respData); err != nil {
+		return nil, err
+	}
+	return blk, nil
+}
+
+func (svc *MsgService) RequestQC(pubKey *core.PublicKey, blkHash []byte) (*core.QuorumCert, error) {
+	respData, err := svc.requestData(pubKey, pb.Request_QC, blkHash)
+	if err != nil {
+		return nil, err
+	}
+	blk := core.NewQuorumCert()
 	if err := blk.Unmarshal(respData); err != nil {
 		return nil, err
 	}
@@ -197,6 +210,7 @@ func (svc *MsgService) listenPeer(peer *Peer) {
 func (svc *MsgService) onReceiveProposal(peer *Peer, data []byte) {
 	blk := core.NewProposal()
 	if err := blk.Unmarshal(data); err != nil {
+		logger.I().Errorw("msg service receive proposal failed", "error", err)
 		return
 	}
 	svc.proposalEmitter.Emit(blk)
@@ -205,6 +219,7 @@ func (svc *MsgService) onReceiveProposal(peer *Peer, data []byte) {
 func (svc *MsgService) onReceiveVote(peer *Peer, data []byte) {
 	vote := core.NewVote()
 	if err := vote.Unmarshal(data); err != nil {
+		logger.I().Errorw("msg service receive vote failed", "error", err)
 		return
 	}
 	svc.voteEmitter.Emit(vote)
@@ -213,6 +228,7 @@ func (svc *MsgService) onReceiveVote(peer *Peer, data []byte) {
 func (svc *MsgService) onReceiveNewView(peer *Peer, data []byte) {
 	qc := core.NewQuorumCert()
 	if err := qc.Unmarshal(data); err != nil {
+		logger.I().Errorw("msg service receive qc failed", "error", err)
 		return
 	}
 	svc.newViewEmitter.Emit(qc)

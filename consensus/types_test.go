@@ -9,8 +9,43 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+func castProposal(val interface{}) Proposal {
+	if b, ok := val.(Proposal); ok {
+		return b
+	}
+	return nil
+}
+
+type MockProposal struct {
+	mock.Mock
+}
+
+var _ Proposal = (*MockProposal)(nil)
+
+func (m *MockProposal) Block() Block {
+	args := m.Called()
+	return castBlock(args.Get(0))
+}
+
+func (m *MockProposal) Justify() QC {
+	args := m.Called()
+	return castQC(args.Get(0))
+}
+
+func (m *MockProposal) View() uint32 {
+	args := m.Called()
+	return uint32(args.Int(0))
+}
+
 func castBlock(val interface{}) Block {
 	if b, ok := val.(Block); ok {
+		return b
+	}
+	return nil
+}
+
+func castQC(val interface{}) QC {
+	if b, ok := val.(QC); ok {
 		return b
 	}
 	return nil
@@ -21,6 +56,11 @@ type MockBlock struct {
 }
 
 var _ Block = (*MockBlock)(nil)
+
+func (m *MockBlock) Hash() []byte {
+	args := m.Called()
+	return castBytes(args.Get(0))
+}
 
 func (m *MockBlock) Proposer() string {
 	args := m.Called()
@@ -66,6 +106,11 @@ var _ QC = (*MockQC)(nil)
 func (m *MockQC) Block() Block {
 	args := m.Called()
 	return castBlock(args.Get(0))
+}
+
+func (m *MockQC) View() uint32 {
+	args := m.Called()
+	return uint32(args.Int(0))
 }
 
 type MockVote struct {
@@ -150,9 +195,9 @@ func (m *MockDriver) MajorityValidatorCount() int {
 	return args.Int(0)
 }
 
-func (m *MockDriver) CreateLeaf(parent Block, qc QC, height uint64) Block {
+func (m *MockDriver) CreateProposal(parent Block, qc QC, height uint64, view uint32) Proposal {
 	args := m.Called(parent, qc, height)
-	return castBlock(args.Get(0))
+	return castProposal(args.Get(0))
 }
 
 func (m *MockDriver) CreateQC(votes []Vote) QC {
@@ -160,11 +205,11 @@ func (m *MockDriver) CreateQC(votes []Vote) QC {
 	return args.Get(0).(QC)
 }
 
-func (m *MockDriver) BroadcastProposal(blk Block) {
+func (m *MockDriver) BroadcastProposal(blk Proposal) {
 	m.Called(blk)
 }
 
-func (m *MockDriver) VoteBlock(blk Block) {
+func (m *MockDriver) VoteProposal(blk Proposal) {
 	m.Called(blk)
 }
 

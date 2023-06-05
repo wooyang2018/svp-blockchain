@@ -11,6 +11,16 @@ import (
 	"github.com/wooyang2018/posv-blockchain/core"
 )
 
+func newTestBlock(height, execHeight uint64, mRoot []byte, txs [][]byte,
+	priv core.Signer) *core.Block {
+	return core.NewBlock().
+		SetHeight(height).
+		SetExecHeight(execHeight).
+		SetMerkleRoot(mRoot).
+		SetTransactions(txs).
+		Sign(priv)
+}
+
 func TestValidator_verifyProposalToVote(t *testing.T) {
 	priv0 := core.GenerateKey(nil)
 	priv1 := core.GenerateKey(nil)
@@ -69,44 +79,28 @@ func TestValidator_verifyProposalToVote(t *testing.T) {
 	}
 	tests := []testCase{
 		{"valid", true, core.NewProposal().
-			SetHeight(14).SetExecHeight(10).SetMerkleRoot(mRoot).
-			SetTransactions([][]byte{tx1.Hash(), tx4.Hash()}).
-			Sign(priv1),
-		},
+			SetBlock(newTestBlock(14, 10, mRoot, [][]byte{tx1.Hash(), tx4.Hash()}, priv1)).
+			Sign(priv1)},
 		{"proposer is not leader", false, core.NewProposal().
-			SetHeight(14).SetExecHeight(10).SetMerkleRoot(mRoot).
-			SetTransactions([][]byte{tx1.Hash(), tx4.Hash()}).
-			Sign(priv0),
-		},
+			SetBlock(newTestBlock(14, 10, mRoot, [][]byte{tx1.Hash(), tx4.Hash()}, priv0)).
+			Sign(priv0)},
 		{"different exec height", false, core.NewProposal().
-			SetHeight(14).SetExecHeight(9).SetMerkleRoot(mRoot).
-			SetTransactions([][]byte{tx1.Hash(), tx4.Hash()}).
-			Sign(priv1),
-		},
-	}
+			SetBlock(newTestBlock(14, 9, mRoot, [][]byte{tx1.Hash(), tx4.Hash()}, priv1)).
+			Sign(priv1)}}
 	if ExecuteTxFlag {
 		tests = append(tests, []testCase{
 			{"different merkle root", false, core.NewProposal().
-				SetHeight(14).SetExecHeight(10).SetMerkleRoot([]byte("different")).
-				SetTransactions([][]byte{tx1.Hash(), tx4.Hash()}).
-				Sign(priv1),
-			},
+				SetBlock(newTestBlock(14, 10, []byte("different"), [][]byte{tx1.Hash(), tx4.Hash()}, priv1)).
+				Sign(priv1)},
 			{"committed tx", false, core.NewProposal().
-				SetHeight(14).SetExecHeight(10).SetMerkleRoot(mRoot).
-				SetTransactions([][]byte{tx1.Hash(), tx2.Hash(), tx4.Hash()}).
-				Sign(priv1),
-			},
+				SetBlock(newTestBlock(14, 10, mRoot, [][]byte{tx1.Hash(), tx2.Hash(), tx4.Hash()}, priv1)).
+				Sign(priv1)},
 			{"expired tx", false, core.NewProposal().
-				SetHeight(14).SetExecHeight(10).SetMerkleRoot(mRoot).
-				SetTransactions([][]byte{tx1.Hash(), tx3.Hash(), tx4.Hash()}).
-				Sign(priv1),
-			},
+				SetBlock(newTestBlock(14, 10, mRoot, [][]byte{tx1.Hash(), tx3.Hash(), tx4.Hash()}, priv1)).
+				Sign(priv1)},
 			{"not found tx", false, core.NewProposal().
-				SetHeight(14).SetExecHeight(10).SetMerkleRoot(mRoot).
-				SetTransactions([][]byte{tx1.Hash(), tx5.Hash(), tx4.Hash()}).
-				Sign(priv1),
-			},
-		}...)
+				SetBlock(newTestBlock(14, 10, mRoot, [][]byte{tx1.Hash(), tx5.Hash(), tx4.Hash()}, priv1)).
+				Sign(priv1)}}...)
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

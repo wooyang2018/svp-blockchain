@@ -19,7 +19,7 @@ func TestVote(t *testing.T) {
 	proposer := GenerateKey(nil)
 	validator := GenerateKey(nil)
 
-	_, pro := newProposal(proposer)
+	pro := newProposal(proposer)
 	vote = pro.Vote(validator)
 	vOk, _ := vote.Marshal()
 

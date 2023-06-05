@@ -20,7 +20,7 @@ type Status struct {
 	LeaderIndex       int
 	ViewNum           uint32
 
-	// posv innerState (block heights)
+	// posv state (block heights)
 	BVote  uint64
 	BLock  uint64
 	BExec  uint64

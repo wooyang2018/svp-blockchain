@@ -11,21 +11,22 @@ import (
 	"github.com/wooyang2018/posv-blockchain/emitter"
 )
 
-type innerState struct {
+type posvState struct {
 	bVote  atomic.Value
 	bExec  atomic.Value
 	qcHigh atomic.Value
 	bLeaf  atomic.Value
 
-	proposal Block
+	viewNum  uint32
+	proposal Proposal
 	votes    map[string]Vote
 	pMtx     sync.RWMutex
 
 	qcHighEmitter *emitter.Emitter
 }
 
-func newInnerState(b0 Block, q0 QC) *innerState {
-	s := new(innerState)
+func newInnerState(b0 Block, q0 QC) *posvState {
+	s := new(posvState)
 	s.qcHighEmitter = emitter.New()
 	s.setBVote(b0)
 	s.setBLeaf(b0)
@@ -34,39 +35,39 @@ func newInnerState(b0 Block, q0 QC) *innerState {
 	return s
 }
 
-func (s *innerState) setBVote(b Block)    { s.bVote.Store(b) }
-func (s *innerState) setBExec(b Block)    { s.bExec.Store(b) }
-func (s *innerState) setBLeaf(bNew Block) { s.bLeaf.Store(bNew) }
-func (s *innerState) setQCHigh(qcHigh QC) { s.qcHigh.Store(qcHigh) }
+func (s *posvState) setBVote(b Block)    { s.bVote.Store(b) }
+func (s *posvState) setBExec(b Block)    { s.bExec.Store(b) }
+func (s *posvState) setBLeaf(bNew Block) { s.bLeaf.Store(bNew) }
+func (s *posvState) setQCHigh(qcHigh QC) { s.qcHigh.Store(qcHigh) }
 
-func (s *innerState) SubscribeNewQCHigh() *emitter.Subscription {
+func (s *posvState) SubscribeNewQCHigh() *emitter.Subscription {
 	return s.qcHighEmitter.Subscribe(10)
 }
 
-func (s *innerState) GetBVote() Block {
+func (s *posvState) GetBVote() Block {
 	return s.bVote.Load().(Block)
 }
 
-func (s *innerState) GetBExec() Block {
+func (s *posvState) GetBExec() Block {
 	return s.bExec.Load().(Block)
 }
 
-func (s *innerState) GetBLeaf() Block {
+func (s *posvState) GetBLeaf() Block {
 	return s.bLeaf.Load().(Block)
 }
 
-func (s *innerState) GetQCHigh() QC {
+func (s *posvState) GetQCHigh() QC {
 	return s.qcHigh.Load().(QC)
 }
 
-func (s *innerState) IsProposing() bool {
+func (s *posvState) IsProposing() bool {
 	s.pMtx.RLock()
 	defer s.pMtx.RUnlock()
 
 	return s.proposal != nil
 }
 
-func (s *innerState) startProposal(b Block) {
+func (s *posvState) startProposal(b Proposal) {
 	s.pMtx.Lock()
 	defer s.pMtx.Unlock()
 
@@ -74,7 +75,7 @@ func (s *innerState) startProposal(b Block) {
 	s.votes = make(map[string]Vote)
 }
 
-func (s *innerState) endProposal() {
+func (s *posvState) endProposal() {
 	s.pMtx.Lock()
 	defer s.pMtx.Unlock()
 
@@ -82,14 +83,14 @@ func (s *innerState) endProposal() {
 	s.votes = nil
 }
 
-func (s *innerState) addVote(v Vote) error {
+func (s *posvState) addVote(v Vote) error {
 	s.pMtx.Lock()
 	defer s.pMtx.Unlock()
 
 	if s.proposal == nil {
 		return fmt.Errorf("no proposal in progress")
 	}
-	if !s.proposal.Equal(v.Block()) {
+	if !s.proposal.Block().Equal(v.Block()) {
 		return fmt.Errorf("not same block")
 	}
 	key := v.Voter()
@@ -100,14 +101,14 @@ func (s *innerState) addVote(v Vote) error {
 	return nil
 }
 
-func (s *innerState) GetVoteCount() int {
+func (s *posvState) GetVoteCount() int {
 	s.pMtx.RLock()
 	defer s.pMtx.RUnlock()
 
 	return len(s.votes)
 }
 
-func (s *innerState) GetVotes() []Vote {
+func (s *posvState) GetVotes() []Vote {
 	s.pMtx.RLock()
 	defer s.pMtx.RUnlock()
 

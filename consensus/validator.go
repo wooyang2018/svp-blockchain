@@ -108,64 +108,64 @@ func (vld *validator) onReceiveProposal(proposal *core.Proposal) error {
 	}
 	pidx := vld.resources.VldStore.GetWorkerIndex(proposal.Proposer())
 	logger.I().Debugw("received proposal", "proposer", pidx, "height", proposal.Block().Height(), "txs", len(proposal.Block().Transactions()))
-	parent, err := vld.getParentBlock(proposal)
+	parent, err := vld.getParentBlock(proposal.Block())
 	if err != nil {
 		return err
 	}
-	return vld.verifyWithParentAndUpdatePoSV(
-		proposal.Proposer(), proposal, parent, true)
+	return vld.updatePoSVAndVote(proposal.Proposer(), proposal, parent)
 }
 
-func (vld *validator) getParentBlock(proposal *core.Proposal) (*core.Proposal, error) {
-	parent := vld.state.getBlock(proposal.Block().ParentHash())
+// TODO 本函数解释了所有同步区块的入口
+func (vld *validator) getParentBlock(block *core.Block) (*core.Block, error) {
+	parent := vld.state.getBlock(block.ParentHash())
 	if parent != nil {
 		return parent, nil
 	}
-	if err := vld.syncMissingCommittedBlocks(proposal); err != nil {
+	if err := vld.syncMissingCommittedBlocks(block); err != nil {
 		return nil, err
 	}
-	return vld.syncMissingParentBlocksRecursive(proposal.Proposer(), proposal)
+	return vld.syncMissingParentBlocksRecursive(block.Proposer(), block)
 }
 
-func (vld *validator) syncMissingCommittedBlocks(proposal *core.Proposal) error {
+func (vld *validator) syncMissingCommittedBlocks(proposal *core.Block) error {
 	commitHeight := vld.resources.Storage.GetBlockHeight()
-	if proposal.Block().ExecHeight() <= commitHeight {
+	if proposal.ExecHeight() <= commitHeight {
 		return nil // already sync committed blocks
 	}
 	// seems like I left behind. Lets check with qcRef to confirm
 	// only qc is trusted and proposal is not
-	if proposal.Block().IsGenesis() {
+	if proposal.IsGenesis() {
 		return fmt.Errorf("genesis block proposal")
 	}
-	qcRef := vld.state.getBlock(proposal.QuorumCert().BlockHash())
+	qcRef := vld.state.getBlock(proposal.ParentHash())
 	if qcRef == nil {
 		var err error
 		qcRef, err = vld.requestBlock(
-			proposal.Proposer(), proposal.QuorumCert().BlockHash())
+			proposal.Proposer(), proposal.ParentHash())
 		if err != nil {
 			return err
 		}
 	}
-	if qcRef.Block().Height() < commitHeight {
-		return fmt.Errorf("old qc ref %d", qcRef.Block().Height())
+	if qcRef.Height() < commitHeight {
+		return fmt.Errorf("old qc ref %d", qcRef.Height())
 	}
 	return vld.syncForwardCommittedBlocks(
-		proposal.Proposer(), commitHeight+1, proposal.Block().ExecHeight())
+		proposal.Proposer(), commitHeight+1, proposal.ExecHeight())
 }
 
 func (vld *validator) syncForwardCommittedBlocks(peer *core.PublicKey, start, end uint64) error {
-	var pro *core.Proposal
+	var pro *core.Block
 	for height := start; height < end; height++ { // end is exclusive
 		var err error
 		pro, err = vld.requestBlockByHeight(peer, height)
 		if err != nil {
 			return err
 		}
-		parent := vld.state.getBlock(pro.Block().ParentHash())
+		parent := vld.state.getBlock(pro.ParentHash())
 		if parent == nil {
 			return fmt.Errorf("cannot connect chain, parent not found")
 		}
-		err = vld.verifyWithParentAndUpdatePoSV(peer, pro, parent, false)
+		err = vld.verifyWithParentAndUpdatePoSV(peer, pro, parent)
 		if err != nil {
 			return err
 		}
@@ -174,13 +174,12 @@ func (vld *validator) syncForwardCommittedBlocks(peer *core.PublicKey, start, en
 }
 
 func (vld *validator) syncMissingParentBlocksRecursive(
-	peer *core.PublicKey, blk *core.Proposal,
-) (*core.Proposal, error) {
-	parent := vld.state.getBlock(blk.Block().ParentHash())
+	peer *core.PublicKey, blk *core.Block) (*core.Block, error) {
+	parent := vld.state.getBlock(blk.ParentHash())
 	if parent != nil {
 		return parent, nil // not missing
 	}
-	parent, err := vld.requestBlock(peer, blk.Block().ParentHash())
+	parent, err := vld.requestBlock(peer, blk.ParentHash())
 	if err != nil {
 		return nil, err
 	}
@@ -188,14 +187,14 @@ func (vld *validator) syncMissingParentBlocksRecursive(
 	if err != nil {
 		return nil, err
 	}
-	err = vld.verifyWithParentAndUpdatePoSV(peer, parent, grandParent, false)
+	err = vld.verifyWithParentAndUpdatePoSV(peer, parent, grandParent)
 	if err != nil {
 		return nil, err
 	}
 	return parent, nil
 }
 
-func (vld *validator) requestBlock(peer *core.PublicKey, hash []byte) (*core.Proposal, error) {
+func (vld *validator) requestBlock(peer *core.PublicKey, hash []byte) (*core.Block, error) {
 	blk, err := vld.resources.MsgSvc.RequestBlock(peer, hash)
 	if err != nil {
 		return nil, fmt.Errorf("cannot request block %w", err)
@@ -206,7 +205,7 @@ func (vld *validator) requestBlock(peer *core.PublicKey, hash []byte) (*core.Pro
 	return blk, nil
 }
 
-func (vld *validator) requestBlockByHeight(peer *core.PublicKey, height uint64) (*core.Proposal, error) {
+func (vld *validator) requestBlockByHeight(peer *core.PublicKey, height uint64) (*core.Block, error) {
 	blk, err := vld.resources.MsgSvc.RequestBlockByHeight(peer, height)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get block by height %d, %w", height, err)
@@ -217,12 +216,34 @@ func (vld *validator) requestBlockByHeight(peer *core.PublicKey, height uint64) 
 	return blk, nil
 }
 
+// TODO: 一种情况是正常提交另一种情况是同步区块
 func (vld *validator) verifyWithParentAndUpdatePoSV(
-	peer *core.PublicKey, blk, parent *core.Proposal, voting bool,
-) error {
-	if blk.Block().Height() != parent.Block().Height()+1 {
+	peer *core.PublicKey, blk, parent *core.Block) error {
+	if blk.Height() != parent.Height()+1 {
 		return fmt.Errorf("invalid block height %d, parent %d",
-			blk.Block().Height(), parent.Block().Height())
+			blk.Height(), parent.Height())
+	}
+	if ExecuteTxFlag {
+		// must sync transactions before updating block to posv
+		if err := vld.resources.TxPool.SyncTxs(peer, blk.Transactions()); err != nil {
+			return err
+		}
+	}
+	vld.state.setBlock(blk)
+	return vld.updatePoSV(blk)
+}
+
+func (vld *validator) updatePoSV(blk *core.Block) error {
+	vld.state.mtxUpdate.Lock()
+	defer vld.state.mtxUpdate.Unlock()
+	vld.posv.Commit(newBlock(blk, vld.state))
+	return nil
+}
+
+func (vld *validator) updatePoSVAndVote(peer *core.PublicKey, blk *core.Proposal, parent *core.Block) error {
+	if blk.Block().Height() != parent.Height()+1 {
+		return fmt.Errorf("invalid block height %d, parent %d",
+			blk.Block().Height(), parent.Height())
 	}
 	if ExecuteTxFlag {
 		// must sync transactions before updating block to posv
@@ -230,23 +251,16 @@ func (vld *validator) verifyWithParentAndUpdatePoSV(
 			return err
 		}
 	}
-	vld.state.setBlock(blk)
-	return vld.updatePoSV(blk, voting)
-}
+	vld.state.setBlock(blk.Block())
 
-func (vld *validator) updatePoSV(blk *core.Proposal, voting bool) error {
 	vld.state.mtxUpdate.Lock()
 	defer vld.state.mtxUpdate.Unlock()
 
-	if !voting {
-		vld.posv.Update(newBlock(blk, vld.state))
-		return nil
-	}
 	if err := vld.verifyProposalToVote(blk); err != nil {
-		vld.posv.Update(newBlock(blk, vld.state))
+		vld.posv.Update(newProposal(blk, vld.state))
 		return err
 	}
-	vld.posv.OnReceiveProposal(newBlock(blk, vld.state))
+	vld.posv.OnReceiveProposal(newProposal(blk, vld.state))
 	return nil
 }
 
@@ -300,8 +314,7 @@ func (vld *validator) onReceiveVote(vote *core.Vote) error {
 	if err := vote.Validate(vld.resources.VldStore); err != nil {
 		return err
 	}
-	vld.posv.OnReceiveVote(newVote(vote, vld.state))
-	return nil
+	return vld.posv.OnReceiveVote(newVote(vote, vld.state))
 }
 
 func (vld *validator) onReceiveNewView(qc *core.QuorumCert) error {

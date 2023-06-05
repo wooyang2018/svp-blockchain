@@ -13,8 +13,9 @@ message Request {
   enum Type {
     Invalid = 0;
     Block = 1;
-    BlockByHeight = 2;
-    TxList = 3;
+    QC = 2;
+    BlockByHeight = 3;
+    TxList = 4;
   }
 }
 

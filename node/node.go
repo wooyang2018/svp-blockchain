@@ -154,6 +154,9 @@ func (node *Node) setReqHandlers() {
 	node.msgSvc.SetReqHandler(&p2p.BlockReqHandler{
 		GetBlock: node.GetBlock,
 	})
+	node.msgSvc.SetReqHandler(&p2p.QCReqHandler{
+		GetQC: node.GetQC,
+	})
 	node.msgSvc.SetReqHandler(&p2p.BlockByHeightReqHandler{
 		GetBlockByHeight: node.storage.GetBlockByHeight,
 	})
@@ -162,11 +165,18 @@ func (node *Node) setReqHandlers() {
 	})
 }
 
-func (node *Node) GetBlock(hash []byte) (*core.Proposal, error) {
+func (node *Node) GetBlock(hash []byte) (*core.Block, error) {
 	if blk := node.consensus.GetBlock(hash); blk != nil {
 		return blk, nil
 	}
 	return node.storage.GetBlock(hash)
+}
+
+func (node *Node) GetQC(hash []byte) (*core.QuorumCert, error) {
+	if blk := node.consensus.GetQC(hash); blk != nil {
+		return blk, nil
+	}
+	return node.storage.GetQC(hash)
 }
 
 func (node *Node) GetTxList(hashes [][]byte) (*core.TxList, error) {

@@ -18,7 +18,7 @@ import (
 const hashFunc = crypto.SHA3_256
 
 func TestStateStore_loadPrevValuesAndTreeIndexes(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 
 	dir, _ := os.MkdirTemp("", "db")
 	rawDB, _ := NewLevelDB(dir)
@@ -39,13 +39,14 @@ func TestStateStore_loadPrevValuesAndTreeIndexes(t *testing.T) {
 	ss.loadPrevTreeIndexes(scList)
 	ss.loadPrevValues(scList)
 
-	assert.Equal([]byte{100}, scList[0].PrevValue())
-	assert.Equal([]byte{200}, scList[1].PrevValue())
-	assert.Equal(big.NewInt(9).Bytes(), scList[0].PrevTreeIndex())
-	assert.Nil(scList[1].PrevTreeIndex())
+	asrt.Equal([]byte{100}, scList[0].PrevValue())
+	asrt.Equal([]byte{200}, scList[1].PrevValue())
+	asrt.Equal(big.NewInt(9).Bytes(), scList[0].PrevTreeIndex())
+	asrt.Nil(scList[1].PrevTreeIndex())
 }
+
 func TestStateStore_updateState(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 
 	dir, _ := os.MkdirTemp("", "db")
 	rawDB, _ := NewLevelDB(dir)
@@ -56,20 +57,19 @@ func TestStateStore_updateState(t *testing.T) {
 		SetKey([]byte{1}).
 		SetValue([]byte{2}).
 		SetTreeIndex([]byte{1})
-
-	assert.Nil(ss.getStateNotFoundNil(upd.Key()))
+	asrt.Nil(ss.getStateNotFoundNil(upd.Key()))
 
 	updateLevelDB(db, ss.commitStateChange(upd))
 
-	assert.Equal(upd.Value(), ss.getStateNotFoundNil(upd.Key()))
+	asrt.Equal(upd.Value(), ss.getStateNotFoundNil(upd.Key()))
 
 	idx, err := ss.getMerkleIndex(upd.Key())
-	assert.NoError(err)
-	assert.Equal(upd.TreeIndex(), idx)
+	asrt.NoError(err)
+	asrt.Equal(upd.TreeIndex(), idx)
 }
 
 func TestStateStore_computeUpdatedTreeNodes(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 
 	scList := []*core.StateChange{
 		core.NewStateChange().
@@ -86,22 +86,19 @@ func TestStateStore_computeUpdatedTreeNodes(t *testing.T) {
 
 	p0 := merkle.NewPosition(0, big.NewInt(9))
 	p1 := merkle.NewPosition(0, big.NewInt(12))
-
-	assert.Equal(p0.Bytes(), nodes[0].Position.Bytes())
-	assert.Equal(p1.Bytes(), nodes[1].Position.Bytes())
+	asrt.Equal(p0.Bytes(), nodes[0].Position.Bytes())
+	asrt.Equal(p1.Bytes(), nodes[1].Position.Bytes())
 
 	d0 := ss.sumStateValue([]byte{10})
 	d1 := ss.sumStateValue([]byte{20})
-
-	assert.Equal(d0, nodes[0].Data)
-	assert.Equal(d1, nodes[1].Data)
+	asrt.Equal(d0, nodes[0].Data)
+	asrt.Equal(d1, nodes[1].Data)
 }
 
 func TestStateStore_setNewTreeIndexes(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 
-	leafCount := big.NewInt(12)
-
+	ss := &stateStore{hashFunc: hashFunc}
 	scList := []*core.StateChange{
 		core.NewStateChange().
 			SetKey([]byte{1}).SetValue([]byte{10}).
@@ -109,13 +106,10 @@ func TestStateStore_setNewTreeIndexes(t *testing.T) {
 		core.NewStateChange().
 			SetKey([]byte{2}).SetValue([]byte{20}),
 	}
-	ss := &stateStore{
-		hashFunc: hashFunc,
-	}
-	newLeafCount := ss.setNewTreeIndexes(scList, leafCount)
+	newLeafCount := ss.setNewTreeIndexes(scList, big.NewInt(12))
 
-	assert.Equal(big.NewInt(13).Bytes(), newLeafCount.Bytes())
-	assert.Equal(scList[0].PrevTreeIndex(), scList[0].TreeIndex())
-	assert.Nil(scList[1].PrevTreeIndex())
-	assert.Equal(big.NewInt(12).Bytes(), scList[1].TreeIndex())
+	asrt.Equal(big.NewInt(13).Bytes(), newLeafCount.Bytes())
+	asrt.Equal(scList[0].PrevTreeIndex(), scList[0].TreeIndex())
+	asrt.Nil(scList[1].PrevTreeIndex())
+	asrt.Equal(big.NewInt(12).Bytes(), scList[1].TreeIndex())
 }

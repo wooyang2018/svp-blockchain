@@ -33,9 +33,9 @@ var _ json.Marshaler = (*Proposal)(nil)
 var _ json.Unmarshaler = (*Proposal)(nil)
 
 func NewProposal() *Proposal {
-	return &Proposal{
-		data: new(pb.Proposal),
-	}
+	pro := &Proposal{data: new(pb.Proposal)}
+	pro.SetBlock(NewBlock())
+	return pro
 }
 
 // Sum returns sha3 sum of proposal

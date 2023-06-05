@@ -90,19 +90,24 @@ func (m *MockStorage) Commit(data *storage.CommitData) error {
 	return args.Error(0)
 }
 
-func (m *MockStorage) GetBlock(hash []byte) (*core.Proposal, error) {
+func (m *MockStorage) GetBlock(hash []byte) (*core.Block, error) {
 	args := m.Called(hash)
 	return castCoreBlock(args.Get(0)), args.Error(1)
 }
 
-func (m *MockStorage) GetLastBlock() (*core.Proposal, error) {
+func (m *MockStorage) GetLastBlock() (*core.Block, error) {
 	args := m.Called()
 	return castCoreBlock(args.Get(0)), args.Error(1)
 }
 
+func (m *MockStorage) GetQC(blkHash []byte) (*core.QuorumCert, error) {
+	args := m.Called(blkHash)
+	return castCoreQC(args.Get(0)), args.Error(1)
+}
+
 func (m *MockStorage) GetLastQC() (*core.QuorumCert, error) {
 	args := m.Called()
-	return castQC(args.Get(0)), args.Error(1)
+	return castCoreQC(args.Get(0)), args.Error(1)
 }
 
 func (m *MockStorage) GetBlockHeight() uint64 {
@@ -136,14 +141,29 @@ func (m *MockMsgService) SendVote(pubKey *core.PublicKey, vote *core.Vote) error
 	return args.Error(0)
 }
 
-func (m *MockMsgService) RequestBlock(pubKey *core.PublicKey, hash []byte) (*core.Proposal, error) {
+func (m *MockMsgService) RequestBlock(pubKey *core.PublicKey, hash []byte) (*core.Block, error) {
 	args := m.Called(pubKey, hash)
 	return castCoreBlock(args.Get(0)), args.Error(1)
 }
 
-func (m *MockMsgService) RequestBlockByHeight(pubKey *core.PublicKey, height uint64) (*core.Proposal, error) {
+func (m *MockMsgService) RequestProposal(pubKey *core.PublicKey, hash []byte) (*core.Proposal, error) {
+	args := m.Called(pubKey, hash)
+	return castCoreProposal(args.Get(0)), args.Error(1)
+}
+
+func (m *MockMsgService) RequestQC(pubKey *core.PublicKey, blkHash []byte) (*core.QuorumCert, error) {
+	args := m.Called(pubKey, blkHash)
+	return castCoreQC(args.Get(0)), args.Error(1)
+}
+
+func (m *MockMsgService) RequestBlockByHeight(pubKey *core.PublicKey, height uint64) (*core.Block, error) {
 	args := m.Called(pubKey, height)
 	return castCoreBlock(args.Get(0)), args.Error(1)
+}
+
+func (m *MockMsgService) RequestProposalByHeight(pubKey *core.PublicKey, height uint64) (*core.Proposal, error) {
+	args := m.Called(pubKey, height)
+	return castCoreProposal(args.Get(0)), args.Error(1)
 }
 
 func (m *MockMsgService) SendNewView(pubKey *core.PublicKey, qc *core.QuorumCert) error {
@@ -172,14 +192,12 @@ type MockExecution struct {
 
 var _ Execution = (*MockExecution)(nil)
 
-func (m *MockExecution) Execute(
-	blk *core.Proposal, txs []*core.Transaction,
-) (*core.BlockCommit, []*core.TxCommit) {
+func (m *MockExecution) Execute(blk *core.Block, txs []*core.Transaction) (*core.BlockCommit, []*core.TxCommit) {
 	args := m.Called(blk, txs)
 	return castBlockCommit(args.Get(0)), castTxCommits(args.Get(1))
 }
 
-func (m *MockExecution) MockExecute(blk *core.Proposal) (*core.BlockCommit, []*core.TxCommit) {
+func (m *MockExecution) MockExecute(blk *core.Block) (*core.BlockCommit, []*core.TxCommit) {
 	args := m.Called(blk)
 	return castBlockCommit(args.Get(0)), castTxCommits(args.Get(1))
 }
@@ -198,14 +216,21 @@ func castBytesBytes(val interface{}) [][]byte {
 	return val.([][]byte)
 }
 
-func castCoreBlock(val interface{}) *core.Proposal {
+func castCoreBlock(val interface{}) *core.Block {
+	if val == nil {
+		return nil
+	}
+	return val.(*core.Block)
+}
+
+func castCoreProposal(val interface{}) *core.Proposal {
 	if val == nil {
 		return nil
 	}
 	return val.(*core.Proposal)
 }
 
-func castQC(val interface{}) *core.QuorumCert {
+func castCoreQC(val interface{}) *core.QuorumCert {
 	if val == nil {
 		return nil
 	}

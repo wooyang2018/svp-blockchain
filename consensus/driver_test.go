@@ -44,7 +44,7 @@ func TestDriver_TestMajorityCount(t *testing.T) {
 
 func TestDriver_CreateLeaf(t *testing.T) {
 	d := setupTestDriver()
-	parent := newBlock(core.NewProposal().Sign(d.resources.Signer), d.state)
+	parent := newBlock(core.NewBlock().Sign(d.resources.Signer), d.state)
 	d.state.setBlock(parent.(*innerBlock).block)
 	qc := newQC(core.NewQuorumCert(), d.state)
 	height := uint64(5)
@@ -63,24 +63,24 @@ func TestDriver_CreateLeaf(t *testing.T) {
 	storage.On("GetMerkleRoot").Return([]byte("merkle-root"))
 	d.resources.Storage = storage
 
-	leaf := d.CreateLeaf(parent, qc, height)
+	pro := d.CreateProposal(parent, qc, height, 0)
 
 	txPool.AssertExpectations(t)
 	storage.AssertExpectations(t)
 
 	assert := assert.New(t)
-	assert.NotNil(leaf)
-	assert.True(parent.Equal(leaf.Parent()), "should link to parent")
-	assert.Equal(qc, leaf.Justify(), "should add qc")
-	assert.Equal(height, leaf.Height())
+	assert.NotNil(pro)
+	assert.True(parent.Equal(pro.Block().Parent()), "should link to parent")
+	assert.Equal(qc, pro.Justify(), "should add qc")
+	assert.Equal(height, pro.Block().Height())
 
-	blk := leaf.(*innerBlock).block
+	blk := pro.(*innerProposal).proposal.Block()
 	assert.Equal(txsInQ, blk.Transactions())
 	assert.EqualValues(2, blk.ExecHeight())
 	assert.Equal([]byte("merkle-root"), blk.MerkleRoot())
 	assert.NotEmpty(blk.Timestamp(), "should add timestamp")
 
-	assert.NotNil(d.state.getBlock(blk.Hash()), "should store leaf block in innerState")
+	assert.NotNil(d.state.getBlock(blk.Hash()), "should store leaf block in posvState")
 }
 
 func TestDriver_VoteBlock(t *testing.T) {
@@ -97,7 +97,7 @@ func TestDriver_VoteBlock(t *testing.T) {
 	txPool := new(MockTxPool)
 	txPool.On("GetStatus").Return(txpool.Status{}) // no txs in the pool
 	if !PreserveTxFlag {
-		txPool.On("SetTxsPending", blk.Transactions())
+		txPool.On("SetTxsPending", blk.Block().Transactions())
 	}
 	d.resources.TxPool = txPool
 
@@ -107,7 +107,7 @@ func TestDriver_VoteBlock(t *testing.T) {
 	d.resources.MsgSvc = msgSvc
 
 	start := time.Now()
-	d.VoteBlock(newBlock(blk, d.state))
+	d.VoteProposal(newProposal(blk, d.state))
 	elapsed := time.Since(start)
 
 	txPool.AssertExpectations(t)
@@ -119,12 +119,12 @@ func TestDriver_VoteBlock(t *testing.T) {
 	txPool = new(MockTxPool)
 	txPool.On("GetStatus").Return(txpool.Status{Total: 1}) // one txs in the pool
 	if !PreserveTxFlag {
-		txPool.On("SetTxsPending", blk.Transactions())
+		txPool.On("SetTxsPending", blk.Block().Transactions())
 	}
 	d.resources.TxPool = txPool
 
 	start = time.Now()
-	d.VoteBlock(newBlock(blk, d.state))
+	d.VoteProposal(newProposal(blk, d.state))
 	elapsed = time.Since(start)
 
 	txPool.AssertExpectations(t)
@@ -135,11 +135,11 @@ func TestDriver_VoteBlock(t *testing.T) {
 
 func TestDriver_Commit(t *testing.T) {
 	d := setupTestDriver()
-	parent := core.NewProposal().SetHeight(10).Sign(d.resources.Signer)
-	bfolk := core.NewProposal().SetTransactions([][]byte{[]byte("txfromfolk")}).SetHeight(10).Sign(d.resources.Signer)
+	parent := core.NewBlock().SetHeight(10).Sign(d.resources.Signer)
+	bfolk := core.NewBlock().SetTransactions([][]byte{[]byte("txfromfolk")}).SetHeight(10).Sign(d.resources.Signer)
 
 	tx := core.NewTransaction().Sign(d.resources.Signer)
-	bexec := core.NewProposal().SetTransactions([][]byte{tx.Hash()}).
+	bexec := core.NewBlock().SetTransactions([][]byte{tx.Hash()}).
 		SetParentHash(parent.Hash()).SetHeight(11).Sign(d.resources.Signer)
 	d.state.setBlock(parent)
 	d.state.setCommittedBlock(parent)
@@ -187,35 +187,35 @@ func TestDriver_Commit(t *testing.T) {
 
 	assert := assert.New(t)
 	assert.NotNil(d.state.getBlockFromState(bexec.Hash()),
-		"should not delete bexec from innerState")
+		"should not delete bexec from posvState")
 	assert.Nil(d.state.getBlockFromState(bfolk.Hash()),
-		"should delete folked block from innerState")
+		"should delete folked block from posvState")
 }
 
 func TestDriver_CreateQC(t *testing.T) {
 	d := setupTestDriver()
 	blk := core.NewProposal().Sign(d.resources.Signer)
-	d.state.setBlock(blk)
+	d.state.setBlock(blk.Block())
 	votes := []Vote{
-		newVote(blk.ProposerVote(), d.state),
+		newVote(blk.Vote(d.resources.Signer), d.state),
 		newVote(blk.Vote(core.GenerateKey(nil)), d.state),
 	}
 	qc := d.CreateQC(votes)
 
 	assert := assert.New(t)
-	assert.Equal(blk, qc.Block().(*innerBlock).block, "should get qc reference block")
+	assert.Equal(blk.Block(), qc.Block().(*innerBlock).block, "should get qc reference block")
 }
 
 func TestDriver_BroadcastProposal(t *testing.T) {
 	d := setupTestDriver()
 	blk := core.NewProposal().Sign(d.resources.Signer)
-	d.state.setBlock(blk)
+	d.state.setBlock(blk.Block())
 
 	msgSvc := new(MockMsgService)
 	msgSvc.On("BroadcastProposal", blk).Return(nil)
 	d.resources.MsgSvc = msgSvc
 
-	d.BroadcastProposal(newBlock(blk, d.state))
+	d.BroadcastProposal(newProposal(blk, d.state))
 
 	msgSvc.AssertExpectations(t)
 }

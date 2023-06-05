@@ -18,7 +18,7 @@ import (
 )
 
 type CommitData struct {
-	Block        *core.Proposal
+	Block        *core.Block
 	QC           *core.QuorumCert // QC for committed block
 	Transactions []*core.Transaction
 	BlockCommit  *core.BlockCommit
@@ -65,12 +65,16 @@ func (strg *Storage) Commit(data *CommitData) error {
 	return strg.commit(data)
 }
 
-func (strg *Storage) GetBlock(hash []byte) (*core.Proposal, error) {
+func (strg *Storage) GetBlock(hash []byte) (*core.Block, error) {
 	return strg.chainStore.getBlock(hash)
 }
 
-func (strg *Storage) GetLastBlock() (*core.Proposal, error) {
+func (strg *Storage) GetLastBlock() (*core.Block, error) {
 	return strg.chainStore.getLastBlock()
+}
+
+func (strg *Storage) GetQC(blkHash []byte) (*core.QuorumCert, error) {
+	return strg.chainStore.getQC(blkHash)
 }
 
 func (strg *Storage) GetLastQC() (*core.QuorumCert, error) {
@@ -82,7 +86,7 @@ func (strg *Storage) GetBlockHeight() uint64 {
 	return height
 }
 
-func (strg *Storage) GetBlockByHeight(height uint64) (*core.Proposal, error) {
+func (strg *Storage) GetBlockByHeight(height uint64) (*core.Block, error) {
 	return strg.chainStore.getBlockByHeight(height)
 }
 
@@ -166,7 +170,7 @@ func (strg *Storage) writeCommitData(data *CommitData) error {
 	if err := strg.writeStateMerkleTree(data); err != nil {
 		return err
 	}
-	return strg.setCommittedBlockHeight(data.Block.Block().Height())
+	return strg.setCommittedBlockHeight(data.Block.Height())
 }
 
 func (strg *Storage) computeMerkleUpdate(data *CommitData) {
@@ -184,8 +188,8 @@ func (strg *Storage) computeMerkleUpdate(data *CommitData) {
 
 func (strg *Storage) writeChainData(data *CommitData) error {
 	updFns := make([]updateFunc, 0)
-	updFns = append(updFns, strg.chainStore.setBlock(data.Block.Block())...)
-	updFns = append(updFns, strg.chainStore.setLastQC(data.QC))
+	updFns = append(updFns, strg.chainStore.setBlock(data.Block)...)
+	updFns = append(updFns, strg.chainStore.setQC((data.QC))...)
 	updFns = append(updFns, strg.chainStore.setTxs(data.Transactions)...)
 	updFns = append(updFns, strg.chainStore.setTxCommits(data.TxCommits)...)
 	return updateLevelDB(strg.db, updFns)

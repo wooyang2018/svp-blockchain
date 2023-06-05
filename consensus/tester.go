@@ -14,7 +14,7 @@ import (
 
 type tester struct {
 	writer  *csv.Writer
-	pretime int64
+	preTime int64
 	elapsed int64
 	txCount int
 }
@@ -38,12 +38,12 @@ func (t *tester) saveItem(height uint64, t0, t1, t2 int64, txs int) {
 	if t.writer == nil {
 		return
 	}
-	if t.pretime == 0 {
-		t.pretime = t1
+	if t.preTime == 0 {
+		t.preTime = t1
 	}
-	t.elapsed = t.elapsed + t1 - t.pretime
+	t.elapsed = t.elapsed + t1 - t.preTime
 	t.txCount = t.txCount + txs
-	t.pretime = t2
+	t.preTime = t2
 	t.writer.Write([]string{
 		strconv.FormatUint(height, 10),
 		strconv.FormatInt(t0, 10),

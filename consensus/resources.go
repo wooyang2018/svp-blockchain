@@ -6,6 +6,7 @@ package consensus
 import (
 	"github.com/wooyang2018/posv-blockchain/core"
 	"github.com/wooyang2018/posv-blockchain/emitter"
+	"github.com/wooyang2018/posv-blockchain/p2p"
 	"github.com/wooyang2018/posv-blockchain/storage"
 	"github.com/wooyang2018/posv-blockchain/txpool"
 )
@@ -28,25 +29,31 @@ type TxPool interface {
 type Storage interface {
 	GetMerkleRoot() []byte
 	Commit(data *storage.CommitData) error
-	GetBlock(hash []byte) (*core.Proposal, error)
-	GetLastBlock() (*core.Proposal, error)
+	GetBlock(hash []byte) (*core.Block, error)
+	GetLastBlock() (*core.Block, error)
+	GetQC(blkHash []byte) (*core.QuorumCert, error)
 	GetLastQC() (*core.QuorumCert, error)
 	GetBlockHeight() uint64
 	HasTx(hash []byte) bool
 }
 
+var _ Storage = (*storage.Storage)(nil)
+
 type MsgService interface {
 	BroadcastProposal(blk *core.Proposal) error
 	BroadcastNewView(qc *core.QuorumCert) error
 	SendVote(pubKey *core.PublicKey, vote *core.Vote) error
-	RequestBlock(pubKey *core.PublicKey, hash []byte) (*core.Proposal, error)
-	RequestBlockByHeight(pubKey *core.PublicKey, height uint64) (*core.Proposal, error)
+	RequestBlock(pubKey *core.PublicKey, hash []byte) (*core.Block, error)
+	RequestBlockByHeight(pubKey *core.PublicKey, height uint64) (*core.Block, error)
+	RequestQC(pubKey *core.PublicKey, blkHash []byte) (*core.QuorumCert, error)
 	SendNewView(pubKey *core.PublicKey, qc *core.QuorumCert) error
 
 	SubscribeProposal(buffer int) *emitter.Subscription
 	SubscribeVote(buffer int) *emitter.Subscription
 	SubscribeNewView(buffer int) *emitter.Subscription
 }
+
+var _ MsgService = (*p2p.MsgService)(nil)
 
 type Execution interface {
 	Execute(blk *core.Block, txs []*core.Transaction) (*core.BlockCommit, []*core.TxCommit)

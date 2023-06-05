@@ -14,7 +14,7 @@ type chainStore struct {
 	getter getter
 }
 
-func (cs *chainStore) getLastBlock() (*core.Proposal, error) {
+func (cs *chainStore) getLastBlock() (*core.Block, error) {
 	height, err := cs.getBlockHeight()
 	if err != nil {
 		return nil, err
@@ -30,7 +30,7 @@ func (cs *chainStore) getBlockHeight() (uint64, error) {
 	return binary.BigEndian.Uint64(b), nil
 }
 
-func (cs *chainStore) getBlockByHeight(height uint64) (*core.Proposal, error) {
+func (cs *chainStore) getBlockByHeight(height uint64) (*core.Block, error) {
 	hash, err := cs.getBlockHashByHeight(height)
 	if err != nil {
 		return nil, err
@@ -42,16 +42,28 @@ func (cs *chainStore) getBlockHashByHeight(height uint64) ([]byte, error) {
 	return cs.getter.Get(concatBytes([]byte{colBlockHashByHeight}, uint64BEBytes(height)))
 }
 
-func (cs *chainStore) getBlock(hash []byte) (*core.Proposal, error) {
+func (cs *chainStore) getBlock(hash []byte) (*core.Block, error) {
 	b, err := cs.getter.Get(concatBytes([]byte{colBlockByHash}, hash))
 	if err != nil {
 		return nil, err
 	}
-	blk := core.NewProposal()
+	blk := core.NewBlock()
 	if err := blk.Unmarshal(b); err != nil {
 		return nil, err
 	}
 	return blk, nil
+}
+
+func (cs *chainStore) getQC(blkHash []byte) (*core.QuorumCert, error) {
+	b, err := cs.getter.Get(concatBytes([]byte{colQCByBlockHash}, blkHash))
+	if err != nil {
+		return nil, err // TODO 添加setQC的函数
+	}
+	qc := core.NewQuorumCert()
+	if err := qc.Unmarshal(b); err != nil {
+		return nil, err
+	}
+	return qc, nil
 }
 
 func (cs *chainStore) getLastQC() (*core.QuorumCert, error) {
@@ -119,6 +131,13 @@ func (cs *chainStore) setBlock(blk *core.Block) []updateFunc {
 	return ret
 }
 
+func (cs *chainStore) setQC(qc *core.QuorumCert) []updateFunc {
+	ret := make([]updateFunc, 0)
+	ret = append(ret, cs.setQCByBlockHash(qc))
+	ret = append(ret, cs.setLastQC(qc))
+	return ret
+}
+
 func (cs *chainStore) setLastQC(qc *core.QuorumCert) updateFunc {
 	return func(setter setter) error {
 		if qc == nil { // some blocks may not have qc (posv nature)
@@ -148,6 +167,16 @@ func (cs *chainStore) setBlockHashByHeight(blk *core.Block) updateFunc {
 			concatBytes([]byte{colBlockHashByHeight}, uint64BEBytes(blk.Height())),
 			blk.Hash(),
 		)
+	}
+}
+
+func (cs *chainStore) setQCByBlockHash(qc *core.QuorumCert) updateFunc {
+	return func(setter setter) error {
+		val, err := qc.Marshal()
+		if err != nil {
+			return err
+		}
+		return setter.Set(concatBytes([]byte{colQCByBlockHash}, qc.BlockHash()), val)
 	}
 }
 

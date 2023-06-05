@@ -30,14 +30,14 @@ type genesis struct {
 	mtxVote    sync.Mutex
 	mtxNewView sync.Mutex
 
-	b0 *core.Proposal
+	b0 *core.Block
 	q0 *core.QuorumCert
 
 	mtxB0 sync.RWMutex
 	mtxQ0 sync.RWMutex
 }
 
-func (gns *genesis) run() (*core.Proposal, *core.QuorumCert) {
+func (gns *genesis) run() (*core.Block, *core.QuorumCert) {
 	logger.I().Infow("creating genesis block...")
 	gns.done = make(chan struct{})
 
@@ -71,7 +71,7 @@ func (gns *genesis) propose() {
 	}
 	gns.votes = make(map[string]*core.Vote, gns.resources.VldStore.MajorityValidatorCount())
 	b0 := gns.createGenesisBlock()
-	gns.setB0(b0)
+	gns.setB0(b0.Block())
 	logger.I().Infow("created genesis block, broadcasting...")
 	go gns.broadcastProposalLoop()
 	gns.onReceiveVote(b0.Vote(gns.resources.Signer))
@@ -96,7 +96,8 @@ func (gns *genesis) broadcastProposalLoop() {
 		default:
 		}
 		if gns.getQ0() == nil {
-			if err := gns.resources.MsgSvc.BroadcastProposal(gns.getB0()); err != nil {
+			pro := core.NewProposal().SetBlock(gns.getB0()).Sign(gns.resources.Signer)
+			if err := gns.resources.MsgSvc.BroadcastProposal(pro); err != nil {
 				logger.I().Errorw("broadcast proposal failed", "error", err)
 			}
 		}
@@ -185,7 +186,7 @@ func (gns *genesis) onReceiveProposal(proposal *core.Proposal) error {
 	if len(proposal.Block().Transactions()) != 0 {
 		return fmt.Errorf("genesis block with txs")
 	}
-	gns.setB0(proposal)
+	gns.setB0(proposal.Block())
 	logger.I().Infow("got genesis block, voting...")
 	return gns.resources.MsgSvc.SendVote(proposal.Proposer(), proposal.Vote(gns.resources.Signer))
 }
@@ -195,31 +196,42 @@ func (gns *genesis) fetchGenesisBlockAndQC(peer *core.PublicKey) error {
 	if err != nil {
 		return err
 	}
-	if !b0.Block().IsGenesis() {
+	if !b0.IsGenesis() {
 		return fmt.Errorf("not genesis block")
 	}
-	b1, err := gns.requestBlockByHeight(peer, 1)
+	qc, err := gns.requestQC(peer, b0.Hash())
 	if err != nil {
 		return err
 	}
-	if !bytes.Equal(b0.Hash(), b1.QuorumCert().BlockHash()) {
-		return fmt.Errorf("b1 qc ref is not b0")
+	if !bytes.Equal(b0.Hash(), qc.BlockHash()) {
+		return fmt.Errorf("qc ref is not b0")
 	}
 	gns.setB0(b0)
-	gns.setQ0(b1.QuorumCert())
+	gns.setQ0(qc)
 	close(gns.done)
 	return nil
 }
 
-func (gns *genesis) requestBlockByHeight(peer *core.PublicKey, height uint64) (*core.Proposal, error) {
-	blk, err := gns.resources.MsgSvc.RequestBlockByHeight(peer, height)
+func (gns *genesis) requestBlockByHeight(peer *core.PublicKey, height uint64) (*core.Block, error) {
+	pro, err := gns.resources.MsgSvc.RequestBlockByHeight(peer, height)
 	if err != nil {
-		return nil, fmt.Errorf("cannot get block by height %d, %w", height, err)
+		return nil, fmt.Errorf("cannot get proposal by height %d, %w", height, err)
 	}
-	if err := blk.Validate(gns.resources.VldStore); err != nil {
-		return nil, fmt.Errorf("validate block %d error %w", height, err)
+	if err := pro.Validate(gns.resources.VldStore); err != nil {
+		return nil, fmt.Errorf("validate proposal %d error %w", height, err)
 	}
-	return blk, nil
+	return pro, nil
+}
+
+func (gns *genesis) requestQC(peer *core.PublicKey, blkHash []byte) (*core.QuorumCert, error) {
+	pro, err := gns.resources.MsgSvc.RequestQC(peer, blkHash)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get proposal by blkHash %w", err)
+	}
+	if err := pro.Validate(gns.resources.VldStore); err != nil {
+		return nil, fmt.Errorf("validate qc error %w", err)
+	}
+	return pro, nil
 }
 
 func (gns *genesis) onReceiveVote(vote *core.Vote) error {
@@ -272,7 +284,7 @@ func (gns *genesis) onReceiveNewView(qc *core.QuorumCert) error {
 	if b0 == nil {
 		return fmt.Errorf("no received genesis block yet")
 	}
-	if !bytes.Equal(b0.Block().Hash(), qc.BlockHash()) {
+	if !bytes.Equal(b0.Hash(), qc.BlockHash()) {
 		return fmt.Errorf("invalid qc reference")
 	}
 	gns.acceptQC(qc)
@@ -296,7 +308,7 @@ func (gns *genesis) acceptQC(qc *core.QuorumCert) {
 	close(gns.done) // when qc is accepted, genesis creation is done
 }
 
-func (gns *genesis) setB0(val *core.Proposal) {
+func (gns *genesis) setB0(val *core.Block) {
 	gns.mtxB0.Lock()
 	defer gns.mtxB0.Unlock()
 	gns.b0 = val
@@ -308,7 +320,7 @@ func (gns *genesis) setQ0(val *core.QuorumCert) {
 	gns.q0 = val
 }
 
-func (gns *genesis) getB0() *core.Proposal {
+func (gns *genesis) getB0() *core.Block {
 	gns.mtxB0.RLock()
 	defer gns.mtxB0.RUnlock()
 	return gns.b0

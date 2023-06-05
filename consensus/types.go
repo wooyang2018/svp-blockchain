@@ -4,33 +4,40 @@
 package consensus
 
 // Block type
-type Block interface {
+type Block interface { //TODO 删除
+	Hash() []byte
 	Height() uint64
 	Parent() Block
 	Equal(blk Block) bool
-	Justify() QC
 	Timestamp() int64
 	Transactions() [][]byte
 }
 
-// QC type
-type QC interface {
+type Proposal interface { //TODO 删除
 	Block() Block
+	Justify() QC
+	View() uint32
+}
+
+// QC type
+type QC interface { //TODO 删除
+	Block() Block
+	View() uint32
 }
 
 // Vote type
-type Vote interface {
+type Vote interface { //TODO 删除
 	Block() Block
 	Voter() string
 }
 
 // Driver godoc
-type Driver interface {
+type Driver interface { //TODO 删除
 	MajorityValidatorCount() int
-	CreateLeaf(parent Block, qc QC, height uint64) Block
+	CreateProposal(parent Block, qc QC, height uint64, view uint32) Proposal
 	CreateQC(votes []Vote) QC
-	BroadcastProposal(blk Block)
-	VoteBlock(blk Block)
+	BroadcastProposal(blk Proposal)
+	VoteProposal(pro Proposal)
 	Commit(blk Block)
 }
 

@@ -15,10 +15,10 @@ type Consensus struct {
 	resources *Resources
 	config    Config
 	startTime int64
-	logfile   *os.File
+	logfile   *os.File //性能测试日志句柄
 	state     *state
 	driver    *driver
-	posv      *posv
+	posv      *posv //TODO posv的成员合并到Consensus中
 	validator *validator
 	pacemaker *pacemaker
 	rotator   *rotator
@@ -44,8 +44,12 @@ func (cons *Consensus) GetStatus() Status {
 	return cons.getStatus()
 }
 
-func (cons *Consensus) GetBlock(hash []byte) *core.Proposal {
+func (cons *Consensus) GetBlock(hash []byte) *core.Block {
 	return cons.state.getBlock(hash)
+}
+
+func (cons *Consensus) GetQC(blkHash []byte) *core.QuorumCert {
+	return cons.state.getQC(blkHash)
 }
 
 func (cons *Consensus) start() {
@@ -87,18 +91,18 @@ func (cons *Consensus) stop() {
 	}
 }
 
-func (cons *Consensus) setupState(b0 *core.Proposal) {
+func (cons *Consensus) setupState(b0 *core.Block) {
 	cons.state = newState(cons.resources)
-	cons.state.setBlock(b0)
+	cons.state.setBlock(b0) // TODO 讨论使用Block还是Proposal
 	cons.state.setLeaderIndex(cons.resources.VldStore.GetWorkerIndex(b0.Proposer()))
 }
 
-func (cons *Consensus) getInitialBlockAndQC() (*core.Proposal, *core.QuorumCert) {
+func (cons *Consensus) getInitialBlockAndQC() (*core.Block, *core.QuorumCert) {
 	b0, err := cons.resources.Storage.GetLastBlock()
 	if err == nil {
 		q0, err := cons.resources.Storage.GetLastQC()
 		if err != nil {
-			logger.I().Fatalf("cannot get last qc %d", b0.Block().Height())
+			logger.I().Fatalf("cannot get last qc %d", b0.Height())
 		}
 		return b0, q0
 	}
@@ -119,7 +123,7 @@ func (cons *Consensus) setupDriver() {
 	}
 }
 
-func (cons *Consensus) setupPoSV(b0 *core.Proposal, q0 *core.QuorumCert) {
+func (cons *Consensus) setupPoSV(b0 *core.Block, q0 *core.QuorumCert) {
 	cons.posv = NewPoSV(
 		cons.driver,
 		cons.logfile,
@@ -167,9 +171,9 @@ func (cons *Consensus) getStatus() (status Status) {
 	status.ViewStart = cons.rotator.getViewStart()
 	status.PendingViewChange = cons.rotator.getPendingViewChange()
 
-	status.BVote = cons.posv.GetBVote().Height()
-	status.BLeaf = cons.posv.GetBLeaf().Height()
-	status.BExec = cons.posv.GetBExec().Height()
-	status.QCHigh = qcRefHeight(cons.posv.GetQCHigh())
+	status.BVote = cons.posv.posvState.GetBVote().Height()
+	status.BLeaf = cons.posv.posvState.GetBLeaf().Height()
+	status.BExec = cons.posv.posvState.GetBExec().Height()
+	status.QCHigh = qcRefHeight(cons.posv.posvState.GetQCHigh())
 	return status
 }

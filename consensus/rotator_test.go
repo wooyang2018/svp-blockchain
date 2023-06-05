@@ -27,12 +27,12 @@ func setupRotator() (*rotator, *core.Proposal) {
 	b0.SetQuorumCert(q0)
 
 	state := newState(resources)
-	state.setBlock(b0)
+	state.setBlock(b0.Block())
 	driver := &driver{
 		resources: resources,
 		state:     state,
 	}
-	posv := NewPoSV(driver, nil, newBlock(b0, state), newQC(q0, state))
+	posv := NewPoSV(driver, nil, newBlock(b0.Block(), state), newQC(q0, state))
 	return &rotator{
 		resources: resources,
 		config:    DefaultConfig,

@@ -23,7 +23,7 @@ func TestStateInit(t *testing.T) {
 }
 
 func TestStateGetVotes(t *testing.T) {
-	s := &innerState{}
+	s := &posvState{}
 	assert := assert.New(t)
 	assert.Equal([]Vote{}, s.GetVotes())
 	v0 := new(MockVote)

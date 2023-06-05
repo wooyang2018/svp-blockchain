@@ -13,16 +13,16 @@ import (
 )
 
 func TestMerkleStore(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 
 	dir, _ := os.MkdirTemp("", "db")
 	rawDB, _ := NewLevelDB(dir)
 	db := &levelDB{rawDB}
 	ms := &merkleStore{db}
-	assert.Equal(uint8(0), ms.GetHeight())
-	assert.Equal(big.NewInt(0), ms.GetLeafCount())
 
-	assert.Nil(ms.GetNode(merkle.NewPosition(0, big.NewInt(0))))
+	asrt.Equal(uint8(0), ms.GetHeight())
+	asrt.Equal(big.NewInt(0), ms.GetLeafCount())
+	asrt.Nil(ms.GetNode(merkle.NewPosition(0, big.NewInt(0))))
 
 	upd := &merkle.UpdateResult{
 		LeafCount: big.NewInt(2),
@@ -38,9 +38,9 @@ func TestMerkleStore(t *testing.T) {
 
 	updateLevelDB(db, ms.commitUpdate(upd))
 
-	assert.Equal(upd.Height, ms.GetHeight())
-	assert.Equal(upd.LeafCount, ms.GetLeafCount())
-	assert.Equal([]byte{1, 1}, ms.GetNode(merkle.NewPosition(0, big.NewInt(0))))
-	assert.Equal([]byte{2, 2}, ms.GetNode(merkle.NewPosition(0, big.NewInt(1))))
-	assert.Equal([]byte{3, 3}, ms.GetNode(merkle.NewPosition(1, big.NewInt(0))))
+	asrt.Equal(upd.Height, ms.GetHeight())
+	asrt.Equal(upd.LeafCount, ms.GetLeafCount())
+	asrt.Equal([]byte{1, 1}, ms.GetNode(merkle.NewPosition(0, big.NewInt(0))))
+	asrt.Equal([]byte{2, 2}, ms.GetNode(merkle.NewPosition(0, big.NewInt(1))))
+	asrt.Equal([]byte{3, 3}, ms.GetNode(merkle.NewPosition(1, big.NewInt(0))))
 }

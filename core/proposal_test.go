@@ -8,35 +8,29 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/wooyang2018/posv-blockchain/pb"
 )
 
-func newProposal(privKey *PrivateKey) (blk *Block, pro *Proposal) {
-	blk = NewBlock().
+func newProposal(privKey *PrivateKey) *Proposal {
+	blk := NewBlock().
 		SetHeight(4).
 		SetParentHash([]byte{1}).
 		SetExecHeight(2).
 		SetMerkleRoot([]byte{1}).
 		SetTransactions([][]byte{{1}}).
 		Sign(privKey)
-	pro = NewProposal().
+	pro := NewProposal().
 		SetBlock(blk).
 		SetViewNum(1).
 		Sign(privKey)
-	return
+	return pro
 }
 
 func TestProposal(t *testing.T) {
 	asrt := assert.New(t)
 	privKey := GenerateKey(nil)
-	blk, pro := newProposal(privKey)
+	pro := newProposal(privKey)
 
-	v := NewVote()
-	err := v.setData(&pb.Vote{
-		BlockHash: blk.Hash(),
-		Signature: privKey.Sign(blk.Hash()).data,
-	})
-	asrt.NoError(err)
+	v := pro.Vote(privKey)
 	qc := NewQuorumCert().Build([]*Vote{v})
 	pro.SetQuorumCert(qc).Sign(privKey)
 
@@ -98,7 +92,7 @@ func TestProposal(t *testing.T) {
 func TestProposal_Vote(t *testing.T) {
 	asrt := assert.New(t)
 	privKey := GenerateKey(nil)
-	_, pro := newProposal(privKey)
+	pro := newProposal(privKey)
 	vote := pro.Vote(privKey)
 	asrt.Equal(pro.Block().Hash(), vote.BlockHash())
 
