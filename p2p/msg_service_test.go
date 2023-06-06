@@ -48,8 +48,21 @@ func setupMsgServiceWithLoopBackPeers() (*MsgService, [][]byte, []*Peer) {
 	return svc, raws, peers
 }
 
+func newTestProposal(priv core.Signer) (*core.Vote, *core.QuorumCert, *core.Proposal) {
+	vote := core.NewProposal().
+		SetBlock(core.NewBlock().SetHeight(9).Sign(priv)).
+		Sign(priv).
+		Vote(priv)
+	qc := core.NewQuorumCert().Build([]*core.Vote{vote})
+	pro := core.NewProposal().
+		SetBlock(core.NewBlock().SetHeight(10).Sign(priv)).
+		SetQuorumCert(qc).
+		Sign(priv)
+	return vote, qc, pro
+}
+
 func TestMsgService_BroadcastProposal(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 
 	svc, raws, _ := setupMsgServiceWithLoopBackPeers()
 	sub := svc.SubscribeProposal(5)
@@ -62,29 +75,28 @@ func TestMsgService_BroadcastProposal(t *testing.T) {
 		}
 	}()
 
-	qc := core.NewQuorumCert().Build(nil)
-	blk := core.NewProposal().SetQuorumCert(qc).Sign(core.GenerateKey(nil))
-	err := svc.BroadcastProposal(blk)
+	_, _, pro := newTestProposal(core.GenerateKey(nil))
+	err := svc.BroadcastProposal(pro)
 
-	if !assert.NoError(err) {
+	if !asrt.NoError(err) {
 		return
 	}
 
 	time.Sleep(time.Millisecond)
 
-	assert.NotNil(raws[0])
-	assert.Equal(raws[0], raws[1])
+	asrt.NotNil(raws[0])
+	asrt.Equal(raws[0], raws[1])
 
-	assert.EqualValues(MsgTypeProposal, raws[0][0])
+	asrt.EqualValues(MsgTypeProposal, raws[0][0])
 
-	assert.Equal(2, recvCount)
-	if assert.NotNil(recvBlk) {
-		assert.Equal(blk.Block().Height(), recvBlk.Block().Height())
+	asrt.Equal(2, recvCount)
+	if asrt.NotNil(recvBlk) {
+		asrt.Equal(pro.Block().Height(), recvBlk.Block().Height())
 	}
 }
 
 func TestMsgService_SendVote(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 
 	svc, raws, peers := setupMsgServiceWithLoopBackPeers()
 
@@ -96,27 +108,26 @@ func TestMsgService_SendVote(t *testing.T) {
 		}
 	}()
 
-	validator := core.GenerateKey(nil)
-	vote := core.NewProposal().Sign(core.GenerateKey(nil)).Vote(validator)
+	vote, _, _ := newTestProposal(core.GenerateKey(nil))
 	err := svc.SendVote(peers[0].PublicKey(), vote)
 
-	if !assert.NoError(err) {
+	if !asrt.NoError(err) {
 		return
 	}
 
 	time.Sleep(time.Millisecond)
 
-	assert.NotNil(raws[0])
-	assert.Nil(raws[1])
-	assert.EqualValues(MsgTypeVote, raws[0][0])
+	asrt.NotNil(raws[0])
+	asrt.Nil(raws[1])
+	asrt.EqualValues(MsgTypeVote, raws[0][0])
 
-	if assert.NotNil(recvVote) {
-		assert.Equal(vote.BlockHash(), recvVote.BlockHash())
+	if asrt.NotNil(recvVote) {
+		asrt.Equal(vote.BlockHash(), recvVote.BlockHash())
 	}
 }
 
 func TestMsgService_SendNewView(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 
 	svc, raws, peers := setupMsgServiceWithLoopBackPeers()
 
@@ -128,27 +139,26 @@ func TestMsgService_SendNewView(t *testing.T) {
 		}
 	}()
 
-	vote := core.NewProposal().Sign(core.GenerateKey(nil)).Vote(core.GenerateKey(nil))
-	qc := core.NewQuorumCert().Build([]*core.Vote{vote})
+	_, qc, _ := newTestProposal(core.GenerateKey(nil))
 	err := svc.SendNewView(peers[0].PublicKey(), qc)
 
-	if !assert.NoError(err) {
+	if !asrt.NoError(err) {
 		return
 	}
 
 	time.Sleep(time.Millisecond)
 
-	assert.NotNil(raws[0])
-	assert.Nil(raws[1])
-	assert.EqualValues(MsgTypeNewView, raws[0][0])
+	asrt.NotNil(raws[0])
+	asrt.Nil(raws[1])
+	asrt.EqualValues(MsgTypeNewView, raws[0][0])
 
-	if assert.NotNil(recvQC) {
-		assert.Equal(qc.BlockHash(), recvQC.BlockHash())
+	if asrt.NotNil(recvQC) {
+		asrt.Equal(qc.BlockHash(), recvQC.BlockHash())
 	}
 }
 
 func TestMsgService_BroadcastTxList(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 
 	svc, raws, _ := setupMsgServiceWithLoopBackPeers()
 	sub := svc.SubscribeTxList(5)
@@ -167,34 +177,31 @@ func TestMsgService_BroadcastTxList(t *testing.T) {
 	}
 	err := svc.BroadcastTxList(txs)
 
-	if !assert.NoError(err) {
+	if !asrt.NoError(err) {
 		return
 	}
 
 	time.Sleep(time.Millisecond)
 
-	assert.NotNil(raws[0])
-	assert.Equal(raws[0], raws[1])
-	assert.EqualValues(MsgTypeTxList, raws[0][0])
+	asrt.NotNil(raws[0])
+	asrt.Equal(raws[0], raws[1])
+	asrt.EqualValues(MsgTypeTxList, raws[0][0])
 
-	assert.Equal(2, recvCount)
-	if assert.NotNil(recvTxs) {
-		assert.Equal((*txs)[0].Nonce(), (*recvTxs)[0].Nonce())
-		assert.Equal((*txs)[1].Nonce(), (*recvTxs)[1].Nonce())
+	asrt.Equal(2, recvCount)
+	if asrt.NotNil(recvTxs) {
+		asrt.Equal((*txs)[0].Nonce(), (*recvTxs)[0].Nonce())
+		asrt.Equal((*txs)[1].Nonce(), (*recvTxs)[1].Nonce())
 	}
 }
 
 func TestMsgService_RequestBlock(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 
-	qc := core.NewQuorumCert().Build(
-		[]*core.Vote{core.NewProposal().SetHeight(9).Vote(core.GenerateKey(nil))})
-	blk := core.NewProposal().SetHeight(10).SetQuorumCert(qc).Sign(core.GenerateKey(nil))
-
+	_, _, pro := newTestProposal(core.GenerateKey(nil))
 	blkReqHandler := &BlockReqHandler{
-		GetBlock: func(hash []byte) (*core.Proposal, error) {
-			if bytes.Equal(blk.Hash(), hash) {
-				return blk, nil
+		GetBlock: func(hash []byte) (*core.Block, error) {
+			if bytes.Equal(pro.Hash(), hash) {
+				return pro.Block(), nil
 			}
 			return nil, errors.New("block not found")
 		},
@@ -202,17 +209,17 @@ func TestMsgService_RequestBlock(t *testing.T) {
 	svc, _, peers := setupMsgServiceWithLoopBackPeers()
 	svc.SetReqHandler(blkReqHandler)
 
-	recvBlk, err := svc.RequestBlock(peers[0].PublicKey(), blk.Hash())
-	if assert.NoError(err) && assert.NotNil(recvBlk) {
-		assert.Equal(blk.Height(), recvBlk.Height())
+	recvBlk, err := svc.RequestBlock(peers[0].PublicKey(), pro.Hash())
+	if asrt.NoError(err) && asrt.NotNil(recvBlk) {
+		asrt.Equal(pro.Block().Height(), recvBlk.Height())
 	}
 
 	_, err = svc.RequestBlock(peers[0].PublicKey(), []byte{1})
-	assert.Error(err)
+	asrt.Error(err)
 }
 
 func TestMsgService_RequestTxList(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 
 	var txs = &core.TxList{
 		core.NewTransaction().SetNonce(1).Sign(core.GenerateKey(nil)),
@@ -228,8 +235,8 @@ func TestMsgService_RequestTxList(t *testing.T) {
 	svc.SetReqHandler(txListReqHandler)
 
 	recvTxs, err := svc.RequestTxList(peers[0].PublicKey(), [][]byte{{1}, {2}})
-	if assert.NoError(err) && assert.NotNil(recvTxs) {
-		assert.Equal((*txs)[0].Nonce(), (*recvTxs)[0].Nonce())
-		assert.Equal((*txs)[1].Nonce(), (*recvTxs)[1].Nonce())
+	if asrt.NoError(err) && asrt.NotNil(recvTxs) {
+		asrt.Equal((*txs)[0].Nonce(), (*recvTxs)[0].Nonce())
+		asrt.Equal((*txs)[1].Nonce(), (*recvTxs)[1].Nonce())
 	}
 }

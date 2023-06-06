@@ -75,8 +75,8 @@ func (svc *MsgService) SubscribeTxList(buffer int) *emitter.Subscription {
 	return svc.txListEmitter.Subscribe(buffer)
 }
 
-func (svc *MsgService) BroadcastProposal(blk *core.Proposal) error {
-	data, err := blk.Marshal()
+func (svc *MsgService) BroadcastProposal(pro *core.Proposal) error {
+	data, err := pro.Marshal()
 	if err != nil {
 		return err
 	}
@@ -127,9 +127,7 @@ func (svc *MsgService) RequestBlock(pubKey *core.PublicKey, hash []byte) (*core.
 	return blk, nil
 }
 
-func (svc *MsgService) RequestBlockByHeight(
-	pubKey *core.PublicKey, height uint64,
-) (*core.Block, error) {
+func (svc *MsgService) RequestBlockByHeight(pubKey *core.PublicKey, height uint64) (*core.Block, error) {
 	buf := bytes.NewBuffer(nil)
 	binary.Write(buf, binary.BigEndian, height)
 	respData, err := svc.requestData(pubKey, pb.Request_BlockByHeight, buf.Bytes())
@@ -148,11 +146,11 @@ func (svc *MsgService) RequestQC(pubKey *core.PublicKey, blkHash []byte) (*core.
 	if err != nil {
 		return nil, err
 	}
-	blk := core.NewQuorumCert()
-	if err := blk.Unmarshal(respData); err != nil {
+	qc := core.NewQuorumCert()
+	if err := qc.Unmarshal(respData); err != nil {
 		return nil, err
 	}
-	return blk, nil
+	return qc, nil
 }
 
 func (svc *MsgService) RequestTxList(pubKey *core.PublicKey, hashes [][]byte) (*core.TxList, error) {
@@ -208,12 +206,12 @@ func (svc *MsgService) listenPeer(peer *Peer) {
 }
 
 func (svc *MsgService) onReceiveProposal(peer *Peer, data []byte) {
-	blk := core.NewProposal()
-	if err := blk.Unmarshal(data); err != nil {
+	pro := core.NewProposal()
+	if err := pro.Unmarshal(data); err != nil {
 		logger.I().Errorw("msg service receive proposal failed", "error", err)
 		return
 	}
-	svc.proposalEmitter.Emit(blk)
+	svc.proposalEmitter.Emit(pro)
 }
 
 func (svc *MsgService) onReceiveVote(peer *Peer, data []byte) {
@@ -279,9 +277,7 @@ func (svc *MsgService) sendData(pubKey *core.PublicKey, msgType MsgType, data []
 	return peer.WriteMsg(append([]byte{byte(msgType)}, data...))
 }
 
-func (svc *MsgService) requestData(
-	pubKey *core.PublicKey, reqType pb.Request_Type, reqData []byte,
-) ([]byte, error) {
+func (svc *MsgService) requestData(pubKey *core.PublicKey, reqType pb.Request_Type, reqData []byte) ([]byte, error) {
 	peer := svc.host.PeerStore().Load(pubKey)
 	if peer == nil {
 		return nil, errors.New("peer not found")

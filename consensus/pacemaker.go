@@ -69,7 +69,7 @@ func (pm *pacemaker) newBlock() {
 
 	blk := pm.driver.OnPropose()
 	logger.I().Debugw("proposed block", "height", blk.Block().Height(), "qc", qcRefHeight(blk.Justify()), "txs", len(blk.Block().Transactions()))
-	vote := blk.(*innerProposal).proposal.Vote(pm.resources.Signer)
+	vote := blk.proposal.Vote(pm.resources.Signer)
 	pm.driver.OnReceiveVote(newVote(vote, pm.state))
 	pm.driver.Update(blk)
 }

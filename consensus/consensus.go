@@ -4,7 +4,6 @@
 package consensus
 
 import (
-	"os"
 	"time"
 
 	"github.com/wooyang2018/posv-blockchain/core"
@@ -15,7 +14,6 @@ type Consensus struct {
 	resources *Resources
 	config    Config
 	startTime int64
-	logfile   *os.File //性能测试日志句柄
 	state     *state
 	driver    *driver
 	validator *validator
@@ -55,15 +53,6 @@ func (cons *Consensus) start() {
 	cons.startTime = time.Now().UnixNano()
 	b0, q0 := cons.getInitialBlockAndQC()
 	cons.setupState(b0)
-
-	if cons.config.BenchmarkPath != "" {
-		var err error
-		cons.logfile, err = os.Create(cons.config.BenchmarkPath)
-		if err != nil {
-			logger.I().Warnf("create benchmark log file failed, %+v", err.Error())
-		}
-	}
-
 	cons.setupDriver()
 	cons.setupPoSV(b0, q0)
 	cons.setupValidator()
@@ -85,9 +74,6 @@ func (cons *Consensus) stop() {
 	cons.pacemaker.stop()
 	cons.rotator.stop()
 	cons.validator.stop()
-	if cons.logfile != nil {
-		cons.logfile.Close()
-	}
 }
 
 func (cons *Consensus) setupState(b0 *core.Block) {
@@ -114,19 +100,12 @@ func (cons *Consensus) getInitialBlockAndQC() (*core.Block, *core.QuorumCert) {
 }
 
 func (cons *Consensus) setupDriver() {
-	cons.driver = &driver{
-		resources:    cons.resources,
-		config:       cons.config,
-		checkTxDelay: 10 * time.Millisecond,
-		state:        cons.state,
-	}
+	cons.driver = NewDriver(cons.resources, cons.config, cons.state)
 }
 
 func (cons *Consensus) setupPoSV(b0 *core.Block, q0 *core.QuorumCert) {
 	posvState := newInnerState(newBlock(b0, cons.state), newQC(q0, cons.state))
-	tester := newTester(cons.logfile)
 	cons.driver.posvState = posvState
-	cons.driver.tester = tester
 }
 
 func (cons *Consensus) setupValidator() {

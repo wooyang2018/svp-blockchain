@@ -67,11 +67,11 @@ func (hdlr *QCReqHandler) Type() pb.Request_Type {
 }
 
 func (hdlr *QCReqHandler) HandleReq(sender *core.PublicKey, data []byte) ([]byte, error) {
-	block, err := hdlr.GetQC(data)
+	qc, err := hdlr.GetQC(data)
 	if err != nil {
 		return nil, err
 	}
-	return block.Marshal()
+	return qc.Marshal()
 }
 
 type BlockByHeightReqHandler struct {

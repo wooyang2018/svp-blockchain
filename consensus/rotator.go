@@ -77,7 +77,7 @@ func (rot *rotator) run() {
 			rot.onLeaderTimeout()
 
 		case e := <-subQC.Events():
-			rot.onNewQCHigh(e.(QC))
+			rot.onNewQCHigh(e.(*innerQC))
 		}
 	}
 }
@@ -122,7 +122,7 @@ func (rot *rotator) changeView() {
 	rot.setPendingViewChange(true)
 	rot.setViewStart()
 	leader := rot.resources.VldStore.GetWorker(rot.state.getLeaderIndex())
-	rot.resources.MsgSvc.SendNewView(leader, rot.driver.posvState.GetQCHigh().(*innerQC).qc)
+	rot.resources.MsgSvc.SendNewView(leader, rot.driver.posvState.GetQCHigh().qc)
 	logger.I().Infow("view changed",
 		"leader", leaderIdx, "qc", qcRefHeight(rot.driver.posvState.GetQCHigh()))
 }
@@ -135,8 +135,8 @@ func (rot *rotator) nextLeader() int {
 	return leaderIdx
 }
 
-func (rot *rotator) onNewQCHigh(qc QC) {
-	rot.state.setQC(qc.(*innerQC).qc)
+func (rot *rotator) onNewQCHigh(qc *innerQC) {
+	rot.state.setQC(qc.qc)
 	proposer := rot.resources.VldStore.GetWorkerIndex(qcRefProposer(qc))
 	logger.I().Debugw("updated qc", "proposer", proposer, "qc", qcRefHeight(qc))
 	var ltreset, vtreset bool

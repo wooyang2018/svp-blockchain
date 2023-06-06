@@ -75,7 +75,7 @@ func (rwc *rwcLoopBack) Close() error {
 }
 
 func TestRWCLoopBack(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 
 	rwc := newRWCLoopBack()
 	recv := make([]byte, 5)
@@ -89,11 +89,11 @@ func TestRWCLoopBack(t *testing.T) {
 	rwc.Write(sent)
 
 	time.Sleep(time.Millisecond)
-	assert.EqualValues(sent, recv)
+	asrt.EqualValues(sent, recv)
 
 	rwc.Close()
 	_, err := rwc.Write(sent)
-	assert.Error(err)
+	asrt.Error(err)
 }
 
 type MockListener struct {
@@ -105,13 +105,12 @@ func (m *MockListener) CB(e emitter.Event) {
 }
 
 func TestPeer_ReadWrite(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 	p := NewPeer(nil, nil)
 
 	rwc := newRWCLoopBack()
 	p.onConnected(rwc)
 	sub := p.SubscribeMsg()
-
 	msg := []byte("hello")
 
 	mln := new(MockListener)
@@ -123,41 +122,39 @@ func TestPeer_ReadWrite(t *testing.T) {
 		}
 	}()
 
-	assert.NoError(p.WriteMsg(msg))
-
+	asrt.NoError(p.WriteMsg(msg))
 	time.Sleep(time.Millisecond)
-
 	mln.AssertExpectations(t)
 }
 
 func TestPeer_ConnStatus(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 	p := NewPeer(nil, nil)
 
-	assert.Equal(PeerStatusDisconnected, p.Status())
+	asrt.Equal(PeerStatusDisconnected, p.Status())
 
 	rwc := newRWCLoopBack()
 	p.onConnected(rwc)
 
-	assert.Equal(PeerStatusConnected, p.Status())
+	asrt.Equal(PeerStatusConnected, p.Status())
 
 	rwc.Close()
 	time.Sleep(time.Millisecond)
 
-	assert.Equal(PeerStatusDisconnected, p.Status())
+	asrt.Equal(PeerStatusDisconnected, p.Status())
 
 	p = NewPeer(nil, nil)
 	err := p.setConnecting()
 
-	assert.NoError(err)
-	assert.Equal(PeerStatusConnecting, p.Status())
+	asrt.NoError(err)
+	asrt.Equal(PeerStatusConnecting, p.Status())
 
 	p.disconnect()
-	assert.Equal(PeerStatusDisconnected, p.Status())
+	asrt.Equal(PeerStatusDisconnected, p.Status())
 
 	p.onConnected(newRWCLoopBack())
 	err = p.setConnecting()
 
-	assert.Error(err)
-	assert.Equal(PeerStatusConnected, p.Status())
+	asrt.Error(err)
+	asrt.Equal(PeerStatusConnected, p.Status())
 }

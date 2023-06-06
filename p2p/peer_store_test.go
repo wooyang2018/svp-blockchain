@@ -13,34 +13,34 @@ import (
 )
 
 func TestPeerStore(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 	s := NewPeerStore()
 
 	// load or store
 	pubKey, _ := core.NewPublicKey(bytes.Repeat([]byte{1}, ed25519.PublicKeySize))
 	p := NewPeer(pubKey, nil)
 	actual, loaded := s.LoadOrStore(p)
-	assert.False(loaded)
-	assert.Equal(p, actual)
+	asrt.False(loaded)
+	asrt.Equal(p, actual)
 
 	p1 := NewPeer(pubKey, nil)
 
 	actual, loaded = s.LoadOrStore(p1)
-	assert.True(loaded)
-	assert.Equal(p, actual)
+	asrt.True(loaded)
+	asrt.Equal(p, actual)
 
 	// load
-	assert.Equal(p, s.Load(pubKey))
+	asrt.Equal(p, s.Load(pubKey))
 
 	// store
-	assert.Equal(p1, s.Store(p1))
-	assert.Equal(p1, s.Load(pubKey))
+	asrt.Equal(p1, s.Store(p1))
+	asrt.Equal(p1, s.Load(pubKey))
 
 	// list
-	assert.Equal([]*Peer{p1}, s.List())
+	asrt.Equal([]*Peer{p1}, s.List())
 
 	// delete
-	assert.Equal(p1, s.Delete(pubKey))
-	assert.Nil(s.Load(pubKey))
-	assert.Equal([]*Peer{}, s.List())
+	asrt.Equal(p1, s.Delete(pubKey))
+	asrt.Nil(s.Load(pubKey))
+	asrt.Equal([]*Peer{}, s.List())
 }

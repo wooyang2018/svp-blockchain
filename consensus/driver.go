@@ -4,6 +4,7 @@
 package consensus
 
 import (
+	"os"
 	"time"
 
 	"github.com/wooyang2018/posv-blockchain/core"
@@ -20,11 +21,30 @@ type driver struct {
 	checkTxDelay time.Duration //检测TxPool交易数量的延迟
 }
 
+func NewDriver(resources *Resources, config Config, state *state) *driver {
+	d := &driver{
+		resources:    resources,
+		config:       config,
+		checkTxDelay: 10 * time.Millisecond,
+		state:        state,
+	}
+	var file *os.File
+	if d.config.BenchmarkPath != "" {
+		var err error
+		file, err = os.Create(d.config.BenchmarkPath)
+		if err != nil {
+			logger.I().Warnf("create benchmark log file failed, %+v", err.Error())
+		}
+	}
+	d.tester = newTester(file)
+	return d
+}
+
 func (d *driver) MajorityValidatorCount() int {
 	return d.resources.VldStore.MajorityValidatorCount()
 }
 
-func (d *driver) CreateProposal(parent Block, qc QC, height uint64, view uint32) Proposal {
+func (d *driver) CreateProposal(parent *innerBlock, qc *innerQC, height uint64, view uint32) *innerProposal {
 	var txs [][]byte
 	if PreserveTxFlag {
 		txs = d.resources.TxPool.GetTxsFromQueue(d.config.BlockTxLimit)
@@ -41,31 +61,30 @@ func (d *driver) CreateProposal(parent Block, qc QC, height uint64, view uint32)
 		Sign(d.resources.Signer)
 	pro := core.NewProposal().
 		SetBlock(blk).
-		SetQuorumCert(qc.(*innerQC).qc).
+		SetQuorumCert(qc.qc).
 		Sign(d.resources.Signer)
 	d.state.setBlock(blk)
 	return newProposal(pro, d.state)
 }
 
-func (d *driver) CreateQC(innerVotes []Vote) QC {
+func (d *driver) CreateQC(innerVotes []*innerVote) *innerQC {
 	votes := make([]*core.Vote, len(innerVotes))
 	for i, v := range innerVotes {
-		votes[i] = v.(*innerVote).vote
+		votes[i] = v.vote
 	}
 	qc := core.NewQuorumCert().Build(votes)
 	return newQC(qc, d.state)
 }
 
-func (d *driver) BroadcastProposal(pro Proposal) {
-	blk := pro.(*innerProposal).proposal //TODO 改断言
-	err := d.resources.MsgSvc.BroadcastProposal(blk)
+func (d *driver) BroadcastProposal(pro *innerProposal) {
+	err := d.resources.MsgSvc.BroadcastProposal(pro.proposal)
 	if err != nil {
 		logger.I().Errorf("BroadcastProposal failed: %v", err) //TODO 表述
 	}
 }
 
-func (d *driver) VoteProposal(pro Proposal) {
-	proposal := pro.(*innerProposal).proposal //TODO 改断言
+func (d *driver) VoteProposal(pro *innerProposal) {
+	proposal := pro.proposal
 	vote := proposal.Vote(d.resources.Signer)
 	if !PreserveTxFlag {
 		d.resources.TxPool.SetTxsPending(proposal.Block().Transactions())
@@ -95,8 +114,8 @@ func (d *driver) delayVoteWhenNoTxs() {
 	}
 }
 
-func (d *driver) Commit(blk Block) { //TODO Block接口转*core.Block
-	bexe := blk.(*innerBlock).block
+func (d *driver) Commit(blk *innerBlock) { //TODO Block接口转*core.Block
+	bexe := blk.block
 	start := time.Now()
 	rawTxs := bexe.Transactions()
 	var txCount int
@@ -170,7 +189,7 @@ func (d *driver) deleteCommittedOlderBlocks(bexec *core.Block) {
 }
 
 // OnPropose is called to propose a new block
-func (d *driver) OnPropose() Proposal {
+func (d *driver) OnPropose() *innerProposal {
 	bLeaf := d.posvState.GetBLeaf()
 	bNew := d.CreateProposal(bLeaf, d.posvState.GetQCHigh(), bLeaf.Height()+1, 1) //TODO: ViewNum
 	if bNew == nil {
@@ -183,7 +202,7 @@ func (d *driver) OnPropose() Proposal {
 }
 
 // OnReceiveVote is called when received a vote
-func (d *driver) OnReceiveVote(v Vote) error {
+func (d *driver) OnReceiveVote(v *innerVote) error {
 	err := d.posvState.addVote(v)
 	if err != nil {
 		return err
@@ -198,7 +217,7 @@ func (d *driver) OnReceiveVote(v Vote) error {
 }
 
 // OnReceiveProposal is called when a new proposal is received
-func (d *driver) OnReceiveProposal(bNew Proposal) error {
+func (d *driver) OnReceiveProposal(bNew *innerProposal) error {
 	d.Update(bNew)
 	if d.posvState.CanVote(bNew) {
 		d.VoteProposal(bNew)
@@ -208,7 +227,7 @@ func (d *driver) OnReceiveProposal(bNew Proposal) error {
 }
 
 // Update perform two/three chain consensus phases
-func (d *driver) Update(bNew Proposal) {
+func (d *driver) Update(bNew *innerProposal) {
 	d.posvState.UpdateQCHigh(bNew.Justify()) // prepare phase for b2
 	b := bNew.Justify().Block()
 	if b != nil {
@@ -220,7 +239,7 @@ func (d *driver) Update(bNew Proposal) {
 	}
 }
 
-func (d *driver) CommitRecursive(b Block) { // prepare phase for b2
+func (d *driver) CommitRecursive(b *innerBlock) { // prepare phase for b2
 	t1 := time.Now().UnixNano()
 	d.onCommit(b)
 	d.posvState.setBExec(b)
@@ -228,7 +247,7 @@ func (d *driver) CommitRecursive(b Block) { // prepare phase for b2
 	d.tester.saveItem(b.Height(), b.Timestamp(), t1, t2, len(b.Transactions()))
 }
 
-func (d *driver) onCommit(b Block) {
+func (d *driver) onCommit(b *innerBlock) { // prepare phase for b
 	if CmpBlockHeight(b, d.posvState.GetBExec()) == 1 {
 		// commit parent blocks recursively
 		d.onCommit(b.Parent())

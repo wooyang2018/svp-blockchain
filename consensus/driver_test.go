@@ -45,7 +45,7 @@ func TestDriver_TestMajorityCount(t *testing.T) {
 func TestDriver_CreateLeaf(t *testing.T) {
 	d := setupTestDriver()
 	parent := newBlock(core.NewBlock().Sign(d.resources.Signer), d.state)
-	d.state.setBlock(parent.(*innerBlock).block)
+	d.state.setBlock(parent.block)
 	qc := newQC(core.NewQuorumCert(), d.state)
 	height := uint64(5)
 
@@ -74,7 +74,7 @@ func TestDriver_CreateLeaf(t *testing.T) {
 	assert.Equal(qc, pro.Justify(), "should add qc")
 	assert.Equal(height, pro.Block().Height())
 
-	blk := pro.(*innerProposal).proposal.Block()
+	blk := pro.proposal.Block()
 	assert.Equal(txsInQ, blk.Transactions())
 	assert.EqualValues(2, blk.ExecHeight())
 	assert.Equal([]byte("merkle-root"), blk.MerkleRoot())
@@ -177,6 +177,7 @@ func TestDriver_Commit(t *testing.T) {
 
 	storage := new(MockStorage)
 	storage.On("Commit", cdata).Return(nil)
+	storage.On("GetQC", bexec.Hash()).Return(nil, nil)
 	d.resources.Storage = storage
 
 	d.Commit(newBlock(bexec, d.state))
@@ -196,14 +197,14 @@ func TestDriver_CreateQC(t *testing.T) {
 	d := setupTestDriver()
 	blk := core.NewProposal().Sign(d.resources.Signer)
 	d.state.setBlock(blk.Block())
-	votes := []Vote{
+	votes := []*innerVote{
 		newVote(blk.Vote(d.resources.Signer), d.state),
 		newVote(blk.Vote(core.GenerateKey(nil)), d.state),
 	}
 	qc := d.CreateQC(votes)
 
 	assert := assert.New(t)
-	assert.Equal(blk.Block(), qc.Block().(*innerBlock).block, "should get qc reference block")
+	assert.Equal(blk.Block(), qc.Block().block, "should get qc reference block")
 }
 
 func TestDriver_BroadcastProposal(t *testing.T) {

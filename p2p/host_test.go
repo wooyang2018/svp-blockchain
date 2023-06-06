@@ -13,7 +13,7 @@ import (
 )
 
 func TestHost(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 
 	priv1 := core.GenerateKey(nil)
 	priv2 := core.GenerateKey(nil)
@@ -22,11 +22,11 @@ func TestHost(t *testing.T) {
 	addr2, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/25002")
 
 	host1, err := NewHost(priv1, addr1)
-	if !assert.NoError(err) {
+	if !asrt.NoError(err) {
 		return
 	}
 	host2, err := NewHost(priv2, addr2)
-	if !assert.NoError(err) {
+	if !asrt.NoError(err) {
 		return
 	}
 
@@ -38,14 +38,14 @@ func TestHost(t *testing.T) {
 	p1 := host2.PeerStore().Load(priv1.PublicKey())
 	p2 := host1.PeerStore().Load(priv2.PublicKey())
 
-	if !assert.NotNil(p1) {
+	if !asrt.NotNil(p1) {
 		return
 	}
-	if !assert.NotNil(p2) {
+	if !asrt.NotNil(p2) {
 		return
 	}
-	assert.Equal(PeerStatusConnected, p1.Status())
-	assert.Equal(PeerStatusConnected, p2.Status())
+	asrt.Equal(PeerStatusConnected, p1.Status())
+	asrt.Equal(PeerStatusConnected, p2.Status())
 
 	// wait message from host2
 	s1 := p1.SubscribeMsg()
@@ -62,7 +62,7 @@ func TestHost(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 
-	assert.Equal(msg, recv1)
+	asrt.Equal(msg, recv1)
 
 	// wait message from host1
 	s2 := p2.SubscribeMsg()
@@ -78,7 +78,7 @@ func TestHost(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 
-	assert.Equal(msg, recv2)
+	asrt.Equal(msg, recv2)
 
 	priv3 := core.GenerateKey(nil)
 	host1.AddPeer(NewPeer(priv3.PublicKey(), addr2)) // invalid key
@@ -86,8 +86,8 @@ func TestHost(t *testing.T) {
 	time.Sleep(5 * time.Millisecond)
 
 	p3 := host1.PeerStore().Load(priv3.PublicKey())
-	if assert.NotNil(p3) {
-		assert.Equal(PeerStatusDisconnected, p3.Status())
+	if asrt.NotNil(p3) {
+		asrt.Equal(PeerStatusDisconnected, p3.Status())
 	}
 
 	addr3, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/25003")
@@ -96,7 +96,7 @@ func TestHost(t *testing.T) {
 	time.Sleep(5000 * time.Millisecond)
 
 	p4 := host2.PeerStore().Load(priv3.PublicKey())
-	if assert.NotNil(p4) {
-		assert.Equal(PeerStatusDisconnected, p4.Status())
+	if asrt.NotNil(p4) {
+		asrt.Equal(PeerStatusDisconnected, p4.Status())
 	}
 }

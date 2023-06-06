@@ -54,25 +54,21 @@ func (cs *chainStore) getBlock(hash []byte) (*core.Block, error) {
 	return blk, nil
 }
 
-func (cs *chainStore) getQC(blkHash []byte) (*core.QuorumCert, error) {
-	b, err := cs.getter.Get(concatBytes([]byte{colQCByBlockHash}, blkHash))
+func (cs *chainStore) getLastQC() (*core.QuorumCert, error) {
+	blkHash, err := cs.getter.Get([]byte{colLastQCBlockHash})
 	if err != nil {
-		return nil, err // TODO 添加setQC的函数
-	}
-	qc := core.NewQuorumCert()
-	if err := qc.Unmarshal(b); err != nil {
 		return nil, err
 	}
-	return qc, nil
+	return cs.getQC(blkHash)
 }
 
-func (cs *chainStore) getLastQC() (*core.QuorumCert, error) {
-	b, err := cs.getter.Get([]byte{colLastQC})
+func (cs *chainStore) getQC(blkHash []byte) (*core.QuorumCert, error) {
+	data, err := cs.getter.Get(concatBytes([]byte{colQCByBlockHash}, blkHash))
 	if err != nil {
 		return nil, err
 	}
 	qc := core.NewQuorumCert()
-	if err := qc.Unmarshal(b); err != nil {
+	if err := qc.Unmarshal(data); err != nil {
 		return nil, err
 	}
 	return qc, nil
@@ -134,20 +130,13 @@ func (cs *chainStore) setBlock(blk *core.Block) []updateFunc {
 func (cs *chainStore) setQC(qc *core.QuorumCert) []updateFunc {
 	ret := make([]updateFunc, 0)
 	ret = append(ret, cs.setQCByBlockHash(qc))
-	ret = append(ret, cs.setLastQC(qc))
+	ret = append(ret, cs.setLastQCBlockHash(qc.BlockHash()))
 	return ret
 }
 
-func (cs *chainStore) setLastQC(qc *core.QuorumCert) updateFunc {
+func (cs *chainStore) setLastQCBlockHash(blkHash []byte) updateFunc {
 	return func(setter setter) error {
-		if qc == nil { // some blocks may not have qc (posv nature)
-			return nil
-		}
-		val, err := qc.Marshal()
-		if err != nil {
-			return err
-		}
-		return setter.Set([]byte{colLastQC}, val)
+		return setter.Set([]byte{colLastQCBlockHash}, blkHash)
 	}
 }
 
@@ -164,8 +153,7 @@ func (cs *chainStore) setBlockByHash(blk *core.Block) updateFunc {
 func (cs *chainStore) setBlockHashByHeight(blk *core.Block) updateFunc {
 	return func(setter setter) error {
 		return setter.Set(
-			concatBytes([]byte{colBlockHashByHeight}, uint64BEBytes(blk.Height())),
-			blk.Hash(),
+			concatBytes([]byte{colBlockHashByHeight}, uint64BEBytes(blk.Height())), blk.Hash(),
 		)
 	}
 }

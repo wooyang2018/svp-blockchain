@@ -18,16 +18,14 @@ type innerVote struct {
 	store blockStore
 }
 
-var _ Vote = (*innerVote)(nil)
-
-func newVote(vote *core.Vote, store blockStore) Vote {
+func newVote(vote *core.Vote, store blockStore) *innerVote {
 	return &innerVote{
 		vote:  vote,
 		store: store,
 	}
 }
 
-func (v *innerVote) Block() Block {
+func (v *innerVote) Block() *innerBlock {
 	blk := v.store.getBlock(v.vote.BlockHash())
 	if blk == nil {
 		return nil
@@ -48,16 +46,14 @@ type innerQC struct {
 	store blockStore
 }
 
-var _ QC = (*innerQC)(nil)
-
-func newQC(coreQC *core.QuorumCert, store blockStore) QC {
+func newQC(coreQC *core.QuorumCert, store blockStore) *innerQC {
 	return &innerQC{
 		qc:    coreQC,
 		store: store,
 	}
 }
 
-func (q *innerQC) Block() Block {
+func (q *innerQC) Block() *innerBlock {
 	if q.qc == nil {
 		return nil
 	}
@@ -77,9 +73,7 @@ type innerBlock struct {
 	store blockStore
 }
 
-var _ Block = (*innerBlock)(nil)
-
-func newBlock(coreBlock *core.Block, store blockStore) Block {
+func newBlock(coreBlock *core.Block, store blockStore) *innerBlock {
 	return &innerBlock{
 		block: coreBlock,
 		store: store,
@@ -102,7 +96,7 @@ func (b *innerBlock) Transactions() [][]byte {
 	return b.block.Transactions()
 }
 
-func (b *innerBlock) Parent() Block {
+func (b *innerBlock) Parent() *innerBlock {
 	blk := b.store.getBlock(b.block.ParentHash())
 	if blk == nil {
 		return nil
@@ -110,12 +104,31 @@ func (b *innerBlock) Parent() Block {
 	return newBlock(blk, b.store)
 }
 
-func (b *innerBlock) Equal(iBlk Block) bool {
+func (b *innerBlock) Equal(iBlk *innerBlock) bool {
 	if iBlk == nil {
 		return false
 	}
-	b2 := iBlk.(*innerBlock)
-	return bytes.Equal(b.block.Hash(), b2.block.Hash())
+	return bytes.Equal(b.block.Hash(), iBlk.block.Hash())
+}
+
+// CmpBlockHeight compares two blocks by height
+func CmpBlockHeight(b1, b2 *innerBlock) int {
+	if b1 == nil && b2 == nil {
+		return 0
+	}
+	if b1 == nil {
+		return -1
+	}
+	if b2 == nil {
+		return 1
+	}
+	if b1.Height() == b2.Height() {
+		return 0
+	}
+	if b1.Height() > b2.Height() {
+		return 1
+	}
+	return -1
 }
 
 type innerProposal struct {
@@ -123,23 +136,21 @@ type innerProposal struct {
 	store    blockStore
 }
 
-var _ Proposal = (*innerProposal)(nil)
-
-func newProposal(coreBlock *core.Proposal, store blockStore) Proposal {
+func newProposal(coreBlock *core.Proposal, store blockStore) *innerProposal {
 	return &innerProposal{
 		proposal: coreBlock,
 		store:    store,
 	}
 }
 
-func (p *innerProposal) Justify() QC {
+func (p *innerProposal) Justify() *innerQC {
 	if p.proposal.Block().IsGenesis() { // genesis block doesn't have qc
 		return newQC(nil, p.store)
 	}
 	return newQC(p.proposal.QuorumCert(), p.store)
 }
 
-func (p *innerProposal) Block() Block {
+func (p *innerProposal) Block() *innerBlock {
 	return newBlock(p.proposal.Block(), p.store)
 }
 
@@ -147,7 +158,7 @@ func (p *innerProposal) View() uint32 {
 	return p.proposal.ViewNum()
 }
 
-func qcRefHeight(qc QC) (height uint64) {
+func qcRefHeight(qc *innerQC) (height uint64) {
 	ref := qc.Block()
 	if ref != nil {
 		height = ref.Height()
@@ -155,10 +166,10 @@ func qcRefHeight(qc QC) (height uint64) {
 	return height
 }
 
-func qcRefProposer(qc QC) *core.PublicKey {
+func qcRefProposer(qc *innerQC) *core.PublicKey {
 	ref := qc.Block()
 	if ref == nil {
 		return nil
 	}
-	return ref.(*innerBlock).block.Proposer()
+	return ref.block.Proposer()
 }
