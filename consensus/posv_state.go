@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 
 	"github.com/wooyang2018/posv-blockchain/emitter"
+	"github.com/wooyang2018/posv-blockchain/logger"
 )
 
 type posvState struct {
@@ -117,4 +118,23 @@ func (s *posvState) GetVotes() []Vote {
 		votes = append(votes, v)
 	}
 	return votes
+}
+
+// UpdateQCHigh replaces qcHigh if the block of given qc is higher than the qcHigh block
+func (s *posvState) UpdateQCHigh(qc QC) {
+	if CmpBlockHeight(qc.Block(), s.GetQCHigh().Block()) == 1 {
+		logger.I().Debugw("posv updated high qc", "height", qc.Block().Height())
+		s.setQCHigh(qc)
+		s.setBLeaf(qc.Block())
+		s.qcHighEmitter.Emit(qc)
+	}
+}
+
+// CanVote returns true if the posv instance can vote the given block
+func (s *posvState) CanVote(bNew Proposal) bool {
+	bLock := s.GetBVote()
+	if bLock.Equal(bNew.Block().Parent()) {
+		return true
+	}
+	return false
 }

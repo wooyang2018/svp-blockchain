@@ -117,7 +117,7 @@ func GetTxPoolStatusAll(cls *cluster.Cluster) map[int]*txpool.Status {
 	return resps
 }
 
-func GetBlockByHeight(node cluster.Node, height uint64) (*core.Proposal, error) {
+func GetBlockByHeight(node cluster.Node, height uint64) (*core.Block, error) {
 	if !node.IsRunning() {
 		return nil, fmt.Errorf("node is not running")
 	}
@@ -126,15 +126,15 @@ func GetBlockByHeight(node cluster.Node, height uint64) (*core.Proposal, error) 
 		return nil, err
 	}
 	defer resp.Body.Close()
-	ret := core.NewProposal()
+	ret := core.NewBlock()
 	if err := json.NewDecoder(resp.Body).Decode(ret); err != nil {
 		return nil, err
 	}
 	return ret, nil
 }
 
-func GetBlockByHeightAll(cls *cluster.Cluster, height uint64) map[int]*core.Proposal {
-	resps := make(map[int]*core.Proposal)
+func GetBlockByHeightAll(cls *cluster.Cluster, height uint64) map[int]*core.Block {
+	resps := make(map[int]*core.Block)
 	var mtx sync.Mutex
 	var wg sync.WaitGroup
 	wg.Add(cls.NodeCount())

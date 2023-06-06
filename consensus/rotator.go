@@ -14,7 +14,7 @@ type rotator struct {
 	resources *Resources
 	config    Config
 	state     *state
-	posv      *posv
+	driver    *driver
 
 	leaderTimer        *time.Timer
 	viewTimer          *time.Timer
@@ -56,7 +56,7 @@ func (rot *rotator) stop() {
 }
 
 func (rot *rotator) run() {
-	subQC := rot.posv.posvState.SubscribeNewQCHigh()
+	subQC := rot.driver.posvState.SubscribeNewQCHigh()
 	defer subQC.Unsubscribe()
 
 	rot.viewTimer = time.NewTimer(rot.config.ViewWidth)
@@ -122,9 +122,9 @@ func (rot *rotator) changeView() {
 	rot.setPendingViewChange(true)
 	rot.setViewStart()
 	leader := rot.resources.VldStore.GetWorker(rot.state.getLeaderIndex())
-	rot.resources.MsgSvc.SendNewView(leader, rot.posv.posvState.GetQCHigh().(*innerQC).qc)
+	rot.resources.MsgSvc.SendNewView(leader, rot.driver.posvState.GetQCHigh().(*innerQC).qc)
 	logger.I().Infow("view changed",
-		"leader", leaderIdx, "qc", qcRefHeight(rot.posv.posvState.GetQCHigh()))
+		"leader", leaderIdx, "qc", qcRefHeight(rot.driver.posvState.GetQCHigh()))
 }
 
 func (rot *rotator) nextLeader() int {

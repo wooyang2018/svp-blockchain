@@ -10,11 +10,9 @@ import (
 type pacemaker struct {
 	resources *Resources
 	config    Config
-
-	state *state
-	posv  *posv
-
-	stopCh chan struct{}
+	state     *state
+	driver    *driver
+	stopCh    chan struct{}
 }
 
 func (pm *pacemaker) start() {
@@ -41,7 +39,7 @@ func (pm *pacemaker) stop() {
 }
 
 func (pm *pacemaker) run() {
-	subQC := pm.posv.posvState.SubscribeNewQCHigh()
+	subQC := pm.driver.posvState.SubscribeNewQCHigh()
 	defer subQC.Unsubscribe()
 
 	for {
@@ -69,9 +67,9 @@ func (pm *pacemaker) newBlock() {
 		return
 	}
 
-	blk := pm.posv.OnPropose()
+	blk := pm.driver.OnPropose()
 	logger.I().Debugw("proposed block", "height", blk.Block().Height(), "qc", qcRefHeight(blk.Justify()), "txs", len(blk.Block().Transactions()))
 	vote := blk.(*innerProposal).proposal.Vote(pm.resources.Signer)
-	pm.posv.OnReceiveVote(newVote(vote, pm.state))
-	pm.posv.Update(blk)
+	pm.driver.OnReceiveVote(newVote(vote, pm.state))
+	pm.driver.Update(blk)
 }

@@ -18,7 +18,6 @@ type Consensus struct {
 	logfile   *os.File //性能测试日志句柄
 	state     *state
 	driver    *driver
-	posv      *posv //TODO posv的成员合并到Consensus中
 	validator *validator
 	pacemaker *pacemaker
 	rotator   *rotator
@@ -124,19 +123,17 @@ func (cons *Consensus) setupDriver() {
 }
 
 func (cons *Consensus) setupPoSV(b0 *core.Block, q0 *core.QuorumCert) {
-	cons.posv = NewPoSV(
-		cons.driver,
-		cons.logfile,
-		newBlock(b0, cons.state),
-		newQC(q0, cons.state),
-	)
+	posvState := newInnerState(newBlock(b0, cons.state), newQC(q0, cons.state))
+	tester := newTester(cons.logfile)
+	cons.driver.posvState = posvState
+	cons.driver.tester = tester
 }
 
 func (cons *Consensus) setupValidator() {
 	cons.validator = &validator{
 		resources: cons.resources,
 		state:     cons.state,
-		posv:      cons.posv,
+		driver:    cons.driver,
 	}
 }
 
@@ -145,7 +142,7 @@ func (cons *Consensus) setupPacemaker() {
 		resources: cons.resources,
 		config:    cons.config,
 		state:     cons.state,
-		posv:      cons.posv,
+		driver:    cons.driver,
 	}
 }
 
@@ -154,7 +151,7 @@ func (cons *Consensus) setupRotator() {
 		resources: cons.resources,
 		config:    cons.config,
 		state:     cons.state,
-		posv:      cons.posv,
+		driver:    cons.driver,
 	}
 }
 
@@ -171,9 +168,9 @@ func (cons *Consensus) getStatus() (status Status) {
 	status.ViewStart = cons.rotator.getViewStart()
 	status.PendingViewChange = cons.rotator.getPendingViewChange()
 
-	status.BVote = cons.posv.posvState.GetBVote().Height()
-	status.BLeaf = cons.posv.posvState.GetBLeaf().Height()
-	status.BExec = cons.posv.posvState.GetBExec().Height()
-	status.QCHigh = qcRefHeight(cons.posv.posvState.GetQCHigh())
+	status.BVote = cons.driver.posvState.GetBVote().Height()
+	status.BLeaf = cons.driver.posvState.GetBLeaf().Height()
+	status.BExec = cons.driver.posvState.GetBExec().Height()
+	status.QCHigh = qcRefHeight(cons.driver.posvState.GetQCHigh())
 	return status
 }

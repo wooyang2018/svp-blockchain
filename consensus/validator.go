@@ -14,13 +14,11 @@ import (
 )
 
 type validator struct {
-	resources *Resources
-	state     *state
-	posv      *posv
-
+	resources   *Resources
+	state       *state
+	driver      *driver
 	mtxProposal sync.Mutex
-
-	stopCh chan struct{}
+	stopCh      chan struct{}
 }
 
 func (vld *validator) start() {
@@ -236,7 +234,7 @@ func (vld *validator) verifyWithParentAndUpdatePoSV(
 func (vld *validator) updatePoSV(blk *core.Block) error {
 	vld.state.mtxUpdate.Lock()
 	defer vld.state.mtxUpdate.Unlock()
-	vld.posv.Commit(newBlock(blk, vld.state))
+	vld.driver.CommitRecursive(newBlock(blk, vld.state))
 	return nil
 }
 
@@ -257,10 +255,10 @@ func (vld *validator) updatePoSVAndVote(peer *core.PublicKey, blk *core.Proposal
 	defer vld.state.mtxUpdate.Unlock()
 
 	if err := vld.verifyProposalToVote(blk); err != nil {
-		vld.posv.Update(newProposal(blk, vld.state))
+		vld.driver.Update(newProposal(blk, vld.state))
 		return err
 	}
-	vld.posv.OnReceiveProposal(newProposal(blk, vld.state))
+	vld.driver.OnReceiveProposal(newProposal(blk, vld.state))
 	return nil
 }
 
@@ -314,14 +312,14 @@ func (vld *validator) onReceiveVote(vote *core.Vote) error {
 	if err := vote.Validate(vld.resources.VldStore); err != nil {
 		return err
 	}
-	return vld.posv.OnReceiveVote(newVote(vote, vld.state))
+	return vld.driver.OnReceiveVote(newVote(vote, vld.state))
 }
 
 func (vld *validator) onReceiveNewView(qc *core.QuorumCert) error {
 	if err := qc.Validate(vld.resources.VldStore); err != nil {
 		return err
 	}
-	vld.posv.UpdateQCHigh(newQC(qc, vld.state))
+	vld.driver.posvState.UpdateQCHigh(newQC(qc, vld.state))
 	return nil
 }
 

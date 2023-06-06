@@ -92,6 +92,19 @@ func (state *state) setQC(qc *core.QuorumCert) {
 }
 
 func (state *state) getQC(blkHash []byte) *core.QuorumCert {
+	qc := state.getQCFromState(blkHash)
+	if qc != nil {
+		return qc
+	}
+	qc, _ = state.resources.Storage.GetQC(blkHash)
+	if qc == nil {
+		return nil
+	}
+	state.setQC(qc)
+	return qc
+}
+
+func (state *state) getQCFromState(blkHash []byte) *core.QuorumCert {
 	state.mtxQCs.RLock()
 	defer state.mtxQCs.RUnlock()
 	return state.qcs[string(blkHash)]

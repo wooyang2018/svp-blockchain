@@ -32,12 +32,16 @@ func setupRotator() (*rotator, *core.Proposal) {
 		resources: resources,
 		state:     state,
 	}
-	posv := NewPoSV(driver, nil, newBlock(b0.Block(), state), newQC(q0, state))
+	posvState := newInnerState(newBlock(b0.Block(), state), newQC(q0, state))
+	tester := newTester(nil)
+	driver.posvState = posvState
+	driver.tester = tester
+
 	return &rotator{
 		resources: resources,
 		config:    DefaultConfig,
 		state:     state,
-		posv:      posv,
+		driver:    driver,
 	}, b0
 }
 

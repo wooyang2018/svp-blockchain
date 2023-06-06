@@ -31,16 +31,6 @@ type Vote interface { //TODO 删除
 	Voter() string
 }
 
-// Driver godoc
-type Driver interface { //TODO 删除
-	MajorityValidatorCount() int
-	CreateProposal(parent Block, qc QC, height uint64, view uint32) Proposal
-	CreateQC(votes []Vote) QC
-	BroadcastProposal(blk Proposal)
-	VoteProposal(pro Proposal)
-	Commit(blk Block)
-}
-
 // CmpBlockHeight compares two blocks by height
 func CmpBlockHeight(b1, b2 Block) int {
 	if b1 == nil && b2 == nil {

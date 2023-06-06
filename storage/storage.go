@@ -189,7 +189,9 @@ func (strg *Storage) computeMerkleUpdate(data *CommitData) {
 func (strg *Storage) writeChainData(data *CommitData) error {
 	updFns := make([]updateFunc, 0)
 	updFns = append(updFns, strg.chainStore.setBlock(data.Block)...)
-	updFns = append(updFns, strg.chainStore.setQC((data.QC))...)
+	if data.QC != nil {
+		updFns = append(updFns, strg.chainStore.setQC((data.QC))...)
+	}
 	updFns = append(updFns, strg.chainStore.setTxs(data.Transactions)...)
 	updFns = append(updFns, strg.chainStore.setTxCommits(data.TxCommits)...)
 	return updateLevelDB(strg.db, updFns)

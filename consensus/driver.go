@@ -15,10 +15,10 @@ type driver struct {
 	resources    *Resources
 	config       Config
 	state        *state
+	posvState    *posvState
+	tester       *tester
 	checkTxDelay time.Duration //检测TxPool交易数量的延迟
 }
-
-var _ Driver = (*driver)(nil)
 
 func (d *driver) MajorityValidatorCount() int {
 	return d.resources.VldStore.MajorityValidatorCount()
@@ -166,5 +166,74 @@ func (d *driver) deleteCommittedOlderBlocks(bexec *core.Block) {
 	for _, blk := range blks {
 		d.state.deleteBlock(blk.Hash())
 		d.state.deleteCommitted(blk.Hash())
+	}
+}
+
+// OnPropose is called to propose a new block
+func (d *driver) OnPropose() Proposal {
+	bLeaf := d.posvState.GetBLeaf()
+	bNew := d.CreateProposal(bLeaf, d.posvState.GetQCHigh(), bLeaf.Height()+1, 1) //TODO: ViewNum
+	if bNew == nil {
+		return nil
+	}
+	d.posvState.setBLeaf(bNew.Block())
+	d.posvState.startProposal(bNew)
+	d.BroadcastProposal(bNew)
+	return bNew
+}
+
+// OnReceiveVote is called when received a vote
+func (d *driver) OnReceiveVote(v Vote) error {
+	err := d.posvState.addVote(v)
+	if err != nil {
+		return err
+	}
+	logger.I().Debugw("posv received vote", "height", v.Block().Height())
+	if d.posvState.GetVoteCount() >= d.MajorityValidatorCount() {
+		votes := d.posvState.GetVotes()
+		d.posvState.endProposal()
+		d.posvState.UpdateQCHigh(d.CreateQC(votes))
+	}
+	return nil
+}
+
+// OnReceiveProposal is called when a new proposal is received
+func (d *driver) OnReceiveProposal(bNew Proposal) error {
+	d.Update(bNew)
+	if d.posvState.CanVote(bNew) {
+		d.VoteProposal(bNew)
+		d.posvState.setBVote(bNew.Block())
+	}
+	return nil
+}
+
+// Update perform two/three chain consensus phases
+func (d *driver) Update(bNew Proposal) {
+	d.posvState.UpdateQCHigh(bNew.Justify()) // prepare phase for b2
+	b := bNew.Justify().Block()
+	if b != nil {
+		t1 := time.Now().UnixNano()
+		d.onCommit(b)
+		d.posvState.setBExec(b)
+		t2 := time.Now().UnixNano()
+		d.tester.saveItem(b.Height(), b.Timestamp(), t1, t2, len(b.Transactions()))
+	}
+}
+
+func (d *driver) CommitRecursive(b Block) { // prepare phase for b2
+	t1 := time.Now().UnixNano()
+	d.onCommit(b)
+	d.posvState.setBExec(b)
+	t2 := time.Now().UnixNano()
+	d.tester.saveItem(b.Height(), b.Timestamp(), t1, t2, len(b.Transactions()))
+}
+
+func (d *driver) onCommit(b Block) {
+	if CmpBlockHeight(b, d.posvState.GetBExec()) == 1 {
+		// commit parent blocks recursively
+		d.onCommit(b.Parent())
+		d.Commit(b)
+	} else if !d.posvState.GetBExec().Equal(b) {
+		logger.I().Warnf("safety breached b-recurrsive: %+v, bexec: %d", b, d.posvState.GetBExec().Height())
 	}
 }
