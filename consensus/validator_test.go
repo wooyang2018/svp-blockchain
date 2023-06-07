@@ -104,11 +104,11 @@ func TestValidator_verifyProposalToVote(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert := assert.New(t)
+			asrt := assert.New(t)
 			if tt.valid {
-				assert.NoError(vld.verifyProposalToVote(tt.proposal))
+				asrt.NoError(vld.verifyProposalToVote(tt.proposal))
 			} else {
-				assert.Error(vld.verifyProposalToVote(tt.proposal))
+				asrt.Error(vld.verifyProposalToVote(tt.proposal))
 			}
 		})
 	}

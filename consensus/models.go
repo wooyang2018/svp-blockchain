@@ -46,9 +46,9 @@ type innerQC struct {
 	store blockStore
 }
 
-func newQC(coreQC *core.QuorumCert, store blockStore) *innerQC {
+func newQC(qc *core.QuorumCert, store blockStore) *innerQC {
 	return &innerQC{
-		qc:    coreQC,
+		qc:    qc,
 		store: store,
 	}
 }
@@ -73,9 +73,9 @@ type innerBlock struct {
 	store blockStore
 }
 
-func newBlock(coreBlock *core.Block, store blockStore) *innerBlock {
+func newBlock(block *core.Block, store blockStore) *innerBlock {
 	return &innerBlock{
-		block: coreBlock,
+		block: block,
 		store: store,
 	}
 }
@@ -104,11 +104,11 @@ func (b *innerBlock) Parent() *innerBlock {
 	return newBlock(blk, b.store)
 }
 
-func (b *innerBlock) Equal(iBlk *innerBlock) bool {
-	if iBlk == nil {
+func (b *innerBlock) Equal(blk *innerBlock) bool {
+	if blk == nil {
 		return false
 	}
-	return bytes.Equal(b.block.Hash(), iBlk.block.Hash())
+	return bytes.Equal(b.block.Hash(), blk.block.Hash())
 }
 
 // CmpBlockHeight compares two blocks by height
@@ -136,9 +136,9 @@ type innerProposal struct {
 	store    blockStore
 }
 
-func newProposal(coreBlock *core.Proposal, store blockStore) *innerProposal {
+func newProposal(pro *core.Proposal, store blockStore) *innerProposal {
 	return &innerProposal{
-		proposal: coreBlock,
+		proposal: pro,
 		store:    store,
 	}
 }

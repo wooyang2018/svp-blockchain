@@ -6,6 +6,7 @@ package consensus
 import (
 	"github.com/wooyang2018/posv-blockchain/core"
 	"github.com/wooyang2018/posv-blockchain/emitter"
+	"github.com/wooyang2018/posv-blockchain/execution"
 	"github.com/wooyang2018/posv-blockchain/p2p"
 	"github.com/wooyang2018/posv-blockchain/storage"
 	"github.com/wooyang2018/posv-blockchain/txpool"
@@ -25,6 +26,8 @@ type TxPool interface {
 	GetStatus() txpool.Status
 	GetTxStatus(hash []byte) txpool.TxStatus
 }
+
+var _ TxPool = (*txpool.TxPool)(nil)
 
 type Storage interface {
 	GetMerkleRoot() []byte
@@ -59,6 +62,8 @@ type Execution interface {
 	Execute(blk *core.Block, txs []*core.Transaction) (*core.BlockCommit, []*core.TxCommit)
 	MockExecute(blk *core.Block) (*core.BlockCommit, []*core.TxCommit)
 }
+
+var _ Execution = (*execution.Execution)(nil)
 
 type Resources struct {
 	Signer    core.Signer

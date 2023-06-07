@@ -15,7 +15,9 @@ import (
 
 type validator struct {
 	resources   *Resources
+	config      Config
 	state       *state
+	posvState   *posvState
 	driver      *driver
 	mtxProposal sync.Mutex
 	stopCh      chan struct{}
@@ -97,20 +99,20 @@ func (vld *validator) newViewLoop() {
 	}
 }
 
-func (vld *validator) onReceiveProposal(proposal *core.Proposal) error {
+func (vld *validator) onReceiveProposal(pro *core.Proposal) error {
 	vld.mtxProposal.Lock()
 	defer vld.mtxProposal.Unlock()
 
-	if err := proposal.Validate(vld.resources.VldStore); err != nil {
+	if err := pro.Validate(vld.resources.VldStore); err != nil {
 		return err
 	}
-	pidx := vld.resources.VldStore.GetWorkerIndex(proposal.Proposer())
-	logger.I().Debugw("received proposal", "proposer", pidx, "height", proposal.Block().Height(), "txs", len(proposal.Block().Transactions()))
-	parent, err := vld.getParentBlock(proposal.Block())
+	pidx := vld.resources.VldStore.GetWorkerIndex(pro.Proposer())
+	logger.I().Debugw("received proposal", "proposer", pidx, "height", pro.Block().Height(), "txs", len(pro.Block().Transactions()))
+	parent, err := vld.getParentBlock(pro.Block())
 	if err != nil {
 		return err
 	}
-	return vld.updatePoSVAndVote(proposal.Proposer(), proposal, parent)
+	return vld.updatePoSVAndVote(pro.Proposer(), pro, parent)
 }
 
 // TODO 本函数解释了所有同步区块的入口
@@ -125,21 +127,21 @@ func (vld *validator) getParentBlock(block *core.Block) (*core.Block, error) {
 	return vld.syncMissingParentBlocksRecursive(block.Proposer(), block)
 }
 
-func (vld *validator) syncMissingCommittedBlocks(proposal *core.Block) error {
+func (vld *validator) syncMissingCommittedBlocks(pro *core.Block) error {
 	commitHeight := vld.resources.Storage.GetBlockHeight()
-	if proposal.ExecHeight() <= commitHeight {
+	if pro.ExecHeight() <= commitHeight {
 		return nil // already sync committed blocks
 	}
 	// seems like I left behind. Lets check with qcRef to confirm
 	// only qc is trusted and proposal is not
-	if proposal.IsGenesis() {
+	if pro.IsGenesis() {
 		return fmt.Errorf("genesis block proposal")
 	}
-	qcRef := vld.state.getBlock(proposal.ParentHash())
+	qcRef := vld.state.getBlock(pro.ParentHash())
 	if qcRef == nil {
 		var err error
 		qcRef, err = vld.requestBlock(
-			proposal.Proposer(), proposal.ParentHash())
+			pro.Proposer(), pro.ParentHash())
 		if err != nil {
 			return err
 		}
@@ -148,7 +150,7 @@ func (vld *validator) syncMissingCommittedBlocks(proposal *core.Block) error {
 		return fmt.Errorf("old qc ref %d", qcRef.Height())
 	}
 	return vld.syncForwardCommittedBlocks(
-		proposal.Proposer(), commitHeight+1, proposal.ExecHeight())
+		pro.Proposer(), commitHeight+1, pro.ExecHeight())
 }
 
 func (vld *validator) syncForwardCommittedBlocks(peer *core.PublicKey, start, end uint64) error {
@@ -238,61 +240,61 @@ func (vld *validator) updatePoSV(blk *core.Block) error {
 	return nil
 }
 
-func (vld *validator) updatePoSVAndVote(peer *core.PublicKey, blk *core.Proposal, parent *core.Block) error {
-	if blk.Block().Height() != parent.Height()+1 {
+func (vld *validator) updatePoSVAndVote(peer *core.PublicKey, pro *core.Proposal, parent *core.Block) error {
+	if pro.Block().Height() != parent.Height()+1 {
 		return fmt.Errorf("invalid block height %d, parent %d",
-			blk.Block().Height(), parent.Height())
+			pro.Block().Height(), parent.Height())
 	}
 	if ExecuteTxFlag {
 		// must sync transactions before updating block to posv
-		if err := vld.resources.TxPool.SyncTxs(peer, blk.Block().Transactions()); err != nil {
+		if err := vld.resources.TxPool.SyncTxs(peer, pro.Block().Transactions()); err != nil {
 			return err
 		}
 	}
-	vld.state.setBlock(blk.Block())
+	vld.state.setBlock(pro.Block())
 
 	vld.state.mtxUpdate.Lock()
 	defer vld.state.mtxUpdate.Unlock()
 
-	if err := vld.verifyProposalToVote(blk); err != nil {
-		vld.driver.Update(newProposal(blk, vld.state))
+	if err := vld.verifyProposalToVote(pro); err != nil {
+		vld.driver.Update(newProposal(pro, vld.state))
 		return err
 	}
-	vld.driver.OnReceiveProposal(newProposal(blk, vld.state))
+	vld.driver.OnReceiveProposal(newProposal(pro, vld.state))
 	return nil
 }
 
-func (vld *validator) verifyProposalToVote(proposal *core.Proposal) error {
-	if !vld.state.isLeader(proposal.Proposer()) {
-		pidx := vld.resources.VldStore.GetWorkerIndex(proposal.Proposer())
+func (vld *validator) verifyProposalToVote(pro *core.Proposal) error {
+	if !vld.state.isLeader(pro.Proposer()) {
+		pidx := vld.resources.VldStore.GetWorkerIndex(pro.Proposer())
 		return fmt.Errorf("proposer %d is not leader", pidx)
 	}
 	// on node restart, not committed any blocks yet, don't check merkle root
 	if vld.state.getCommittedHeight() != 0 {
-		if err := vld.verifyMerkleRoot(proposal); err != nil {
+		if err := vld.verifyMerkleRoot(pro); err != nil {
 			return err
 		}
 	}
-	return vld.verifyProposalTxs(proposal)
+	return vld.verifyProposalTxs(pro)
 }
 
-func (vld *validator) verifyMerkleRoot(proposal *core.Proposal) error {
+func (vld *validator) verifyMerkleRoot(pro *core.Proposal) error {
 	bh := vld.resources.Storage.GetBlockHeight()
-	if bh != proposal.Block().ExecHeight() {
+	if bh != pro.Block().ExecHeight() {
 		return fmt.Errorf("invalid exec height")
 	}
 	if ExecuteTxFlag {
 		mr := vld.resources.Storage.GetMerkleRoot()
-		if !bytes.Equal(mr, proposal.Block().MerkleRoot()) {
+		if !bytes.Equal(mr, pro.Block().MerkleRoot()) {
 			return fmt.Errorf("invalid merkle root")
 		}
 	}
 	return nil
 }
 
-func (vld *validator) verifyProposalTxs(proposal *core.Proposal) error {
+func (vld *validator) verifyProposalTxs(pro *core.Proposal) error {
 	if ExecuteTxFlag {
-		for _, hash := range proposal.Block().Transactions() {
+		for _, hash := range pro.Block().Transactions() {
 			if vld.resources.Storage.HasTx(hash) {
 				return fmt.Errorf("already committed tx: %s", base64String(hash))
 			}
@@ -300,7 +302,7 @@ func (vld *validator) verifyProposalTxs(proposal *core.Proposal) error {
 			if tx == nil {
 				return fmt.Errorf("tx not found: %s", base64String(hash))
 			}
-			if tx.Expiry() != 0 && tx.Expiry() < proposal.Block().Height() {
+			if tx.Expiry() != 0 && tx.Expiry() < pro.Block().Height() {
 				return fmt.Errorf("expired tx: %s", base64String(hash))
 			}
 		}

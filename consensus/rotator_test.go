@@ -46,7 +46,7 @@ func setupRotator() (*rotator, *core.Proposal) {
 }
 
 func TestRotator_changeView(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 
 	rot, b0 := setupRotator()
 	rot.state.setLeaderIndex(1)
@@ -58,12 +58,12 @@ func TestRotator_changeView(t *testing.T) {
 	rot.changeView()
 
 	msgSvc.AssertExpectations(t)
-	assert.True(rot.getPendingViewChange())
-	assert.EqualValues(rot.state.getLeaderIndex(), 0)
+	asrt.True(rot.getPendingViewChange())
+	asrt.EqualValues(rot.state.getLeaderIndex(), 0)
 }
 
 func Test_rotator_isNewViewApproval(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 
 	rot1, _ := setupRotator()
 	rot2, _ := setupRotator()
@@ -84,19 +84,19 @@ func Test_rotator_isNewViewApproval(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.EqualValues(tt.want, tt.rot.isNewViewApproval(tt.proposerIdx))
+			asrt.EqualValues(tt.want, tt.rot.isNewViewApproval(tt.proposerIdx))
 		})
 	}
 }
 
 func TestRotator_resetViewTimer(t *testing.T) {
-	assert := assert.New(t)
+	asrt := assert.New(t)
 
 	rot, _ := setupRotator()
 	rot.setPendingViewChange(true)
 
 	rot.approveViewLeader(1)
 
-	assert.False(rot.getPendingViewChange())
-	assert.EqualValues(rot.state.getLeaderIndex(), 1)
+	asrt.False(rot.getPendingViewChange())
+	asrt.EqualValues(rot.state.getLeaderIndex(), 1)
 }

@@ -22,19 +22,17 @@ type genesis struct {
 	resources *Resources
 	chainID   int64
 
-	done chan struct{}
-
 	// collect votes from all validators instead of majority for genesis block
-	votes map[string]*core.Vote
-
+	votes      map[string]*core.Vote
 	mtxVote    sync.Mutex
 	mtxNewView sync.Mutex
 
-	b0 *core.Block
-	q0 *core.QuorumCert
-
+	b0    *core.Block
+	q0    *core.QuorumCert
 	mtxB0 sync.RWMutex
 	mtxQ0 sync.RWMutex
+
+	done chan struct{}
 }
 
 func (gns *genesis) run() (*core.Block, *core.QuorumCert) {
@@ -60,7 +58,7 @@ func (gns *genesis) commit() {
 	data.BlockCommit = core.NewBlockCommit().SetHash(data.Block.Hash())
 	err := gns.resources.Storage.Commit(data)
 	if err != nil {
-		logger.I().Fatalf("commit storage error: %+v", err)
+		logger.I().Fatalf("commit storage error, %+v", err)
 	}
 	logger.I().Debugw("committed genesis bock")
 }
@@ -70,14 +68,14 @@ func (gns *genesis) propose() {
 		return
 	}
 	gns.votes = make(map[string]*core.Vote, gns.resources.VldStore.MajorityValidatorCount())
-	b0 := gns.createGenesisBlock()
-	gns.setB0(b0.Block())
+	pro := gns.createGenesisProposal()
+	gns.setB0(pro.Block())
 	logger.I().Infow("created genesis block, broadcasting...")
 	go gns.broadcastProposalLoop()
-	gns.onReceiveVote(b0.Vote(gns.resources.Signer))
+	gns.onReceiveVote(pro.Vote(gns.resources.Signer))
 }
 
-func (gns *genesis) createGenesisBlock() *core.Proposal {
+func (gns *genesis) createGenesisProposal() *core.Proposal {
 	blk := core.NewBlock().
 		SetHeight(0).
 		SetParentHash(hashChainID(gns.chainID)).
@@ -98,7 +96,7 @@ func (gns *genesis) broadcastProposalLoop() {
 		if gns.getQ0() == nil {
 			pro := core.NewProposal().SetBlock(gns.getB0()).Sign(gns.resources.Signer)
 			if err := gns.resources.MsgSvc.BroadcastProposal(pro); err != nil {
-				logger.I().Errorw("broadcast proposal failed", "error", err)
+				logger.I().Warnf("broadcast proposal failed, %+v", err)
 			}
 		}
 		time.Sleep(2 * time.Second)
@@ -129,7 +127,7 @@ func (gns *genesis) proposalLoop() {
 
 		case e := <-sub.Events():
 			if err := gns.onReceiveProposal(e.(*core.Proposal)); err != nil {
-				logger.I().Warnf("receive proposal failed, %+v", err.Error())
+				logger.I().Warnf("receive proposal failed, %+v", err)
 			}
 		}
 	}
@@ -146,7 +144,7 @@ func (gns *genesis) voteLoop() {
 
 		case e := <-sub.Events():
 			if err := gns.onReceiveVote(e.(*core.Vote)); err != nil {
-				logger.I().Warnf("receive vote failed, %+v", err.Error())
+				logger.I().Warnf("receive vote failed, %+v", err)
 			}
 		}
 	}
@@ -163,32 +161,32 @@ func (gns *genesis) newViewLoop() {
 
 		case e := <-sub.Events():
 			if err := gns.onReceiveNewView(e.(*core.QuorumCert)); err != nil {
-				logger.I().Warnf("receive new view failed, %+v", err.Error())
+				logger.I().Warnf("receive new view failed, %+v", err)
 			}
 		}
 	}
 }
 
-func (gns *genesis) onReceiveProposal(proposal *core.Proposal) error {
-	if err := proposal.Validate(gns.resources.VldStore); err != nil {
+func (gns *genesis) onReceiveProposal(pro *core.Proposal) error {
+	if err := pro.Validate(gns.resources.VldStore); err != nil {
 		return err
 	}
-	if !proposal.Block().IsGenesis() {
+	if !pro.Block().IsGenesis() {
 		logger.I().Info("left behind, fetching genesis block...")
-		return gns.fetchGenesisBlockAndQC(proposal.Proposer())
+		return gns.fetchGenesisBlockAndQC(pro.Proposer())
 	}
-	if !bytes.Equal(hashChainID(gns.chainID), proposal.Block().ParentHash()) {
+	if !bytes.Equal(hashChainID(gns.chainID), pro.Block().ParentHash()) {
 		return fmt.Errorf("different chain id genesis")
 	}
-	if !gns.isLeader(proposal.Proposer()) {
+	if !gns.isLeader(pro.Proposer()) {
 		return fmt.Errorf("proposer is not leader")
 	}
-	if len(proposal.Block().Transactions()) != 0 {
+	if len(pro.Block().Transactions()) != 0 {
 		return fmt.Errorf("genesis block with txs")
 	}
-	gns.setB0(proposal.Block())
+	gns.setB0(pro.Block())
 	logger.I().Infow("got genesis block, voting...")
-	return gns.resources.MsgSvc.SendVote(proposal.Proposer(), proposal.Vote(gns.resources.Signer))
+	return gns.resources.MsgSvc.SendVote(pro.Proposer(), pro.Vote(gns.resources.Signer))
 }
 
 func (gns *genesis) fetchGenesisBlockAndQC(peer *core.PublicKey) error {
@@ -213,25 +211,25 @@ func (gns *genesis) fetchGenesisBlockAndQC(peer *core.PublicKey) error {
 }
 
 func (gns *genesis) requestBlockByHeight(peer *core.PublicKey, height uint64) (*core.Block, error) {
-	pro, err := gns.resources.MsgSvc.RequestBlockByHeight(peer, height)
+	blk, err := gns.resources.MsgSvc.RequestBlockByHeight(peer, height)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get proposal by height %d, %w", height, err)
 	}
-	if err := pro.Validate(gns.resources.VldStore); err != nil {
-		return nil, fmt.Errorf("validate proposal %d error %w", height, err)
+	if err := blk.Validate(gns.resources.VldStore); err != nil {
+		return nil, fmt.Errorf("validate proposal %d, %w", height, err)
 	}
-	return pro, nil
+	return blk, nil
 }
 
 func (gns *genesis) requestQC(peer *core.PublicKey, blkHash []byte) (*core.QuorumCert, error) {
-	pro, err := gns.resources.MsgSvc.RequestQC(peer, blkHash)
+	qc, err := gns.resources.MsgSvc.RequestQC(peer, blkHash)
 	if err != nil {
-		return nil, fmt.Errorf("cannot get proposal by blkHash %w", err)
+		return nil, fmt.Errorf("request qc failed, %w", err)
 	}
-	if err := pro.Validate(gns.resources.VldStore); err != nil {
-		return nil, fmt.Errorf("validate qc error %w", err)
+	if err := qc.Validate(gns.resources.VldStore); err != nil {
+		return nil, fmt.Errorf("validate qc failed, %w", err)
 	}
-	return pro, nil
+	return qc, nil
 }
 
 func (gns *genesis) onReceiveVote(vote *core.Vote) error {
@@ -300,10 +298,9 @@ func (gns *genesis) acceptQC(qc *core.QuorumCert) {
 		return
 	default:
 	}
-	b0 := gns.getB0()
 	gns.setQ0(qc)
 	if !gns.isLeader(gns.resources.Signer.PublicKey()) {
-		gns.resources.MsgSvc.SendNewView(b0.Proposer(), qc)
+		gns.resources.MsgSvc.SendNewView(gns.getB0().Proposer(), qc)
 	}
 	close(gns.done) // when qc is accepted, genesis creation is done
 }

@@ -13,7 +13,9 @@ import (
 type rotator struct {
 	resources *Resources
 	config    Config
+
 	state     *state
+	posvState *posvState
 	driver    *driver
 
 	leaderTimer        *time.Timer

@@ -11,6 +11,7 @@ type pacemaker struct {
 	resources *Resources
 	config    Config
 	state     *state
+	posvState *posvState
 	driver    *driver
 	stopCh    chan struct{}
 }
@@ -44,7 +45,6 @@ func (pm *pacemaker) run() {
 
 	for {
 		pm.newBlock()
-
 		select {
 		case <-pm.stopCh:
 			return
@@ -67,9 +67,9 @@ func (pm *pacemaker) newBlock() {
 		return
 	}
 
-	blk := pm.driver.OnPropose()
-	logger.I().Debugw("proposed block", "height", blk.Block().Height(), "qc", qcRefHeight(blk.Justify()), "txs", len(blk.Block().Transactions()))
-	vote := blk.proposal.Vote(pm.resources.Signer)
+	pro := pm.driver.OnPropose()
+	logger.I().Debugw("proposed block", "height", pro.Block().Height(), "qc", qcRefHeight(pro.Justify()), "txs", len(pro.Block().Transactions()))
+	vote := pro.proposal.Vote(pm.resources.Signer)
 	pm.driver.OnReceiveVote(newVote(vote, pm.state))
-	pm.driver.Update(blk)
+	pm.driver.Update(pro)
 }

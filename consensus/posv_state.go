@@ -36,10 +36,10 @@ func newInnerState(b0 *innerBlock, q0 *innerQC) *posvState {
 	return s
 }
 
-func (s *posvState) setBVote(b *innerBlock)    { s.bVote.Store(b) }
-func (s *posvState) setBExec(b *innerBlock)    { s.bExec.Store(b) }
-func (s *posvState) setBLeaf(b *innerBlock)    { s.bLeaf.Store(b) }
-func (s *posvState) setQCHigh(qcHigh *innerQC) { s.qcHigh.Store(qcHigh) }
+func (s *posvState) setBVote(b *innerBlock) { s.bVote.Store(b) }
+func (s *posvState) setBExec(b *innerBlock) { s.bExec.Store(b) }
+func (s *posvState) setBLeaf(b *innerBlock) { s.bLeaf.Store(b) }
+func (s *posvState) setQCHigh(qc *innerQC)  { s.qcHigh.Store(qc) }
 
 func (s *posvState) SubscribeNewQCHigh() *emitter.Subscription {
 	return s.qcHighEmitter.Subscribe(10)
@@ -84,21 +84,21 @@ func (s *posvState) endProposal() {
 	s.votes = nil
 }
 
-func (s *posvState) addVote(v *innerVote) error {
+func (s *posvState) addVote(vote *innerVote) error {
 	s.pMtx.Lock()
 	defer s.pMtx.Unlock()
 
 	if s.proposal == nil {
 		return fmt.Errorf("no proposal in progress")
 	}
-	if !s.proposal.Block().Equal(v.Block()) {
+	if !s.proposal.Block().Equal(vote.Block()) {
 		return fmt.Errorf("not same block")
 	}
-	key := v.Voter()
+	key := vote.Voter()
 	if _, found := s.votes[key]; found {
 		return fmt.Errorf("duplicate vote")
 	}
-	s.votes[key] = v
+	s.votes[key] = vote
 	return nil
 }
 
@@ -131,9 +131,9 @@ func (s *posvState) UpdateQCHigh(qc *innerQC) {
 }
 
 // CanVote returns true if the posv instance can vote the given block
-func (s *posvState) CanVote(bNew *innerProposal) bool {
-	bLock := s.GetBVote()
-	if bLock.Equal(bNew.Block().Parent()) {
+func (s *posvState) CanVote(pro *innerProposal) bool {
+	bVote := s.GetBVote()
+	if bVote.Equal(pro.Block().Parent()) {
 		return true
 	}
 	return false

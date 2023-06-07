@@ -4,6 +4,7 @@
 package consensus
 
 import (
+	"os"
 	"time"
 
 	"github.com/wooyang2018/posv-blockchain/core"
@@ -15,6 +16,8 @@ type Consensus struct {
 	config    Config
 	startTime int64
 	state     *state
+	posvState *posvState
+	logfile   *os.File
 	driver    *driver
 	validator *validator
 	pacemaker *pacemaker
@@ -22,11 +25,10 @@ type Consensus struct {
 }
 
 func New(resources *Resources, config Config) *Consensus {
-	cons := &Consensus{
+	return &Consensus{
 		resources: resources,
 		config:    config,
 	}
-	return cons
 }
 
 func (cons *Consensus) Start() {
@@ -52,9 +54,8 @@ func (cons *Consensus) GetQC(blkHash []byte) *core.QuorumCert {
 func (cons *Consensus) start() {
 	cons.startTime = time.Now().UnixNano()
 	b0, q0 := cons.getInitialBlockAndQC()
-	cons.setupState(b0)
+	cons.setupState(b0, q0)
 	cons.setupDriver()
-	cons.setupPoSV(b0, q0)
 	cons.setupValidator()
 	cons.setupPacemaker()
 	cons.setupRotator()
@@ -74,12 +75,9 @@ func (cons *Consensus) stop() {
 	cons.pacemaker.stop()
 	cons.rotator.stop()
 	cons.validator.stop()
-}
-
-func (cons *Consensus) setupState(b0 *core.Block) {
-	cons.state = newState(cons.resources)
-	cons.state.setBlock(b0) // TODO 讨论使用Block还是Proposal
-	cons.state.setLeaderIndex(cons.resources.VldStore.GetWorkerIndex(b0.Proposer()))
+	if cons.logfile != nil {
+		cons.logfile.Close()
+	}
 }
 
 func (cons *Consensus) getInitialBlockAndQC() (*core.Block, *core.QuorumCert) {
@@ -100,18 +98,36 @@ func (cons *Consensus) getInitialBlockAndQC() (*core.Block, *core.QuorumCert) {
 }
 
 func (cons *Consensus) setupDriver() {
-	cons.driver = NewDriver(cons.resources, cons.config, cons.state)
+	cons.driver = &driver{
+		resources:    cons.resources,
+		config:       cons.config,
+		checkTxDelay: 10 * time.Millisecond,
+		state:        cons.state,
+		posvState:    cons.posvState,
+	}
+	if cons.config.BenchmarkPath != "" {
+		var err error
+		cons.logfile, err = os.Create(cons.config.BenchmarkPath)
+		if err != nil {
+			logger.I().Errorw("create benchmark log file failed", "error", err)
+		}
+	}
+	cons.driver.tester = newTester(cons.logfile)
 }
 
-func (cons *Consensus) setupPoSV(b0 *core.Block, q0 *core.QuorumCert) {
-	posvState := newInnerState(newBlock(b0, cons.state), newQC(q0, cons.state))
-	cons.driver.posvState = posvState
+func (cons *Consensus) setupState(b0 *core.Block, q0 *core.QuorumCert) {
+	cons.state = newState(cons.resources)
+	cons.state.setBlock(b0)
+	cons.state.setLeaderIndex(cons.resources.VldStore.GetWorkerIndex(b0.Proposer()))
+	cons.posvState = newInnerState(newBlock(b0, cons.state), newQC(q0, cons.state))
 }
 
 func (cons *Consensus) setupValidator() {
 	cons.validator = &validator{
 		resources: cons.resources,
+		config:    cons.config,
 		state:     cons.state,
+		posvState: cons.posvState,
 		driver:    cons.driver,
 	}
 }
@@ -121,6 +137,7 @@ func (cons *Consensus) setupPacemaker() {
 		resources: cons.resources,
 		config:    cons.config,
 		state:     cons.state,
+		posvState: cons.posvState,
 		driver:    cons.driver,
 	}
 }
@@ -130,6 +147,7 @@ func (cons *Consensus) setupRotator() {
 		resources: cons.resources,
 		config:    cons.config,
 		state:     cons.state,
+		posvState: cons.posvState,
 		driver:    cons.driver,
 	}
 }
@@ -147,9 +165,9 @@ func (cons *Consensus) getStatus() (status Status) {
 	status.ViewStart = cons.rotator.getViewStart()
 	status.PendingViewChange = cons.rotator.getPendingViewChange()
 
-	status.BVote = cons.driver.posvState.GetBVote().Height()
-	status.BLeaf = cons.driver.posvState.GetBLeaf().Height()
-	status.BExec = cons.driver.posvState.GetBExec().Height()
-	status.QCHigh = qcRefHeight(cons.driver.posvState.GetQCHigh())
+	status.BVote = cons.posvState.GetBVote().Height()
+	status.BLeaf = cons.posvState.GetBLeaf().Height()
+	status.BExec = cons.posvState.GetBExec().Height()
+	status.QCHigh = qcRefHeight(cons.posvState.GetQCHigh())
 	return status
 }
