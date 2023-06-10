@@ -166,7 +166,24 @@ func (d *driver) deleteCommittedOlderBlocks(bexec *core.Block) {
 // OnPropose is called to propose a new proposal
 func (d *driver) OnPropose() *innerProposal {
 	bLeaf := d.posvState.GetBLeaf()
-	pro := d.CreateProposal(bLeaf, d.posvState.GetQCHigh(), bLeaf.Height()+1, 1) //TODO: ViewNum
+	pro := d.CreateProposal(bLeaf, d.posvState.GetQCHigh(), bLeaf.Height()+1, d.posvState.GetViewNum()) //TODO: ViewNum
+	if pro == nil {
+		return nil
+	}
+	d.posvState.setBLeaf(pro.Block())
+	d.posvState.startProposal(pro)
+	d.BroadcastProposal(pro)
+	return pro
+}
+
+func (d *driver) NewViewPropose() *innerProposal {
+	qc := d.posvState.GetQCHigh()
+	proposal := core.NewProposal().
+		SetBlock(qc.Block().block).
+		SetQuorumCert(qc.qc).
+		SetViewNum(d.posvState.GetViewNum()).
+		Sign(d.resources.Signer)
+	pro := newProposal(proposal, d.state)
 	if pro == nil {
 		return nil
 	}

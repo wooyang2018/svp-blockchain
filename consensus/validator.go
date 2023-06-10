@@ -197,10 +197,10 @@ func (vld *validator) syncMissingParentBlocksRecursive(
 func (vld *validator) requestBlock(peer *core.PublicKey, hash []byte) (*core.Block, error) {
 	blk, err := vld.resources.MsgSvc.RequestBlock(peer, hash)
 	if err != nil {
-		return nil, fmt.Errorf("cannot request block %w", err)
+		return nil, fmt.Errorf("cannot request block, %w", err)
 	}
 	if err := blk.Validate(vld.resources.VldStore); err != nil {
-		return nil, fmt.Errorf("validate block error %w", err)
+		return nil, fmt.Errorf("validate block error, %w", err)
 	}
 	return blk, nil
 }
@@ -256,11 +256,18 @@ func (vld *validator) updatePoSVAndVote(peer *core.PublicKey, pro *core.Proposal
 	vld.state.mtxUpdate.Lock()
 	defer vld.state.mtxUpdate.Unlock()
 
-	if err := vld.verifyProposalToVote(pro); err != nil {
-		vld.driver.Update(newProposal(pro, vld.state))
-		return err
+	if vld.resources.Storage.GetBlockHeight() == pro.Block().Height() {
+		ipro := newProposal(pro, vld.state)
+		vld.driver.VoteProposal(ipro)
+		vld.driver.posvState.setBVote(ipro.Block())
+	} else {
+		if err := vld.verifyProposalToVote(pro); err != nil {
+			vld.driver.Update(newProposal(pro, vld.state))
+			return err
+		}
+		vld.driver.OnReceiveProposal(newProposal(pro, vld.state))
 	}
-	vld.driver.OnReceiveProposal(newProposal(pro, vld.state))
+
 	return nil
 }
 
@@ -274,20 +281,27 @@ func (vld *validator) verifyProposalToVote(pro *core.Proposal) error {
 		if err := vld.verifyMerkleRoot(pro); err != nil {
 			return err
 		}
+		if err := vld.verifyExecHeight(pro); err != nil {
+			return err
+		}
 	}
 	return vld.verifyProposalTxs(pro)
 }
 
 func (vld *validator) verifyMerkleRoot(pro *core.Proposal) error {
-	bh := vld.resources.Storage.GetBlockHeight()
-	if bh != pro.Block().ExecHeight() {
-		return fmt.Errorf("invalid exec height")
-	}
 	if ExecuteTxFlag {
 		mr := vld.resources.Storage.GetMerkleRoot()
 		if !bytes.Equal(mr, pro.Block().MerkleRoot()) {
 			return fmt.Errorf("invalid merkle root")
 		}
+	}
+	return nil
+}
+
+func (vld *validator) verifyExecHeight(pro *core.Proposal) error {
+	bh := vld.resources.Storage.GetBlockHeight()
+	if bh != pro.Block().ExecHeight() { //TODO: Remove this
+		return fmt.Errorf("invalid exec height")
 	}
 	return nil
 }
@@ -321,7 +335,7 @@ func (vld *validator) onReceiveNewView(qc *core.QuorumCert) error {
 	if err := qc.Validate(vld.resources.VldStore); err != nil {
 		return err
 	}
-	vld.driver.posvState.UpdateQCHigh(newQC(qc, vld.state))
+	vld.driver.posvState.LockQCHigh(newQC(qc, vld.state))
 	return nil
 }
 

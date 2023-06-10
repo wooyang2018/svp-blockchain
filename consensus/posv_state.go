@@ -24,11 +24,13 @@ type posvState struct {
 	pMtx     sync.RWMutex
 
 	qcHighEmitter *emitter.Emitter
+	viewEmitter   *emitter.Emitter
 }
 
 func newInnerState(b0 *innerBlock, q0 *innerQC) *posvState {
 	s := new(posvState)
 	s.qcHighEmitter = emitter.New()
+	s.viewEmitter = emitter.New()
 	s.setBVote(b0)
 	s.setBLeaf(b0)
 	s.setBExec(b0)
@@ -45,6 +47,10 @@ func (s *posvState) SubscribeNewQCHigh() *emitter.Subscription {
 	return s.qcHighEmitter.Subscribe(10)
 }
 
+func (s *posvState) SubscribeNewView() *emitter.Subscription {
+	return s.viewEmitter.Subscribe(10)
+}
+
 func (s *posvState) GetBVote() *innerBlock {
 	return s.bVote.Load().(*innerBlock)
 }
@@ -59,6 +65,10 @@ func (s *posvState) GetBLeaf() *innerBlock {
 
 func (s *posvState) GetQCHigh() *innerQC {
 	return s.qcHigh.Load().(*innerQC)
+}
+
+func (s *posvState) GetViewNum() uint32 {
+	return s.viewNum
 }
 
 func (s *posvState) IsProposing() bool {
@@ -122,8 +132,13 @@ func (s *posvState) GetVotes() []*innerVote {
 
 // UpdateQCHigh replaces qcHigh if the block of given qc is higher than the qcHigh block
 func (s *posvState) UpdateQCHigh(qc *innerQC) {
-	if CmpBlockHeight(qc.Block(), s.GetQCHigh().Block()) == 1 {
+	if CmpBlockHeight(qc.Block(), s.GetQCHigh().Block()) == 1 { //TODO 添加View
 		logger.I().Debugw("posv updated high qc", "height", qc.Block().Height())
+		s.setQCHigh(qc)
+		s.setBLeaf(qc.Block())
+		s.qcHighEmitter.Emit(qc)
+	} else if CmpBlockHeight(qc.Block(), s.GetQCHigh().Block()) == 0 {
+		logger.I().Debugw("new view updated high qc", "height", qc.Block().Height())
 		s.setQCHigh(qc)
 		s.setBLeaf(qc.Block())
 		s.qcHighEmitter.Emit(qc)
@@ -137,4 +152,19 @@ func (s *posvState) CanVote(pro *innerProposal) bool {
 		return true
 	}
 	return false
+}
+
+func (s *posvState) UpdateView(num uint32) {
+	if num > s.viewNum {
+		s.viewEmitter.Emit(num)
+		s.viewNum = num
+	}
+}
+
+func (s *posvState) LockQCHigh(qc *innerQC) {
+	if CmpBlockHeight(qc.Block(), s.GetQCHigh().Block()) == 1 {
+		logger.I().Debugw("posv updated high qc", "height", qc.Block().Height())
+		s.setQCHigh(qc)
+		s.setBLeaf(qc.Block())
+	}
 }

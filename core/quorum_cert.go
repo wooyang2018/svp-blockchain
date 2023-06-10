@@ -67,6 +67,7 @@ func (qc *QuorumCert) Build(votes []*Vote) *QuorumCert {
 	for i, vote := range votes {
 		if qc.data.BlockHash == nil {
 			qc.data.BlockHash = vote.data.BlockHash
+			qc.data.ViewNum = vote.data.ViewNum
 		}
 		qc.data.Signatures[i] = vote.data.Signature
 		qc.sigs[i] = &Signature{

@@ -119,14 +119,16 @@ func (rot *rotator) onViewTimeout() {
 }
 
 func (rot *rotator) changeView() {
+	rot.setPendingViewChange(true)
+	time.Sleep(rot.config.Delta)
+	rot.setViewStart()
 	leaderIdx := rot.nextLeader()
 	rot.state.setLeaderIndex(leaderIdx)
-	rot.setPendingViewChange(true)
-	rot.setViewStart()
 	leader := rot.resources.VldStore.GetWorker(rot.state.getLeaderIndex())
 	rot.resources.MsgSvc.SendNewView(leader, rot.driver.posvState.GetQCHigh().qc)
 	logger.I().Infow("view changed",
 		"leader", leaderIdx, "qc", qcRefHeight(rot.driver.posvState.GetQCHigh()))
+	rot.posvState.UpdateView(rot.posvState.GetViewNum() + 1)
 }
 
 func (rot *rotator) nextLeader() int {

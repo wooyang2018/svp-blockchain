@@ -65,7 +65,7 @@ func (m *MockTxPool) GetTx(hash []byte) *core.Transaction {
 }
 
 func (m *MockTxPool) GetTxStatus(hash []byte) txpool.TxStatus {
-	args := m.Called()
+	args := m.Called(hash)
 	return args.Get(0).(txpool.TxStatus)
 }
 
@@ -146,11 +146,6 @@ func (m *MockMsgService) RequestBlock(pubKey *core.PublicKey, hash []byte) (*cor
 	return castCoreBlock(args.Get(0)), args.Error(1)
 }
 
-func (m *MockMsgService) RequestProposal(pubKey *core.PublicKey, hash []byte) (*core.Proposal, error) {
-	args := m.Called(pubKey, hash)
-	return castCoreProposal(args.Get(0)), args.Error(1)
-}
-
 func (m *MockMsgService) RequestQC(pubKey *core.PublicKey, blkHash []byte) (*core.QuorumCert, error) {
 	args := m.Called(pubKey, blkHash)
 	return castCoreQC(args.Get(0)), args.Error(1)
@@ -159,11 +154,6 @@ func (m *MockMsgService) RequestQC(pubKey *core.PublicKey, blkHash []byte) (*cor
 func (m *MockMsgService) RequestBlockByHeight(pubKey *core.PublicKey, height uint64) (*core.Block, error) {
 	args := m.Called(pubKey, height)
 	return castCoreBlock(args.Get(0)), args.Error(1)
-}
-
-func (m *MockMsgService) RequestProposalByHeight(pubKey *core.PublicKey, height uint64) (*core.Proposal, error) {
-	args := m.Called(pubKey, height)
-	return castCoreProposal(args.Get(0)), args.Error(1)
 }
 
 func (m *MockMsgService) SendNewView(pubKey *core.PublicKey, qc *core.QuorumCert) error {
@@ -221,13 +211,6 @@ func castCoreBlock(val interface{}) *core.Block {
 		return nil
 	}
 	return val.(*core.Block)
-}
-
-func castCoreProposal(val interface{}) *core.Proposal {
-	if val == nil {
-		return nil
-	}
-	return val.(*core.Proposal)
 }
 
 func castCoreQC(val interface{}) *core.QuorumCert {
