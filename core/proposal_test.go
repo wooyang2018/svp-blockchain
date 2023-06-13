@@ -20,7 +20,7 @@ func newProposal(privKey *PrivateKey) *Proposal {
 		Sign(privKey)
 	pro := NewProposal().
 		SetBlock(blk).
-		SetViewNum(1).
+		SetView(1).
 		Sign(privKey)
 	return pro
 }

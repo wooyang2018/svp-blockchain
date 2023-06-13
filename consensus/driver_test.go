@@ -5,13 +5,11 @@ package consensus
 
 import (
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/wooyang2018/posv-blockchain/core"
 	"github.com/wooyang2018/posv-blockchain/storage"
-	"github.com/wooyang2018/posv-blockchain/txpool"
 )
 
 func setupTestDriver() *driver {
@@ -22,14 +20,18 @@ func setupTestDriver() *driver {
 		resources: resources,
 		config:    DefaultConfig,
 		state:     newState(resources),
+		posvState: new(posvState),
 	}
 }
 
 func TestDriver_CreateProposal(t *testing.T) {
 	d := setupTestDriver()
-	parent := newBlock(core.NewBlock().Sign(d.resources.Signer), d.state)
+	pblk := core.NewBlock().SetHeight(4).Sign(d.resources.Signer)
+	parent := newBlock(pblk, d.state)
 	d.state.setBlock(parent.block)
+	d.posvState.setBLeaf(parent)
 	qc := newQC(core.NewQuorumCert(), d.state)
+	d.posvState.setQCHigh(qc)
 
 	txsInQ := [][]byte{[]byte("tx1"), []byte("tx2")}
 	txPool := new(MockTxPool)
@@ -45,7 +47,7 @@ func TestDriver_CreateProposal(t *testing.T) {
 	storage.On("GetMerkleRoot").Return([]byte("merkle-root"))
 	d.resources.Storage = storage
 
-	pro := d.CreateProposal(parent, qc, 5, 1)
+	pro := d.CreateProposal()
 
 	txPool.AssertExpectations(t)
 	storage.AssertExpectations(t)
@@ -66,16 +68,25 @@ func TestDriver_CreateProposal(t *testing.T) {
 
 func TestDriver_VoteBlock(t *testing.T) {
 	d := setupTestDriver()
-	d.checkTxDelay = time.Millisecond
-	d.config.TxWaitTime = 20 * time.Millisecond
+	blk2 := newTestBlock(3, 2, nil, nil, d.resources.Signer)
+	pro2 := core.NewProposal().SetBlock(blk2).Sign(d.resources.Signer)
+	d.state.setBlock(pro2.Block())
+	votes := []*iVote{
+		newVote(pro2.Vote(d.resources.Signer), d.state),
+		newVote(pro2.Vote(core.GenerateKey(nil)), d.state),
+	}
+	qc2 := d.CreateQC(votes)
 
 	proposer := core.GenerateKey(nil)
-	pro := core.NewProposal().Sign(proposer)
+	blk3 := newTestBlock(4, 3, nil, nil, d.resources.Signer)
+	pro := core.NewProposal().
+		SetBlock(blk3).
+		SetQuorumCert(qc2.qc).
+		Sign(proposer)
 	validators := []string{pro.Proposer().String()}
 	d.resources.VldStore = core.NewValidatorStore(validators, []int{1}, validators)
 
 	txPool := new(MockTxPool)
-	txPool.On("GetStatus").Return(txpool.Status{}) // no txs in the pool
 	if !PreserveTxFlag {
 		txPool.On("SetTxsPending", pro.Block().Transactions())
 	}
@@ -86,31 +97,21 @@ func TestDriver_VoteBlock(t *testing.T) {
 	msgSvc.On("SendVote", proposer.PublicKey(), pro.Vote(d.resources.Signer)).Return(nil)
 	d.resources.MsgSvc = msgSvc
 
-	start := time.Now()
 	d.VoteProposal(newProposal(pro, d.state))
-	elapsed := time.Since(start)
 
 	txPool.AssertExpectations(t)
 	msgSvc.AssertExpectations(t)
 
-	asrt := assert.New(t)
-	asrt.GreaterOrEqual(elapsed, d.config.TxWaitTime, "should delay if no txs in the pool")
-
 	txPool = new(MockTxPool)
-	txPool.On("GetStatus").Return(txpool.Status{Total: 1}) // one txs in the pool
 	if !PreserveTxFlag {
 		txPool.On("SetTxsPending", pro.Block().Transactions())
 	}
 	d.resources.TxPool = txPool
 
-	start = time.Now()
 	d.VoteProposal(newProposal(pro, d.state))
-	elapsed = time.Since(start)
 
 	txPool.AssertExpectations(t)
 	msgSvc.AssertExpectations(t)
-
-	asrt.Less(elapsed, d.config.TxWaitTime, "should not delay if txs in the pool")
 }
 
 func TestDriver_Commit(t *testing.T) {
@@ -161,7 +162,7 @@ func TestDriver_Commit(t *testing.T) {
 	storage.On("GetQC", bexec.Hash()).Return(nil, nil)
 	d.resources.Storage = storage
 
-	d.Commit(bexec)
+	d.Commit(newBlock(bexec, d.state))
 
 	txPool.AssertExpectations(t)
 	execution.AssertExpectations(t)
@@ -178,7 +179,7 @@ func TestDriver_CreateQC(t *testing.T) {
 	d := setupTestDriver()
 	pro := core.NewProposal().Sign(d.resources.Signer)
 	d.state.setBlock(pro.Block())
-	votes := []*innerVote{
+	votes := []*iVote{
 		newVote(pro.Vote(d.resources.Signer), d.state),
 		newVote(pro.Vote(core.GenerateKey(nil)), d.state),
 	}

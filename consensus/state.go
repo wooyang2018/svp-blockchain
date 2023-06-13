@@ -25,7 +25,6 @@ type state struct {
 	mtxUpdate sync.Mutex // lock for posv update call
 
 	leaderIndex int64
-	viewNum     uint32
 
 	// committed block height. on node restart, it's zero until a block is committed
 	committedHeight uint64
@@ -192,14 +191,6 @@ func (state *state) setLeaderIndex(idx int) {
 
 func (state *state) getLeaderIndex() int {
 	return int(atomic.LoadInt64(&state.leaderIndex))
-}
-
-func (state *state) setViewNum(num int) {
-	atomic.StoreUint32(&state.viewNum, uint32(num))
-}
-
-func (state *state) getViewNum() uint32 {
-	return atomic.LoadUint32(&state.viewNum)
 }
 
 func (state *state) getFaultyCount() int {

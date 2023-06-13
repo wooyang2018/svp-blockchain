@@ -19,6 +19,7 @@ func setupRotator() (*rotator, *core.Proposal) {
 	}
 	weights := []int{1, 1}
 	resources := &Resources{
+		Signer:   key1,
 		VldStore: core.NewValidatorStore(workers, weights, workers),
 	}
 
@@ -33,9 +34,8 @@ func setupRotator() (*rotator, *core.Proposal) {
 		state:     state,
 	}
 	posvState := newInnerState(newBlock(b0.Block(), state), newQC(q0, state))
-	tester := newTester(nil)
 	driver.posvState = posvState
-	driver.tester = tester
+	driver.tester = newTester(nil)
 
 	return &rotator{
 		resources: resources,
@@ -58,7 +58,7 @@ func TestRotator_changeView(t *testing.T) {
 	rot.changeView()
 
 	msgSvc.AssertExpectations(t)
-	asrt.True(rot.getPendingViewChange())
+	asrt.EqualValues(rot.getViewChange(), 1)
 	asrt.EqualValues(rot.state.getLeaderIndex(), 0)
 }
 
@@ -68,8 +68,8 @@ func Test_rotator_isNewViewApproval(t *testing.T) {
 	rot1, _ := setupRotator()
 	rot2, _ := setupRotator()
 
-	rot1.setPendingViewChange(true)
-	rot2.setPendingViewChange(false)
+	rot1.setViewChange(1)
+	rot2.setViewChange(0)
 
 	tests := []struct {
 		name        string
@@ -93,10 +93,10 @@ func TestRotator_resetViewTimer(t *testing.T) {
 	asrt := assert.New(t)
 
 	rot, _ := setupRotator()
-	rot.setPendingViewChange(true)
+	rot.setViewChange(1)
 
 	rot.approveViewLeader(1)
 
-	asrt.False(rot.getPendingViewChange())
+	asrt.EqualValues(rot.getViewChange(), 0)
 	asrt.EqualValues(rot.state.getLeaderIndex(), 1)
 }

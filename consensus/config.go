@@ -27,9 +27,6 @@ const (
 	// consensus
 	FlagChainID       = "consensus-chainID"
 	FlagBlockTxLimit  = "consensus-blockTxLimit"
-	FlagTxWaitTime    = "consensus-txWaitTime"
-	FlagBeatTimeout   = "consensus-beatTimeout"
-	FlagBlockDelay    = "consensus-blockDelay"
 	FlagViewWidth     = "consensus-viewWidth"
 	FlagLeaderTimeout = "consensus-leaderTimeout"
 	FlagDelta         = "consensus-delta"
@@ -41,15 +38,6 @@ type Config struct {
 
 	// maximum tx count in a block
 	BlockTxLimit int
-
-	// block creation delay if no transactions in the pool
-	TxWaitTime time.Duration
-
-	// for leader, delay to propose next block if she cannot create qc")
-	BeatTimeout time.Duration
-
-	// minimum delay between each block (i.e, it can define maximum block rate)
-	BlockDelay time.Duration
 
 	// view duration for a leader
 	ViewWidth time.Duration
@@ -66,9 +54,6 @@ type Config struct {
 
 var DefaultConfig = Config{
 	BlockTxLimit:  10000,
-	TxWaitTime:    1 * time.Second,
-	BeatTimeout:   1000 * time.Millisecond,
-	BlockDelay:    100 * time.Millisecond, // maximum block rate = 10 blk per sec
 	ViewWidth:     60 * time.Second,
 	LeaderTimeout: 20 * time.Second,
 	Delta:         3 * time.Second,

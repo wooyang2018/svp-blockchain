@@ -65,10 +65,10 @@ func (hc *checker) hasViewChanged(status, last *consensus.Status) bool {
 	if last == nil {
 		return false // last view is not loaded yet for the first time
 	}
-	if status.PendingViewChange {
+	if status.ViewChange == 1 {
 		return false // view change is pending but not confirmed yet
 	}
-	if last.PendingViewChange { // previously pending, now not pending
+	if last.ViewChange == 1 { // previously pending, now not pending
 		return true // it's confirmed view change
 	}
 	return status.LeaderIndex != last.LeaderIndex

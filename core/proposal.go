@@ -45,7 +45,7 @@ func (pro *Proposal) Sum() []byte {
 	if pro.data.QuorumCert != nil {
 		h.Write(pro.data.QuorumCert.BlockHash) // qc reference block hash
 	}
-	binary.Write(h, binary.BigEndian, pro.data.ViewNum)
+	binary.Write(h, binary.BigEndian, pro.data.View)
 	return h.Sum(nil)
 }
 
@@ -84,7 +84,7 @@ func (pro *Proposal) Vote(signer Signer) *Vote {
 	vote.setData(&pb.Vote{
 		BlockHash: pro.block.Hash(),
 		Quota:     1,
-		ViewNum:   pro.data.ViewNum,
+		View:      pro.data.View,
 		Signature: signer.Sign(pro.block.Hash()).data,
 	})
 	return vote
@@ -125,8 +125,8 @@ func (pro *Proposal) SetQuorumCert(val *QuorumCert) *Proposal {
 	return pro
 }
 
-func (pro *Proposal) SetViewNum(val uint32) *Proposal {
-	pro.data.ViewNum = val
+func (pro *Proposal) SetView(val uint32) *Proposal {
+	pro.data.View = val
 	return pro
 }
 
@@ -140,7 +140,7 @@ func (pro *Proposal) Sign(signer Signer) *Proposal {
 func (pro *Proposal) Hash() []byte            { return pro.data.Hash }
 func (pro *Proposal) Block() *Block           { return pro.block }
 func (pro *Proposal) QuorumCert() *QuorumCert { return pro.quorumCert }
-func (pro *Proposal) ViewNum() uint32         { return pro.data.ViewNum }
+func (pro *Proposal) View() uint32            { return pro.data.View }
 func (pro *Proposal) Proposer() *PublicKey    { return pro.signature.pubKey }
 
 // Marshal encodes proposal as bytes

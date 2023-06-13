@@ -16,9 +16,8 @@ type Status struct {
 
 	// set to true when current view timeout
 	// set to false once the view leader created the first qc
-	PendingViewChange bool
-	LeaderIndex       int
-	ViewNum           uint32
+	ViewChange  int32
+	LeaderIndex int
 
 	// posv state (block heights)
 	BVote  uint64
@@ -26,4 +25,5 @@ type Status struct {
 	BExec  uint64
 	BLeaf  uint64
 	QCHigh uint64
+	View   uint32
 }

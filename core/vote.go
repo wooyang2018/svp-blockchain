@@ -56,6 +56,8 @@ func (vote *Vote) setData(data *pb.Vote) error {
 }
 
 func (vote *Vote) BlockHash() []byte { return vote.data.BlockHash }
+func (vote *Vote) View() uint32      { return vote.data.View }
+func (vote *Vote) Quota() float64    { return vote.data.Quota }
 func (vote *Vote) Voter() *PublicKey { return vote.voter.pubKey }
 
 // Marshal encodes vote as bytes

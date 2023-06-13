@@ -66,18 +66,6 @@ func init() {
 		consensus.FlagBlockTxLimit, nodeConfig.ConsensusConfig.BlockTxLimit,
 		"maximum tx count in a block")
 
-	rootCmd.Flags().DurationVar(&nodeConfig.ConsensusConfig.TxWaitTime,
-		consensus.FlagTxWaitTime, nodeConfig.ConsensusConfig.TxWaitTime,
-		"block creation delay if no transactions in the pool")
-
-	rootCmd.Flags().DurationVar(&nodeConfig.ConsensusConfig.BeatTimeout,
-		consensus.FlagBeatTimeout, nodeConfig.ConsensusConfig.BeatTimeout,
-		"duration to wait to propose next block if leader cannot create qc")
-
-	rootCmd.Flags().DurationVar(&nodeConfig.ConsensusConfig.BlockDelay,
-		consensus.FlagBlockDelay, nodeConfig.ConsensusConfig.BlockDelay,
-		"minimum delay between blocks")
-
 	rootCmd.Flags().DurationVar(&nodeConfig.ConsensusConfig.ViewWidth,
 		consensus.FlagViewWidth, nodeConfig.ConsensusConfig.ViewWidth,
 		"view duration for a leader")

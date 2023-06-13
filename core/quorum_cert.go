@@ -67,7 +67,7 @@ func (qc *QuorumCert) Build(votes []*Vote) *QuorumCert {
 	for i, vote := range votes {
 		if qc.data.BlockHash == nil {
 			qc.data.BlockHash = vote.data.BlockHash
-			qc.data.ViewNum = vote.data.ViewNum
+			qc.data.View = vote.data.View
 		}
 		qc.data.Signatures[i] = vote.data.Signature
 		qc.sigs[i] = &Signature{
@@ -80,7 +80,7 @@ func (qc *QuorumCert) Build(votes []*Vote) *QuorumCert {
 
 func (qc *QuorumCert) BlockHash() []byte        { return qc.data.BlockHash }
 func (qc *QuorumCert) Signatures() []*Signature { return qc.sigs }
-func (qc *QuorumCert) ViewNum() uint32          { return qc.data.ViewNum }
+func (qc *QuorumCert) View() uint32             { return qc.data.View }
 
 // Marshal encodes quorum cert as bytes
 func (qc *QuorumCert) Marshal() ([]byte, error) {

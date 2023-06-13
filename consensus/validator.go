@@ -17,7 +17,6 @@ type validator struct {
 	resources   *Resources
 	config      Config
 	state       *state
-	posvState   *posvState
 	driver      *driver
 	mtxProposal sync.Mutex
 	stopCh      chan struct{}

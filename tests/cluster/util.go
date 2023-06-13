@@ -138,15 +138,6 @@ func AddPoSVFlags(cmd *exec.Cmd, config *node.Config) {
 	cmd.Args = append(cmd.Args, "--"+consensus.FlagBlockTxLimit,
 		strconv.Itoa(config.ConsensusConfig.BlockTxLimit))
 
-	cmd.Args = append(cmd.Args, "--"+consensus.FlagTxWaitTime,
-		config.ConsensusConfig.TxWaitTime.String())
-
-	cmd.Args = append(cmd.Args, "--"+consensus.FlagBeatTimeout,
-		config.ConsensusConfig.BeatTimeout.String())
-
-	cmd.Args = append(cmd.Args, "--"+consensus.FlagBlockDelay,
-		config.ConsensusConfig.BlockDelay.String())
-
 	cmd.Args = append(cmd.Args, "--"+consensus.FlagViewWidth,
 		config.ConsensusConfig.ViewWidth.String())
 
