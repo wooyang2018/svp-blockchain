@@ -60,7 +60,7 @@ func (d *driver) BroadcastProposal(pro *iProposal) {
 	}
 }
 
-func (d *driver) VoteProposal(pro *iProposal) {
+func (d *driver) VoteProposal(pro *iProposal, blk *iBlock) {
 	proposal := pro.proposal
 	vote := proposal.Vote(d.resources.Signer)
 	if !PreserveTxFlag {
@@ -73,7 +73,7 @@ func (d *driver) VoteProposal(pro *iProposal) {
 	d.resources.MsgSvc.SendVote(proposal.Proposer(), vote)
 	logger.I().Debugw("voted proposal",
 		"proposer", proposer,
-		"height", pro.Block().Height(),
+		"height", blk.Height(),
 		"qc", qcRefHeight(pro.Justify()),
 	)
 }
@@ -190,19 +190,9 @@ func (d *driver) OnReceiveVote(vote *iVote) error {
 	return nil
 }
 
-// OnReceiveProposal is called when a new proposal is received
-func (d *driver) OnReceiveProposal(pro *iProposal) error {
-	d.Update(pro)
-	if d.posvState.CanVote(pro) {
-		d.VoteProposal(pro)
-		d.posvState.setBVote(pro.Block())
-	}
-	return nil
-}
-
-func (d *driver) Update(pro *iProposal) {
-	d.posvState.UpdateQCHigh(pro.Justify())
-	b := pro.Justify().Block()
+func (d *driver) Update(qc *iQC) {
+	d.posvState.UpdateQCHigh(qc)
+	b := qc.Block()
 	if b != nil {
 		d.CommitRecursive(b)
 	}
@@ -224,4 +214,12 @@ func (d *driver) onCommit(b *iBlock) {
 	} else if !d.posvState.GetBExec().Equal(b) {
 		logger.I().Warnf("safety breached b-recurrsive: %+v, bexec: %d", b, d.posvState.GetBExec().Height())
 	}
+}
+
+func (d *driver) Lock() {
+	d.state.mtxUpdate.Lock()
+}
+
+func (d *driver) Unlock() {
+	d.state.mtxUpdate.Unlock()
 }

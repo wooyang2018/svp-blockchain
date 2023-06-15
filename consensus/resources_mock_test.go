@@ -131,7 +131,7 @@ func (m *MockMsgService) BroadcastProposal(blk *core.Proposal) error {
 	return args.Error(0)
 }
 
-func (m *MockMsgService) BroadcastNewView(qc *core.QuorumCert) error {
+func (m *MockMsgService) BroadcastQC(qc *core.QuorumCert) error {
 	args := m.Called(qc)
 	return args.Error(0)
 }
@@ -156,7 +156,7 @@ func (m *MockMsgService) RequestBlockByHeight(pubKey *core.PublicKey, height uin
 	return castCoreBlock(args.Get(0)), args.Error(1)
 }
 
-func (m *MockMsgService) SendNewView(pubKey *core.PublicKey, qc *core.QuorumCert) error {
+func (m *MockMsgService) SendQC(pubKey *core.PublicKey, qc *core.QuorumCert) error {
 	args := m.Called(pubKey, qc)
 	return args.Error(0)
 }
@@ -171,7 +171,7 @@ func (m *MockMsgService) SubscribeVote(buffer int) *emitter.Subscription {
 	return castSubscription(args.Get(0))
 }
 
-func (m *MockMsgService) SubscribeNewView(buffer int) *emitter.Subscription {
+func (m *MockMsgService) SubscribeQC(buffer int) *emitter.Subscription {
 	args := m.Called(buffer)
 	return castSubscription(args.Get(0))
 }

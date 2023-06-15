@@ -24,7 +24,7 @@ const (
 	_ MsgType = iota
 	MsgTypeProposal
 	MsgTypeVote
-	MsgTypeNewView
+	MsgTypeQC
 	MsgTypeTxList
 	MsgTypeRequest
 	MsgTypeResponse
@@ -38,7 +38,7 @@ type MsgService struct {
 
 	proposalEmitter *emitter.Emitter
 	voteEmitter     *emitter.Emitter
-	newViewEmitter  *emitter.Emitter
+	qcEmitter       *emitter.Emitter
 	txListEmitter   *emitter.Emitter
 
 	reqHandlers map[pb.Request_Type]ReqHandler
@@ -67,8 +67,8 @@ func (svc *MsgService) SubscribeVote(buffer int) *emitter.Subscription {
 	return svc.voteEmitter.Subscribe(buffer)
 }
 
-func (svc *MsgService) SubscribeNewView(buffer int) *emitter.Subscription {
-	return svc.newViewEmitter.Subscribe(buffer)
+func (svc *MsgService) SubscribeQC(buffer int) *emitter.Subscription {
+	return svc.qcEmitter.Subscribe(buffer)
 }
 
 func (svc *MsgService) SubscribeTxList(buffer int) *emitter.Subscription {
@@ -91,20 +91,20 @@ func (svc *MsgService) SendVote(pubKey *core.PublicKey, vote *core.Vote) error {
 	return svc.sendData(pubKey, MsgTypeVote, data)
 }
 
-func (svc *MsgService) SendNewView(pubKey *core.PublicKey, qc *core.QuorumCert) error {
+func (svc *MsgService) SendQC(pubKey *core.PublicKey, qc *core.QuorumCert) error {
 	data, err := qc.Marshal()
 	if err != nil {
 		return err
 	}
-	return svc.sendData(pubKey, MsgTypeNewView, data)
+	return svc.sendData(pubKey, MsgTypeQC, data)
 }
 
-func (svc *MsgService) BroadcastNewView(qc *core.QuorumCert) error {
+func (svc *MsgService) BroadcastQC(qc *core.QuorumCert) error {
 	data, err := qc.Marshal()
 	if err != nil {
 		return err
 	}
-	return svc.broadcastData(MsgTypeNewView, data)
+	return svc.broadcastData(MsgTypeQC, data)
 }
 
 func (svc *MsgService) BroadcastTxList(txList *core.TxList) error {
@@ -179,7 +179,7 @@ func (svc *MsgService) SetReqHandler(reqHandler ReqHandler) error {
 func (svc *MsgService) setEmitters() {
 	svc.proposalEmitter = emitter.New()
 	svc.voteEmitter = emitter.New()
-	svc.newViewEmitter = emitter.New()
+	svc.qcEmitter = emitter.New()
 	svc.txListEmitter = emitter.New()
 }
 
@@ -187,7 +187,7 @@ func (svc *MsgService) setMsgReceivers() {
 	svc.receivers = make(map[MsgType]msgReceiver)
 	svc.receivers[MsgTypeProposal] = svc.onReceiveProposal
 	svc.receivers[MsgTypeVote] = svc.onReceiveVote
-	svc.receivers[MsgTypeNewView] = svc.onReceiveNewView
+	svc.receivers[MsgTypeQC] = svc.onReceiveQC
 	svc.receivers[MsgTypeTxList] = svc.onReceiveTxList
 	svc.receivers[MsgTypeRequest] = svc.onReceiveRequest
 }
@@ -223,13 +223,13 @@ func (svc *MsgService) onReceiveVote(peer *Peer, data []byte) {
 	svc.voteEmitter.Emit(vote)
 }
 
-func (svc *MsgService) onReceiveNewView(peer *Peer, data []byte) {
+func (svc *MsgService) onReceiveQC(peer *Peer, data []byte) {
 	qc := core.NewQuorumCert()
 	if err := qc.Unmarshal(data); err != nil {
 		logger.I().Errorw("msg service receive qc failed", "error", err)
 		return
 	}
-	svc.newViewEmitter.Emit(qc)
+	svc.qcEmitter.Emit(qc)
 }
 
 func (svc *MsgService) onReceiveTxList(peer *Peer, data []byte) {

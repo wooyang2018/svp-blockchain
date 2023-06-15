@@ -121,7 +121,7 @@ func (rot *rotator) changeView() {
 	leaderIdx := rot.nextLeader()
 	rot.state.setLeaderIndex(leaderIdx)
 	leader := rot.resources.VldStore.GetWorker(leaderIdx)
-	err := rot.resources.MsgSvc.SendNewView(leader, rot.driver.posvState.GetQCHigh().qc)
+	err := rot.resources.MsgSvc.SendQC(leader, rot.driver.posvState.GetQCHigh().qc)
 	if err != nil {
 		logger.I().Errorw("send high qc to new leader failed", "error", err)
 	}
@@ -148,7 +148,7 @@ func (rot *rotator) newViewProposal() {
 	logger.I().Debugw("proposed new view block", "view", pro.View(), "qc", qcRefHeight(pro.Justify()))
 	vote := pro.proposal.Vote(rot.resources.Signer)
 	rot.driver.OnReceiveVote(newVote(vote, rot.state))
-	rot.driver.Update(pro)
+	rot.driver.Update(pro.Justify())
 }
 
 func (rot *rotator) nextLeader() int {

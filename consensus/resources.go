@@ -44,16 +44,16 @@ var _ Storage = (*storage.Storage)(nil)
 
 type MsgService interface {
 	BroadcastProposal(blk *core.Proposal) error
-	BroadcastNewView(qc *core.QuorumCert) error
+	BroadcastQC(qc *core.QuorumCert) error
 	SendVote(pubKey *core.PublicKey, vote *core.Vote) error
 	RequestBlock(pubKey *core.PublicKey, hash []byte) (*core.Block, error)
 	RequestBlockByHeight(pubKey *core.PublicKey, height uint64) (*core.Block, error)
 	RequestQC(pubKey *core.PublicKey, blkHash []byte) (*core.QuorumCert, error)
-	SendNewView(pubKey *core.PublicKey, qc *core.QuorumCert) error
+	SendQC(pubKey *core.PublicKey, qc *core.QuorumCert) error
 
 	SubscribeProposal(buffer int) *emitter.Subscription
 	SubscribeVote(buffer int) *emitter.Subscription
-	SubscribeNewView(buffer int) *emitter.Subscription
+	SubscribeQC(buffer int) *emitter.Subscription
 }
 
 var _ MsgService = (*p2p.MsgService)(nil)

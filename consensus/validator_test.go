@@ -106,9 +106,9 @@ func TestValidator_verifyProposalToVote(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			asrt := assert.New(t)
 			if tt.valid {
-				asrt.NoError(vld.verifyProposalToVote(tt.proposal))
+				asrt.NoError(vld.verifyBlockToVote(tt.proposal.Block()))
 			} else {
-				asrt.Error(vld.verifyProposalToVote(tt.proposal))
+				asrt.Error(vld.verifyBlockToVote(tt.proposal.Block()))
 			}
 		})
 	}

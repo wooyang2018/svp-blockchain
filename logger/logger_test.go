@@ -10,8 +10,7 @@ import (
 )
 
 func TestInit(t *testing.T) {
-	asrt := assert.New(t)
-	asrt.NotPanics(func() {
+	assert.NotPanics(t, func() {
 		I().Info("hello", "key", "value", "key1", 1)
 	})
 }

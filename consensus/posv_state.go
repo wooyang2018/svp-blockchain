@@ -97,8 +97,12 @@ func (s *posvState) addVote(vote *iVote) error {
 	if s.proposal == nil {
 		return fmt.Errorf("no proposal in progress")
 	}
-	if !s.proposal.Block().Equal(vote.Block()) {
+	if s.proposal.Block() != nil && !s.proposal.Block().Equal(vote.Block()) ||
+		s.proposal.Block() == nil && vote.Block() == nil {
 		return fmt.Errorf("not same block")
+	}
+	if s.proposal.View() != vote.View() {
+		return fmt.Errorf("not same view")
 	}
 	key := vote.Voter()
 	if _, found := s.votes[key]; found {
@@ -137,18 +141,10 @@ func (s *posvState) UpdateQCHigh(qc *iQC) {
 }
 
 // CanVote returns true if the posv instance can vote the given block
-func (s *posvState) CanVote(pro *iProposal) bool {
+func (s *posvState) CanVote(blk *iBlock) bool {
 	bVote := s.GetBVote()
-	if bVote.Equal(pro.Block().Parent()) {
+	if bVote.Equal(blk.Parent()) {
 		return true
 	}
 	return false
-}
-
-func (s *posvState) LockQCHigh(qc *iQC) {
-	if cmpQCPriority(qc, s.GetQCHigh()) == 1 {
-		logger.I().Debugw("posv updated high qc", "height", qc.Block().Height())
-		s.setQCHigh(qc)
-		s.setBLeaf(qc.Block())
-	}
 }

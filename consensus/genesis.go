@@ -154,7 +154,7 @@ func (gns *genesis) voteLoop() {
 }
 
 func (gns *genesis) newViewLoop() {
-	sub := gns.resources.MsgSvc.SubscribeNewView(10)
+	sub := gns.resources.MsgSvc.SubscribeQC(10)
 	defer sub.Unsubscribe()
 
 	for {
@@ -174,7 +174,7 @@ func (gns *genesis) onReceiveProposal(pro *core.Proposal) error {
 	if err := pro.Validate(gns.resources.VldStore); err != nil {
 		return err
 	}
-	if !pro.Block().IsGenesis() {
+	if pro.Block().Height() != 0 {
 		logger.I().Info("left behind, fetching genesis block...")
 		return gns.fetchGenesisBlockAndQC(pro.Proposer())
 	}
@@ -197,7 +197,7 @@ func (gns *genesis) fetchGenesisBlockAndQC(peer *core.PublicKey) error {
 	if err != nil {
 		return err
 	}
-	if !b0.IsGenesis() {
+	if b0.Height() != 0 {
 		return fmt.Errorf("not genesis block")
 	}
 	qc, err := gns.requestQC(peer, b0.Hash())
@@ -270,7 +270,7 @@ func (gns *genesis) broadcastQC() {
 			return
 		default:
 		}
-		if err := gns.resources.MsgSvc.BroadcastNewView(gns.getQ0()); err != nil {
+		if err := gns.resources.MsgSvc.BroadcastQC(gns.getQ0()); err != nil {
 			logger.I().Errorw("broadcast proposal failed", "error", err)
 		}
 		time.Sleep(time.Second)
@@ -302,7 +302,7 @@ func (gns *genesis) acceptQC(qc *core.QuorumCert) {
 	}
 	gns.setQ0(qc)
 	if !gns.isLeader(gns.resources.Signer.PublicKey()) {
-		gns.resources.MsgSvc.SendNewView(gns.getB0().Proposer(), qc)
+		gns.resources.MsgSvc.SendQC(gns.getB0().Proposer(), qc)
 	}
 	close(gns.done) // when qc is accepted, genesis creation is done
 }

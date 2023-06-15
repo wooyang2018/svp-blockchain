@@ -137,13 +137,16 @@ func newProposal(pro *core.Proposal, store blockStore) *iProposal {
 }
 
 func (p *iProposal) Justify() *iQC {
-	if p.proposal.Block().IsGenesis() { // genesis block doesn't have qc
-		return newQC(nil, p.store)
+	if p.proposal.QuorumCert() == nil {
+		return nil
 	}
 	return newQC(p.proposal.QuorumCert(), p.store)
 }
 
 func (p *iProposal) Block() *iBlock {
+	if p.proposal.Block() == nil {
+		return nil
+	}
 	return newBlock(p.proposal.Block(), p.store)
 }
 
@@ -155,12 +158,8 @@ func (p *iProposal) Hash() []byte {
 	return p.proposal.Hash()
 }
 
-func (p *iProposal) Proposer() string {
-	proposer := p.proposal.Proposer()
-	if proposer == nil {
-		return ""
-	}
-	return proposer.String()
+func (p *iProposal) Proposer() *core.PublicKey {
+	return p.proposal.Proposer()
 }
 
 func qcRefHeight(qc *iQC) (height uint64) {

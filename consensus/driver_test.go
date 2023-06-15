@@ -42,15 +42,15 @@ func TestDriver_CreateProposal(t *testing.T) {
 	}
 	d.resources.TxPool = txPool
 
-	storage := new(MockStorage)
-	storage.On("GetBlockHeight").Return(2) // driver should get bexec height from storage
-	storage.On("GetMerkleRoot").Return([]byte("merkle-root"))
-	d.resources.Storage = storage
+	strg := new(MockStorage)
+	strg.On("GetBlockHeight").Return(2) // driver should get bexec height from storage
+	strg.On("GetMerkleRoot").Return([]byte("merkle-root"))
+	d.resources.Storage = strg
 
 	pro := d.CreateProposal()
 
 	txPool.AssertExpectations(t)
-	storage.AssertExpectations(t)
+	strg.AssertExpectations(t)
 
 	asrt := assert.New(t)
 	asrt.NotNil(pro)
@@ -97,7 +97,7 @@ func TestDriver_VoteBlock(t *testing.T) {
 	msgSvc.On("SendVote", proposer.PublicKey(), pro.Vote(d.resources.Signer)).Return(nil)
 	d.resources.MsgSvc = msgSvc
 
-	d.VoteProposal(newProposal(pro, d.state))
+	d.VoteProposal(newProposal(pro, d.state), newBlock(pro.Block(), d.state))
 
 	txPool.AssertExpectations(t)
 	msgSvc.AssertExpectations(t)
@@ -108,7 +108,7 @@ func TestDriver_VoteBlock(t *testing.T) {
 	}
 	d.resources.TxPool = txPool
 
-	d.VoteProposal(newProposal(pro, d.state))
+	d.VoteProposal(newProposal(pro, d.state), newBlock(pro.Block(), d.state))
 
 	txPool.AssertExpectations(t)
 	msgSvc.AssertExpectations(t)

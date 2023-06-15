@@ -34,14 +34,15 @@ var _ json.Unmarshaler = (*Proposal)(nil)
 
 func NewProposal() *Proposal {
 	pro := &Proposal{data: new(pb.Proposal)}
-	pro.SetBlock(NewBlock())
 	return pro
 }
 
 // Sum returns sha3 sum of proposal
 func (pro *Proposal) Sum() []byte {
 	h := sha3.New256()
-	h.Write(pro.data.Block.Hash)
+	if pro.data.Block != nil {
+		h.Write(pro.data.Block.Hash)
+	}
 	if pro.data.QuorumCert != nil {
 		h.Write(pro.data.QuorumCert.BlockHash) // qc reference block hash
 	}
@@ -54,10 +55,12 @@ func (pro *Proposal) Validate(vs ValidatorStore) error {
 	if pro.data == nil {
 		return ErrNilProposal
 	}
-	if err := pro.block.Validate(vs); err != nil {
-		return err
+	if pro.block != nil {
+		if err := pro.block.Validate(vs); err != nil {
+			return err
+		}
 	}
-	if !pro.block.IsGenesis() { // skip quorum cert validation for genesis block
+	if pro.quorumCert != nil { // skip quorum cert validation for genesis block
 		if err := pro.quorumCert.Validate(vs); err != nil {
 			return err
 		}
@@ -80,14 +83,16 @@ func (pro *Proposal) Validate(vs ValidatorStore) error {
 
 // Vote creates a vote for proposal
 func (pro *Proposal) Vote(signer Signer) *Vote {
-	vote := NewVote()
-	vote.setData(&pb.Vote{
-		BlockHash: pro.block.Hash(),
-		Quota:     1,
-		View:      pro.data.View,
-		Signature: signer.Sign(pro.block.Hash()).data,
-	})
-	return vote
+	vote := &pb.Vote{Quota: 1, View: pro.data.View}
+	if pro.block != nil {
+		vote.BlockHash = pro.block.Hash()
+	} else {
+		vote.BlockHash = pro.quorumCert.BlockHash()
+	}
+	vote.Signature = signer.Sign(vote.BlockHash).data
+	res := NewVote()
+	res.setData(vote)
+	return res
 }
 
 func (pro *Proposal) setData(data *pb.Proposal) error {
@@ -98,15 +103,17 @@ func (pro *Proposal) setData(data *pb.Proposal) error {
 	}
 	pro.signature = signature
 
-	block := NewBlock()
-	if err = block.setData(pro.data.Block); err != nil {
-		return err
+	if pro.data.Block != nil {
+		block := NewBlock()
+		if err = block.setData(pro.data.Block); err != nil {
+			return err
+		}
+		pro.block = block
 	}
-	pro.block = block
 
-	if !pro.block.IsGenesis() { // every block contains qc except for genesis
+	if pro.data.QuorumCert != nil { // every block contains qc except for genesis
 		pro.quorumCert = NewQuorumCert()
-		if err := pro.quorumCert.setData(data.QuorumCert); err != nil {
+		if err := pro.quorumCert.setData(pro.data.QuorumCert); err != nil {
 			return err
 		}
 	}

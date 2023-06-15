@@ -126,7 +126,6 @@ func (blk *Block) MerkleRoot() []byte     { return blk.data.MerkleRoot }
 func (blk *Block) Timestamp() int64       { return blk.data.Timestamp }
 func (blk *Block) Transactions() [][]byte { return blk.data.Transactions }
 func (blk *Block) Proposer() *PublicKey   { return blk.signature.pubKey }
-func (blk *Block) IsGenesis() bool        { return blk.Height() == 0 }
 
 // Marshal encodes block as bytes
 func (blk *Block) Marshal() ([]byte, error) {

@@ -131,7 +131,7 @@ func TestMsgService_SendNewView(t *testing.T) {
 
 	svc, raws, peers := setupMsgServiceWithLoopBackPeers()
 
-	sub := svc.SubscribeNewView(5)
+	sub := svc.SubscribeQC(5)
 	var recvQC *core.QuorumCert
 	go func() {
 		for e := range sub.Events() {
@@ -140,7 +140,7 @@ func TestMsgService_SendNewView(t *testing.T) {
 	}()
 
 	_, qc, _ := newTestProposal(core.GenerateKey(nil))
-	err := svc.SendNewView(peers[0].PublicKey(), qc)
+	err := svc.SendQC(peers[0].PublicKey(), qc)
 
 	if !asrt.NoError(err) {
 		return
@@ -150,7 +150,7 @@ func TestMsgService_SendNewView(t *testing.T) {
 
 	asrt.NotNil(raws[0])
 	asrt.Nil(raws[1])
-	asrt.EqualValues(MsgTypeNewView, raws[0][0])
+	asrt.EqualValues(MsgTypeQC, raws[0][0])
 
 	if asrt.NotNil(recvQC) {
 		asrt.Equal(qc.BlockHash(), recvQC.BlockHash())

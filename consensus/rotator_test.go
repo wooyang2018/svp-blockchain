@@ -52,7 +52,7 @@ func TestRotator_changeView(t *testing.T) {
 	rot.state.setLeaderIndex(1)
 
 	msgSvc := new(MockMsgService)
-	msgSvc.On("SendNewView", rot.resources.VldStore.GetWorker(0), b0.QuorumCert()).Return(nil)
+	msgSvc.On("SendQC", rot.resources.VldStore.GetWorker(0), b0.QuorumCert()).Return(nil)
 	rot.resources.MsgSvc = msgSvc
 
 	rot.changeView()
