@@ -237,7 +237,7 @@ func (pool *TxPool) getTxsToExecute(hashes [][]byte) ([]*core.Transaction, [][]b
 				// tx not found in local node
 				// all txs from accepted blocks should be sync
 				logger.I().Fatalw("missing tx to execute",
-					"tx", base64.StdEncoding.EncodeToString(tx.Hash()))
+					"tx", base64.StdEncoding.EncodeToString(hash))
 			}
 		}
 	}

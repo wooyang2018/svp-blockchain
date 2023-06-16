@@ -75,7 +75,7 @@ func TestDriver_VoteBlock(t *testing.T) {
 		pro2.Vote(d.resources.Signer),
 		pro2.Vote(core.GenerateKey(nil)),
 	}
-	qc2 := d.CreateQC(votes)
+	qc2 := d.CreateQuorumCert(votes)
 
 	proposer := core.GenerateKey(nil)
 	blk3 := newTestBlock(4, 3, nil, nil, d.resources.Signer)
@@ -184,7 +184,7 @@ func TestDriver_CreateQC(t *testing.T) {
 		pro.Vote(d.resources.Signer),
 		pro.Vote(core.GenerateKey(nil)),
 	}
-	qc := d.CreateQC(votes)
+	qc := d.CreateQuorumCert(votes)
 	assert.Equal(t, pro.Block(), d.state.getBlock(qc.BlockHash()), "should get qc reference block")
 }
 

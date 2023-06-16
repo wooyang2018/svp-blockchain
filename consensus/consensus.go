@@ -148,9 +148,8 @@ func (cons *Consensus) getStatus() (status Status) {
 	status.QCPoolSize = cons.state.getQCPoolSize()
 	status.LeaderIndex = cons.state.getLeaderIndex()
 	status.ViewStart = cons.rotator.getViewStart()
-	status.ViewChange = cons.rotator.getViewChange()
+	status.ViewChange = cons.driver.getViewChange()
 
-	status.BVote = cons.driver.innerState.GetBVote().Height()
 	status.BLeaf = cons.driver.innerState.GetBLeaf().Height()
 	status.BExec = cons.driver.innerState.GetBExec().Height()
 	status.View = cons.driver.innerState.GetView()

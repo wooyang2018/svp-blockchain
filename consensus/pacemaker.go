@@ -4,6 +4,8 @@
 package consensus
 
 import (
+	"time"
+
 	"github.com/wooyang2018/posv-blockchain/logger"
 )
 
@@ -39,15 +41,15 @@ func (pm *pacemaker) stop() {
 }
 
 func (pm *pacemaker) run() {
-	subQC := pm.driver.SubscribeNewQCHigh()
-	defer subQC.Unsubscribe()
-
+	qc := pm.driver.SubscribeNewQC()
+	defer qc.Unsubscribe()
+	time.Sleep(time.Second)
 	pm.newProposal()
 	for {
 		select {
 		case <-pm.stopCh:
 			return
-		case <-subQC.Events():
+		case <-qc.Events():
 			pm.newProposal()
 		}
 	}
@@ -62,7 +64,7 @@ func (pm *pacemaker) newProposal() {
 	}
 
 	pro := pm.driver.OnPropose()
-	logger.I().Debugw("proposed block", "view", pro.View(),
+	logger.I().Debugw("proposed proposal", "view", pro.View(),
 		"height", pro.Block().Height(), "qc", pm.driver.qcRefHeight(pro.QuorumCert()), "txs", len(pro.Block().Transactions()))
 	vote := pro.Vote(pm.resources.Signer)
 	pm.driver.OnReceiveVote(vote)

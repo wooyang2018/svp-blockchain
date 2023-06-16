@@ -13,7 +13,7 @@ import (
 	"github.com/wooyang2018/posv-blockchain/core"
 )
 
-func TestTxExecuter(t *testing.T) {
+func TestTxExecutor(t *testing.T) {
 	asrt := assert.New(t)
 
 	priv := core.GenerateKey(nil)

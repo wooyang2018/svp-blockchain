@@ -109,6 +109,12 @@ func (vld *validator) onReceiveProposal(pro *core.Proposal) error {
 	blk := pro.Block()
 	if blk == nil { //received new view proposal
 		blk = vld.state.getBlock(pro.QuorumCert().BlockHash())
+		if blk == nil {
+			blk, _ = vld.requestBlock(pro.Proposer(), pro.QuorumCert().BlockHash())
+			if blk == nil {
+				panic("received proposal with nil block")
+			}
+		}
 	}
 
 	pidx := vld.resources.VldStore.GetWorkerIndex(pro.Proposer())
@@ -156,18 +162,18 @@ func (vld *validator) syncMissingCommittedBlocks(blk *core.Block) error {
 }
 
 func (vld *validator) syncForwardCommittedBlocks(peer *core.PublicKey, start, end uint64) error {
-	var pro *core.Block
+	var blk *core.Block
 	for height := start; height < end; height++ { // end is exclusive
 		var err error
-		pro, err = vld.requestBlockByHeight(peer, height)
+		blk, err = vld.requestBlockByHeight(peer, height)
 		if err != nil {
 			return err
 		}
-		parent := vld.state.getBlock(pro.ParentHash())
+		parent := vld.state.getBlock(blk.ParentHash())
 		if parent == nil {
 			return fmt.Errorf("cannot connect chain, parent not found")
 		}
-		err = vld.verifyParentAndCommitRecursive(peer, pro, parent)
+		err = vld.verifyParentAndCommitRecursive(peer, blk, parent)
 		if err != nil {
 			return err
 		}
@@ -186,6 +192,12 @@ func (vld *validator) syncMissingParentRecursive(peer *core.PublicKey, blk *core
 	}
 	if blk.Height() != parent.Height()+1 {
 		return nil, fmt.Errorf("invalid block height %d, parent %d", blk.Height(), parent.Height())
+	}
+	vld.state.setBlock(parent)
+	if ExecuteTxFlag { // must sync transactions before updating block to posv
+		if err := vld.resources.TxPool.SyncTxs(peer, parent.Transactions()); err != nil {
+			return nil, err
+		}
 	}
 	if _, err := vld.syncMissingParentRecursive(peer, parent); err != nil {
 		return nil, err
@@ -251,17 +263,15 @@ func (vld *validator) updatePoSVAndVote(peer *core.PublicKey, pro *core.Proposal
 		pidx := vld.resources.VldStore.GetWorkerIndex(pro.Proposer())
 		return fmt.Errorf("proposer %d is not leader", pidx)
 	}
-
 	if !newView {
 		if err := vld.verifyBlockToVote(blk); err != nil {
 			return err
 		}
-		if !vld.driver.innerState.CanVote(blk) {
-			return fmt.Errorf("can not vote for block height %d", blk.Height())
-		}
+	}
+	if !vld.driver.CanVote(pro) {
+		return fmt.Errorf("can not vote proposal height %d", blk.Height())
 	}
 	vld.driver.VoteProposal(pro, blk)
-	vld.driver.innerState.setBVote(blk)
 
 	return nil
 }
@@ -269,10 +279,10 @@ func (vld *validator) updatePoSVAndVote(peer *core.PublicKey, pro *core.Proposal
 func (vld *validator) verifyBlockToVote(blk *core.Block) error {
 	// on node restart, not committed any blocks yet, don't check merkle root
 	if vld.state.getCommittedHeight() != 0 {
-		if err := vld.verifyMerkleRoot(blk); err != nil {
+		if err := vld.verifyExecHeight(blk); err != nil {
 			return err
 		}
-		if err := vld.verifyExecHeight(blk); err != nil {
+		if err := vld.verifyMerkleRoot(blk); err != nil {
 			return err
 		}
 	}
@@ -292,7 +302,7 @@ func (vld *validator) verifyMerkleRoot(blk *core.Block) error {
 func (vld *validator) verifyExecHeight(blk *core.Block) error {
 	bh := vld.resources.Storage.GetBlockHeight()
 	if bh != blk.ExecHeight() {
-		return fmt.Errorf("invalid exec height")
+		return fmt.Errorf("invalid exec height, expected %d, got %d", bh, blk.ExecHeight())
 	}
 	return nil
 }

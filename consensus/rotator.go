@@ -22,8 +22,7 @@ type rotator struct {
 	viewTimer          *time.Timer
 	leaderTimeoutCount int
 
-	viewStart  int64 // start timestamp of current view
-	viewChange int32 // -1:failed ; 0:success ; 1:ongoing
+	viewStart int64 // start timestamp of current view
 
 	stopCh chan struct{}
 }
@@ -97,7 +96,7 @@ func (rot *rotator) onLeaderTimeout() {
 	rot.drainStopTimer(rot.leaderTimer)
 	if rot.leaderTimeoutCount > rot.state.getFaultyCount() {
 		rot.leaderTimer.Stop()
-		rot.setViewChange(-1) //failed to change view when leader timeout
+		rot.driver.setViewChange(-1) //failed to change view when leader timeout
 	} else {
 		rot.leaderTimer.Reset(rot.config.LeaderTimeout)
 	}
@@ -110,7 +109,7 @@ func (rot *rotator) onViewTimeout() {
 }
 
 func (rot *rotator) changeView() {
-	rot.setViewChange(1)
+	rot.driver.setViewChange(1)
 	t := time.NewTimer(rot.config.Delta)
 	select {
 	case <-rot.stopCh:
@@ -124,13 +123,13 @@ func (rot *rotator) changeView() {
 	leader := rot.resources.VldStore.GetWorker(leaderIdx)
 	err := rot.resources.MsgSvc.SendQC(leader, rot.driver.innerState.GetQCHigh())
 	if err != nil {
-		logger.I().Errorw("send high qc to new leader failed", "error", err)
+		logger.I().Errorw("send high qc to new leader failed", "idx", leaderIdx, "error", err)
 	}
 	rot.driver.innerState.setView(rot.driver.innerState.GetView() + 1)
 	logger.I().Infow("view changed", "view", rot.driver.innerState.GetView(),
 		"leader", leaderIdx, "qc", rot.driver.qcRefHeight(rot.driver.innerState.GetQCHigh()))
 
-	if !rot.state.isThisNodeLeader() {
+	if rot.state.isThisNodeLeader() {
 		t := time.NewTimer(rot.config.Delta * 2)
 		select {
 		case <-rot.stopCh:
@@ -146,7 +145,7 @@ func (rot *rotator) newViewProposal() {
 	defer rot.driver.Unlock()
 
 	pro := rot.driver.NewViewPropose()
-	logger.I().Debugw("proposed new view block", "view", pro.View(), "qc", rot.driver.qcRefHeight(pro.QuorumCert()))
+	logger.I().Debugw("proposed new view proposal", "view", pro.View(), "qc", rot.driver.qcRefHeight(pro.QuorumCert()))
 	vote := pro.Vote(rot.resources.Signer)
 	rot.driver.OnReceiveVote(vote)
 	rot.driver.UpdateQCHigh(pro.QuorumCert())
@@ -185,13 +184,13 @@ func (rot *rotator) onNewQCHigh(qc *core.QuorumCert) {
 
 func (rot *rotator) isNewViewApproval(proposer int) bool {
 	leaderIdx := rot.state.getLeaderIndex()
-	pending := rot.getViewChange()
+	pending := rot.driver.getViewChange()
 	return (pending == 0 && proposer != leaderIdx) || // node first run or out of sync
 		(pending == 1 && proposer == leaderIdx) // expecting leader
 }
 
 func (rot *rotator) approveViewLeader(proposer int) {
-	rot.setViewChange(0)
+	rot.driver.setViewChange(0)
 	rot.state.setLeaderIndex(proposer)
 	rot.setViewStart()
 	logger.I().Infow("approved leader", "leader", rot.state.getLeaderIndex())
@@ -204,12 +203,4 @@ func (rot *rotator) setViewStart() {
 
 func (rot *rotator) getViewStart() int64 {
 	return atomic.LoadInt64(&rot.viewStart)
-}
-
-func (rot *rotator) setViewChange(val int32) {
-	atomic.StoreInt32(&rot.viewChange, val)
-}
-
-func (rot *rotator) getViewChange() int32 {
-	return atomic.LoadInt32(&rot.viewChange)
 }

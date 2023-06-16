@@ -5,6 +5,7 @@ package consensus
 
 import (
 	"bytes"
+	"sync/atomic"
 	"time"
 
 	"github.com/wooyang2018/posv-blockchain/core"
@@ -19,7 +20,9 @@ type driver struct {
 	state         *state
 	innerState    *innerState
 	tester        *tester
+	viewChange    int32 // -1:failed ; 0:success ; 1:ongoing
 	qcHighEmitter *emitter.Emitter
+	qcEmitter     *emitter.Emitter
 }
 
 func newDriver(resources *Resources, config Config, state *state) *driver {
@@ -28,6 +31,7 @@ func newDriver(resources *Resources, config Config, state *state) *driver {
 		config:        config,
 		state:         state,
 		qcHighEmitter: emitter.New(),
+		qcEmitter:     emitter.New(),
 	}
 }
 
@@ -56,7 +60,7 @@ func (d *driver) CreateProposal() *core.Proposal {
 	return pro
 }
 
-func (d *driver) CreateQC(iVotes []*core.Vote) *core.QuorumCert {
+func (d *driver) CreateQuorumCert(iVotes []*core.Vote) *core.QuorumCert {
 	votes := make([]*core.Vote, len(iVotes))
 	for i, v := range iVotes {
 		votes[i] = v
@@ -75,7 +79,7 @@ func (d *driver) BroadcastProposal(pro *core.Proposal) {
 func (d *driver) VoteProposal(pro *core.Proposal, blk *core.Block) {
 	vote := pro.Vote(d.resources.Signer)
 	if !PreserveTxFlag {
-		d.resources.TxPool.SetTxsPending(pro.Block().Transactions())
+		d.resources.TxPool.SetTxsPending(blk.Transactions())
 	}
 	proposer := d.resources.VldStore.GetWorkerIndex(pro.Proposer())
 	if proposer != d.state.getLeaderIndex() {
@@ -197,7 +201,9 @@ func (d *driver) OnReceiveVote(vote *core.Vote) error {
 	if d.innerState.GetVoteCount() >= d.resources.VldStore.MajorityValidatorCount() {
 		votes := d.innerState.GetVotes()
 		d.innerState.endProposal()
-		d.UpdateQCHigh(d.CreateQC(votes))
+		qc := d.CreateQuorumCert(votes)
+		d.UpdateQCHigh(qc)
+		d.qcEmitter.Emit(qc)
 	}
 	return nil
 }
@@ -281,7 +287,7 @@ func (d *driver) UpdateQCHigh(qc *core.QuorumCert) {
 		return
 	}
 	blk := d.state.getBlock(qc.BlockHash())
-	logger.I().Debugw("posv updated high qc", "height", blk.Height())
+	logger.I().Debugw("posv updated high qc", "height", d.qcRefHeight(qc))
 	d.innerState.setQCHigh(qc)
 	d.innerState.setBLeaf(blk)
 	d.CommitRecursive(blk)
@@ -290,4 +296,21 @@ func (d *driver) UpdateQCHigh(qc *core.QuorumCert) {
 
 func (d *driver) SubscribeNewQCHigh() *emitter.Subscription {
 	return d.qcHighEmitter.Subscribe(10)
+}
+
+func (d *driver) SubscribeNewQC() *emitter.Subscription {
+	return d.qcEmitter.Subscribe(1)
+}
+
+// CanVote returns true if the posv instance can vote the given block
+func (d *driver) CanVote(pro *core.Proposal) bool {
+	return d.cmpQCPriority(pro.QuorumCert(), d.innerState.GetQCHigh()) >= 0
+}
+
+func (d *driver) setViewChange(val int32) {
+	atomic.StoreInt32(&d.viewChange, val)
+}
+
+func (d *driver) getViewChange() int32 {
+	return atomic.LoadInt32(&d.viewChange)
 }

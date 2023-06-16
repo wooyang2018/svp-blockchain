@@ -13,7 +13,6 @@ import (
 )
 
 type innerState struct {
-	bVote  atomic.Value
 	bExec  atomic.Value
 	qcHigh atomic.Value
 	bLeaf  atomic.Value
@@ -26,7 +25,6 @@ type innerState struct {
 
 func newInnerState(b0 *core.Block, q0 *core.QuorumCert) *innerState {
 	s := new(innerState)
-	s.setBVote(b0)
 	s.setBLeaf(b0)
 	s.setBExec(b0)
 	s.setQCHigh(q0)
@@ -34,15 +32,10 @@ func newInnerState(b0 *core.Block, q0 *core.QuorumCert) *innerState {
 	return s
 }
 
-func (s *innerState) setBVote(b *core.Block)        { s.bVote.Store(b) }
 func (s *innerState) setBExec(b *core.Block)        { s.bExec.Store(b) }
 func (s *innerState) setBLeaf(b *core.Block)        { s.bLeaf.Store(b) }
 func (s *innerState) setQCHigh(qc *core.QuorumCert) { s.qcHigh.Store(qc) }
 func (s *innerState) setView(num uint32)            { atomic.StoreUint32(&s.view, num) }
-
-func (s *innerState) GetBVote() *core.Block {
-	return s.bVote.Load().(*core.Block)
-}
 
 func (s *innerState) GetBExec() *core.Block {
 	return s.bExec.Load().(*core.Block)
@@ -121,13 +114,4 @@ func (s *innerState) GetVotes() []*core.Vote {
 		votes = append(votes, v)
 	}
 	return votes
-}
-
-// CanVote returns true if the posv instance can vote the given block
-func (s *innerState) CanVote(blk *core.Block) bool {
-	bVote := s.GetBVote()
-	if bytes.Equal(bVote.Hash(), blk.ParentHash()) {
-		return true
-	}
-	return false
 }
