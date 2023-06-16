@@ -4,31 +4,28 @@
 package consensus
 
 import (
+	"bytes"
 	"fmt"
 	"sync"
 	"sync/atomic"
 
-	"github.com/wooyang2018/posv-blockchain/emitter"
-	"github.com/wooyang2018/posv-blockchain/logger"
+	"github.com/wooyang2018/posv-blockchain/core"
 )
 
-type posvState struct {
+type InnerState struct {
 	bVote  atomic.Value
 	bExec  atomic.Value
 	qcHigh atomic.Value
 	bLeaf  atomic.Value
 	view   uint32
 
-	proposal *iProposal
-	votes    map[string]*iVote
+	proposal *core.Proposal
+	votes    map[string]*core.Vote
 	mtx      sync.RWMutex
-
-	qcHighEmitter *emitter.Emitter
 }
 
-func newInnerState(b0 *iBlock, q0 *iQC) *posvState {
-	s := new(posvState)
-	s.qcHighEmitter = emitter.New()
+func newInnerState(b0 *core.Block, q0 *core.QuorumCert) *InnerState {
+	s := new(InnerState)
 	s.setBVote(b0)
 	s.setBLeaf(b0)
 	s.setBExec(b0)
@@ -37,52 +34,48 @@ func newInnerState(b0 *iBlock, q0 *iQC) *posvState {
 	return s
 }
 
-func (s *posvState) setBVote(b *iBlock) { s.bVote.Store(b) }
-func (s *posvState) setBExec(b *iBlock) { s.bExec.Store(b) }
-func (s *posvState) setBLeaf(b *iBlock) { s.bLeaf.Store(b) }
-func (s *posvState) setQCHigh(qc *iQC)  { s.qcHigh.Store(qc) }
-func (s *posvState) setView(num uint32) { atomic.StoreUint32(&s.view, num) }
+func (s *InnerState) setBVote(b *core.Block)        { s.bVote.Store(b) }
+func (s *InnerState) setBExec(b *core.Block)        { s.bExec.Store(b) }
+func (s *InnerState) setBLeaf(b *core.Block)        { s.bLeaf.Store(b) }
+func (s *InnerState) setQCHigh(qc *core.QuorumCert) { s.qcHigh.Store(qc) }
+func (s *InnerState) setView(num uint32)            { atomic.StoreUint32(&s.view, num) }
 
-func (s *posvState) SubscribeNewQCHigh() *emitter.Subscription {
-	return s.qcHighEmitter.Subscribe(10)
+func (s *InnerState) GetBVote() *core.Block {
+	return s.bVote.Load().(*core.Block)
 }
 
-func (s *posvState) GetBVote() *iBlock {
-	return s.bVote.Load().(*iBlock)
+func (s *InnerState) GetBExec() *core.Block {
+	return s.bExec.Load().(*core.Block)
 }
 
-func (s *posvState) GetBExec() *iBlock {
-	return s.bExec.Load().(*iBlock)
+func (s *InnerState) GetBLeaf() *core.Block {
+	return s.bLeaf.Load().(*core.Block)
 }
 
-func (s *posvState) GetBLeaf() *iBlock {
-	return s.bLeaf.Load().(*iBlock)
+func (s *InnerState) GetQCHigh() *core.QuorumCert {
+	return s.qcHigh.Load().(*core.QuorumCert)
 }
 
-func (s *posvState) GetQCHigh() *iQC {
-	return s.qcHigh.Load().(*iQC)
-}
-
-func (s *posvState) GetView() uint32 {
+func (s *InnerState) GetView() uint32 {
 	return atomic.LoadUint32(&s.view)
 }
 
-func (s *posvState) IsProposing() bool {
+func (s *InnerState) IsProposing() bool {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 
 	return s.proposal != nil
 }
 
-func (s *posvState) startProposal(b *iProposal) {
+func (s *InnerState) startProposal(b *core.Proposal) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
 	s.proposal = b
-	s.votes = make(map[string]*iVote)
+	s.votes = make(map[string]*core.Vote)
 }
 
-func (s *posvState) endProposal() {
+func (s *InnerState) endProposal() {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
@@ -90,21 +83,21 @@ func (s *posvState) endProposal() {
 	s.votes = nil
 }
 
-func (s *posvState) addVote(vote *iVote) error {
+func (s *InnerState) addVote(vote *core.Vote) error {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
 	if s.proposal == nil {
 		return fmt.Errorf("no proposal in progress")
 	}
-	if s.proposal.Block() != nil && !s.proposal.Block().Equal(vote.Block()) ||
-		s.proposal.Block() == nil && vote.Block() == nil {
+	if s.proposal.Block() != nil && !bytes.Equal(s.proposal.Block().Hash(), vote.BlockHash()) ||
+		s.proposal.Block() == nil && vote.BlockHash() == nil {
 		return fmt.Errorf("not same block")
 	}
 	if s.proposal.View() != vote.View() {
 		return fmt.Errorf("not same view")
 	}
-	key := vote.Voter()
+	key := vote.Voter().String()
 	if _, found := s.votes[key]; found {
 		return fmt.Errorf("duplicate vote")
 	}
@@ -112,38 +105,28 @@ func (s *posvState) addVote(vote *iVote) error {
 	return nil
 }
 
-func (s *posvState) GetVoteCount() int {
+func (s *InnerState) GetVoteCount() int {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 
 	return len(s.votes)
 }
 
-func (s *posvState) GetVotes() []*iVote {
+func (s *InnerState) GetVotes() []*core.Vote {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 
-	votes := make([]*iVote, 0, len(s.votes))
+	votes := make([]*core.Vote, 0, len(s.votes))
 	for _, v := range s.votes {
 		votes = append(votes, v)
 	}
 	return votes
 }
 
-// UpdateQCHigh replaces qcHigh if the block of given qc is higher than the qcHigh block
-func (s *posvState) UpdateQCHigh(qc *iQC) {
-	if cmpQCPriority(qc, s.GetQCHigh()) == 1 {
-		logger.I().Debugw("posv updated high qc", "height", qc.Block().Height())
-		s.setQCHigh(qc)
-		s.setBLeaf(qc.Block())
-		s.qcHighEmitter.Emit(qc)
-	}
-}
-
 // CanVote returns true if the posv instance can vote the given block
-func (s *posvState) CanVote(blk *iBlock) bool {
+func (s *InnerState) CanVote(blk *core.Block) bool {
 	bVote := s.GetBVote()
-	if bVote.Equal(blk.Parent()) {
+	if bytes.Equal(bVote.Hash(), blk.ParentHash()) {
 		return true
 	}
 	return false

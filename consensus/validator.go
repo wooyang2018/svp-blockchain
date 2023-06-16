@@ -106,19 +106,18 @@ func (vld *validator) onReceiveProposal(pro *core.Proposal) error {
 		return err
 	}
 
-	ipro := newProposal(pro, vld.state)
-	iblk := ipro.Block()
-	if iblk == nil { //received new view proposal
-		iblk = newBlock(ipro.Justify().Block().block, vld.state)
+	blk := pro.Block()
+	if blk == nil { //received new view proposal
+		blk = vld.state.getBlock(pro.QuorumCert().BlockHash())
 	}
 
 	pidx := vld.resources.VldStore.GetWorkerIndex(pro.Proposer())
-	logger.I().Debugw("received proposal", "view", pro.View(), "proposer", pidx, "height", iblk.Height(), "txs", len(iblk.Transactions()))
-	if _, err := vld.getParentBlock(iblk.block); err != nil {
+	logger.I().Debugw("received proposal", "view", pro.View(), "proposer", pidx, "height", blk.Height(), "txs", len(blk.Transactions()))
+	if _, err := vld.getParentBlock(blk); err != nil {
 		return err
 	}
 
-	return vld.updatePoSVAndVote(pro.Proposer(), ipro, iblk, ipro.Block() == nil)
+	return vld.updatePoSVAndVote(pro.Proposer(), pro, blk, pro.Block() == nil)
 }
 
 func (vld *validator) getParentBlock(block *core.Block) (*core.Block, error) {
@@ -231,38 +230,38 @@ func (vld *validator) verifyParentAndCommitRecursive(peer *core.PublicKey, blk, 
 
 	vld.state.mtxUpdate.Lock()
 	defer vld.state.mtxUpdate.Unlock()
-	vld.driver.CommitRecursive(newBlock(blk, vld.state))
+	vld.driver.CommitRecursive(blk)
 
 	return nil
 }
 
-func (vld *validator) updatePoSVAndVote(peer *core.PublicKey, pro *iProposal, blk *iBlock, newView bool) error {
+func (vld *validator) updatePoSVAndVote(peer *core.PublicKey, pro *core.Proposal, blk *core.Block, newView bool) error {
 	if ExecuteTxFlag { // must sync transactions before updating block to posv
 		if err := vld.resources.TxPool.SyncTxs(peer, blk.Transactions()); err != nil {
 			return err
 		}
 	}
-	vld.state.setBlock(blk.block)
+	vld.state.setBlock(blk)
 
 	vld.state.mtxUpdate.Lock()
 	defer vld.state.mtxUpdate.Unlock()
 
-	vld.driver.Update(pro.Justify())
+	vld.driver.Update(pro.QuorumCert())
 	if !vld.state.isLeader(pro.Proposer()) {
 		pidx := vld.resources.VldStore.GetWorkerIndex(pro.Proposer())
 		return fmt.Errorf("proposer %d is not leader", pidx)
 	}
 
 	if !newView {
-		if err := vld.verifyBlockToVote(blk.block); err != nil {
+		if err := vld.verifyBlockToVote(blk); err != nil {
 			return err
 		}
-		if vld.driver.posvState.CanVote(blk) {
+		if vld.driver.innerState.CanVote(blk) {
 			return fmt.Errorf("can not vote for block height %d", blk.Height())
 		}
 	}
 	vld.driver.VoteProposal(pro, blk)
-	vld.driver.posvState.setBVote(blk)
+	vld.driver.innerState.setBVote(blk)
 
 	return nil
 }
@@ -320,14 +319,14 @@ func (vld *validator) onReceiveVote(vote *core.Vote) error {
 	if err := vote.Validate(vld.resources.VldStore); err != nil {
 		return err
 	}
-	return vld.driver.OnReceiveVote(newVote(vote, vld.state))
+	return vld.driver.OnReceiveVote(vote)
 }
 
 func (vld *validator) onReceiveQC(qc *core.QuorumCert) error {
 	if err := qc.Validate(vld.resources.VldStore); err != nil {
 		return err
 	}
-	vld.driver.posvState.UpdateQCHigh(newQC(qc, vld.state))
+	vld.driver.UpdateQCHigh(qc)
 	return nil
 }
 

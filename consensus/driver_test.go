@@ -4,6 +4,7 @@
 package consensus
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,21 +18,20 @@ func setupTestDriver() *driver {
 		Signer: core.GenerateKey(nil),
 	}
 	return &driver{
-		resources: resources,
-		config:    DefaultConfig,
-		state:     newState(resources),
-		posvState: new(posvState),
+		resources:  resources,
+		config:     DefaultConfig,
+		state:      newState(resources),
+		innerState: new(InnerState),
 	}
 }
 
 func TestDriver_CreateProposal(t *testing.T) {
 	d := setupTestDriver()
-	pblk := core.NewBlock().SetHeight(4).Sign(d.resources.Signer)
-	parent := newBlock(pblk, d.state)
-	d.state.setBlock(parent.block)
-	d.posvState.setBLeaf(parent)
-	qc := newQC(core.NewQuorumCert(), d.state)
-	d.posvState.setQCHigh(qc)
+	parent := core.NewBlock().SetHeight(4).Sign(d.resources.Signer)
+	d.state.setBlock(parent)
+	d.innerState.setBLeaf(parent)
+	qc := core.NewQuorumCert()
+	d.innerState.setQCHigh(qc)
 
 	txsInQ := [][]byte{[]byte("tx1"), []byte("tx2")}
 	txPool := new(MockTxPool)
@@ -54,16 +54,16 @@ func TestDriver_CreateProposal(t *testing.T) {
 
 	asrt := assert.New(t)
 	asrt.NotNil(pro)
-	asrt.True(parent.Equal(pro.Block().Parent()), "should link to parent")
-	asrt.Equal(qc, pro.Justify(), "should add qc")
+	asrt.True(bytes.Equal(parent.Hash(), pro.Block().ParentHash()), "should link to parent")
+	asrt.Equal(qc, pro.QuorumCert(), "should add qc")
 	asrt.EqualValues(5, pro.Block().Height())
 
-	blk := pro.proposal.Block()
+	blk := pro.Block()
 	asrt.Equal(txsInQ, blk.Transactions())
 	asrt.EqualValues(2, blk.ExecHeight())
 	asrt.Equal([]byte("merkle-root"), blk.MerkleRoot())
 	asrt.NotEmpty(blk.Timestamp(), "should add timestamp")
-	asrt.NotNil(d.state.getBlock(blk.Hash()), "should store leaf block in posvState")
+	asrt.NotNil(d.state.getBlock(blk.Hash()), "should store leaf block in InnerState")
 }
 
 func TestDriver_VoteBlock(t *testing.T) {
@@ -71,9 +71,9 @@ func TestDriver_VoteBlock(t *testing.T) {
 	blk2 := newTestBlock(3, 2, nil, nil, d.resources.Signer)
 	pro2 := core.NewProposal().SetBlock(blk2).Sign(d.resources.Signer)
 	d.state.setBlock(pro2.Block())
-	votes := []*iVote{
-		newVote(pro2.Vote(d.resources.Signer), d.state),
-		newVote(pro2.Vote(core.GenerateKey(nil)), d.state),
+	votes := []*core.Vote{
+		pro2.Vote(d.resources.Signer),
+		pro2.Vote(core.GenerateKey(nil)),
 	}
 	qc2 := d.CreateQC(votes)
 
@@ -81,7 +81,7 @@ func TestDriver_VoteBlock(t *testing.T) {
 	blk3 := newTestBlock(4, 3, nil, nil, d.resources.Signer)
 	pro := core.NewProposal().
 		SetBlock(blk3).
-		SetQuorumCert(qc2.qc).
+		SetQuorumCert(qc2).
 		Sign(proposer)
 	validators := []string{pro.Proposer().String()}
 	d.resources.VldStore = core.NewValidatorStore(validators, []int{1}, validators)
@@ -97,7 +97,7 @@ func TestDriver_VoteBlock(t *testing.T) {
 	msgSvc.On("SendVote", proposer.PublicKey(), pro.Vote(d.resources.Signer)).Return(nil)
 	d.resources.MsgSvc = msgSvc
 
-	d.VoteProposal(newProposal(pro, d.state), newBlock(pro.Block(), d.state))
+	d.VoteProposal(pro, pro.Block())
 
 	txPool.AssertExpectations(t)
 	msgSvc.AssertExpectations(t)
@@ -108,7 +108,7 @@ func TestDriver_VoteBlock(t *testing.T) {
 	}
 	d.resources.TxPool = txPool
 
-	d.VoteProposal(newProposal(pro, d.state), newBlock(pro.Block(), d.state))
+	d.VoteProposal(pro, pro.Block())
 
 	txPool.AssertExpectations(t)
 	msgSvc.AssertExpectations(t)
@@ -162,7 +162,7 @@ func TestDriver_Commit(t *testing.T) {
 	storage.On("GetQC", bexec.Hash()).Return(nil, nil)
 	d.resources.Storage = storage
 
-	d.Commit(newBlock(bexec, d.state))
+	d.Commit(bexec)
 
 	txPool.AssertExpectations(t)
 	execution.AssertExpectations(t)
@@ -170,34 +170,35 @@ func TestDriver_Commit(t *testing.T) {
 
 	asrt := assert.New(t)
 	asrt.NotNil(d.state.getBlockFromState(bexec.Hash()),
-		"should not delete bexec from posvState")
+		"should not delete bexec from InnerState")
 	asrt.Nil(d.state.getBlockFromState(bfolk.Hash()),
-		"should delete folked block from posvState")
+		"should delete folked block from InnerState")
 }
 
 func TestDriver_CreateQC(t *testing.T) {
 	d := setupTestDriver()
-	pro := core.NewProposal().Sign(d.resources.Signer)
+	blk := core.NewBlock().SetHeight(10).Sign(d.resources.Signer)
+	pro := core.NewProposal().SetBlock(blk).Sign(d.resources.Signer)
 	d.state.setBlock(pro.Block())
-	votes := []*iVote{
-		newVote(pro.Vote(d.resources.Signer), d.state),
-		newVote(pro.Vote(core.GenerateKey(nil)), d.state),
+	votes := []*core.Vote{
+		pro.Vote(d.resources.Signer),
+		pro.Vote(core.GenerateKey(nil)),
 	}
 	qc := d.CreateQC(votes)
-
-	assert.Equal(t, pro.Block(), qc.Block().block, "should get qc reference block")
+	assert.Equal(t, pro.Block(), d.state.getBlock(qc.BlockHash()), "should get qc reference block")
 }
 
 func TestDriver_BroadcastProposal(t *testing.T) {
 	d := setupTestDriver()
-	pro := core.NewProposal().Sign(d.resources.Signer)
+	blk := core.NewBlock().SetHeight(10).Sign(d.resources.Signer)
+	pro := core.NewProposal().SetBlock(blk).Sign(d.resources.Signer)
 	d.state.setBlock(pro.Block())
 
 	msgSvc := new(MockMsgService)
 	msgSvc.On("BroadcastProposal", pro).Return(nil)
 	d.resources.MsgSvc = msgSvc
 
-	d.BroadcastProposal(newProposal(pro, d.state))
+	d.BroadcastProposal(pro)
 
 	msgSvc.AssertExpectations(t)
 }

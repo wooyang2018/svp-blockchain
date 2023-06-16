@@ -99,12 +99,8 @@ func (cons *Consensus) setupDriver(b0 *core.Block, q0 *core.QuorumCert) {
 	cons.state = newState(cons.resources)
 	cons.state.setBlock(b0)
 	cons.state.setLeaderIndex(cons.resources.VldStore.GetWorkerIndex(b0.Proposer()))
-	cons.driver = &driver{
-		resources: cons.resources,
-		config:    cons.config,
-		state:     cons.state,
-		posvState: newInnerState(newBlock(b0, cons.state), newQC(q0, cons.state)),
-	}
+	cons.driver = newDriver(cons.resources, cons.config, cons.state)
+	cons.driver.setupInnerState(b0, q0)
 	if cons.config.BenchmarkPath != "" {
 		var err error
 		cons.logfile, err = os.Create(cons.config.BenchmarkPath)
@@ -154,10 +150,10 @@ func (cons *Consensus) getStatus() (status Status) {
 	status.ViewStart = cons.rotator.getViewStart()
 	status.ViewChange = cons.rotator.getViewChange()
 
-	status.BVote = cons.driver.posvState.GetBVote().Height()
-	status.BLeaf = cons.driver.posvState.GetBLeaf().Height()
-	status.BExec = cons.driver.posvState.GetBExec().Height()
-	status.View = cons.driver.posvState.GetView()
-	status.QCHigh = qcRefHeight(cons.driver.posvState.GetQCHigh())
+	status.BVote = cons.driver.innerState.GetBVote().Height()
+	status.BLeaf = cons.driver.innerState.GetBLeaf().Height()
+	status.BExec = cons.driver.innerState.GetBExec().Height()
+	status.View = cons.driver.innerState.GetView()
+	status.QCHigh = cons.driver.qcRefHeight(cons.driver.innerState.GetQCHigh())
 	return status
 }

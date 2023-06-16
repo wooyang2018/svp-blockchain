@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/wooyang2018/posv-blockchain/core"
 	"github.com/wooyang2018/posv-blockchain/logger"
 )
 
@@ -52,7 +53,7 @@ func (rot *rotator) stop() {
 }
 
 func (rot *rotator) run() {
-	subQC := rot.driver.posvState.SubscribeNewQCHigh()
+	subQC := rot.driver.SubscribeNewQCHigh()
 	defer subQC.Unsubscribe()
 
 	rot.viewTimer = time.NewTimer(rot.config.ViewWidth)
@@ -73,7 +74,7 @@ func (rot *rotator) run() {
 			rot.onLeaderTimeout()
 
 		case e := <-subQC.Events():
-			rot.onNewQCHigh(e.(*iQC))
+			rot.onNewQCHigh(e.(*core.QuorumCert))
 		}
 	}
 }
@@ -121,13 +122,13 @@ func (rot *rotator) changeView() {
 	leaderIdx := rot.nextLeader()
 	rot.state.setLeaderIndex(leaderIdx)
 	leader := rot.resources.VldStore.GetWorker(leaderIdx)
-	err := rot.resources.MsgSvc.SendQC(leader, rot.driver.posvState.GetQCHigh().qc)
+	err := rot.resources.MsgSvc.SendQC(leader, rot.driver.innerState.GetQCHigh())
 	if err != nil {
 		logger.I().Errorw("send high qc to new leader failed", "error", err)
 	}
-	rot.driver.posvState.setView(rot.driver.posvState.GetView() + 1)
-	logger.I().Infow("view changed", "view", rot.driver.posvState.GetView(),
-		"leader", leaderIdx, "qc", qcRefHeight(rot.driver.posvState.GetQCHigh()))
+	rot.driver.innerState.setView(rot.driver.innerState.GetView() + 1)
+	logger.I().Infow("view changed", "view", rot.driver.innerState.GetView(),
+		"leader", leaderIdx, "qc", rot.driver.qcRefHeight(rot.driver.innerState.GetQCHigh()))
 
 	if !rot.state.isThisNodeLeader() {
 		t := time.NewTimer(rot.config.Delta * 2)
@@ -141,14 +142,14 @@ func (rot *rotator) changeView() {
 }
 
 func (rot *rotator) newViewProposal() {
-	rot.state.mtxUpdate.Lock()
-	defer rot.state.mtxUpdate.Unlock()
+	rot.driver.Lock()
+	defer rot.driver.Unlock()
 
 	pro := rot.driver.NewViewPropose()
-	logger.I().Debugw("proposed new view block", "view", pro.View(), "qc", qcRefHeight(pro.Justify()))
-	vote := pro.proposal.Vote(rot.resources.Signer)
-	rot.driver.OnReceiveVote(newVote(vote, rot.state))
-	rot.driver.Update(pro.Justify())
+	logger.I().Debugw("proposed new view block", "view", pro.View(), "qc", rot.driver.qcRefHeight(pro.QuorumCert()))
+	vote := pro.Vote(rot.resources.Signer)
+	rot.driver.OnReceiveVote(vote)
+	rot.driver.Update(pro.QuorumCert())
 }
 
 func (rot *rotator) nextLeader() int {
@@ -159,10 +160,10 @@ func (rot *rotator) nextLeader() int {
 	return leaderIdx
 }
 
-func (rot *rotator) onNewQCHigh(qc *iQC) {
-	rot.state.setQC(qc.qc)
-	proposer := rot.resources.VldStore.GetWorkerIndex(qcRefProposer(qc))
-	logger.I().Debugw("updated qc", "proposer", proposer, "qc", qcRefHeight(qc))
+func (rot *rotator) onNewQCHigh(qc *core.QuorumCert) {
+	rot.state.setQC(qc)
+	proposer := rot.resources.VldStore.GetWorkerIndex(rot.driver.qcRefProposer(qc))
+	logger.I().Debugw("updated qc", "proposer", proposer, "qc", rot.driver.qcRefHeight(qc))
 	var ltreset, vtreset bool
 	if proposer == rot.state.getLeaderIndex() { // if qc is from current leader
 		ltreset = true

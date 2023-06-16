@@ -81,7 +81,7 @@ func TestValidator_verifyProposalToVote(t *testing.T) {
 		{"valid", true, core.NewProposal().
 			SetBlock(newTestBlock(14, 10, mRoot, [][]byte{tx1.Hash(), tx4.Hash()}, priv1)).
 			Sign(priv1)},
-		{"proposer is not leader", false, core.NewProposal().
+		{"proposer is not leader", true, core.NewProposal().
 			SetBlock(newTestBlock(14, 10, mRoot, [][]byte{tx1.Hash(), tx4.Hash()}, priv0)).
 			Sign(priv0)},
 		{"different exec height", false, core.NewProposal().

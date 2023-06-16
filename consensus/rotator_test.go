@@ -23,7 +23,8 @@ func setupRotator() (*rotator, *core.Proposal) {
 		VldStore: core.NewValidatorStore(workers, weights, workers),
 	}
 
-	b0 := core.NewProposal().Sign(key1)
+	blk := core.NewBlock().Sign(key1)
+	b0 := core.NewProposal().SetBlock(blk).Sign(key1)
 	q0 := core.NewQuorumCert().Build([]*core.Vote{b0.Vote(key1)})
 	b0.SetQuorumCert(q0)
 
@@ -33,8 +34,8 @@ func setupRotator() (*rotator, *core.Proposal) {
 		resources: resources,
 		state:     state,
 	}
-	posvState := newInnerState(newBlock(b0.Block(), state), newQC(q0, state))
-	driver.posvState = posvState
+	posvState := newInnerState(b0.Block(), q0)
+	driver.innerState = posvState
 	driver.tester = newTester(nil)
 
 	return &rotator{
