@@ -100,7 +100,7 @@ func (cons *Consensus) setupDriver(b0 *core.Block, q0 *core.QuorumCert) {
 	cons.state.setBlock(b0)
 	cons.state.setLeaderIndex(cons.resources.VldStore.GetWorkerIndex(b0.Proposer()))
 	cons.driver = newDriver(cons.resources, cons.config, cons.state)
-	cons.driver.setupInnerState(b0, q0)
+	cons.driver.innerState = newInnerState(b0, q0)
 	if cons.config.BenchmarkPath != "" {
 		var err error
 		cons.logfile, err = os.Create(cons.config.BenchmarkPath)

@@ -246,7 +246,7 @@ func (vld *validator) updatePoSVAndVote(peer *core.PublicKey, pro *core.Proposal
 	vld.state.mtxUpdate.Lock()
 	defer vld.state.mtxUpdate.Unlock()
 
-	vld.driver.Update(pro.QuorumCert())
+	vld.driver.UpdateQCHigh(pro.QuorumCert())
 	if !vld.state.isLeader(pro.Proposer()) {
 		pidx := vld.resources.VldStore.GetWorkerIndex(pro.Proposer())
 		return fmt.Errorf("proposer %d is not leader", pidx)
@@ -256,7 +256,7 @@ func (vld *validator) updatePoSVAndVote(peer *core.PublicKey, pro *core.Proposal
 		if err := vld.verifyBlockToVote(blk); err != nil {
 			return err
 		}
-		if vld.driver.innerState.CanVote(blk) {
+		if !vld.driver.innerState.CanVote(blk) {
 			return fmt.Errorf("can not vote for block height %d", blk.Height())
 		}
 	}

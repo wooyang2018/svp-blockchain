@@ -149,7 +149,7 @@ func (rot *rotator) newViewProposal() {
 	logger.I().Debugw("proposed new view block", "view", pro.View(), "qc", rot.driver.qcRefHeight(pro.QuorumCert()))
 	vote := pro.Vote(rot.resources.Signer)
 	rot.driver.OnReceiveVote(vote)
-	rot.driver.Update(pro.QuorumCert())
+	rot.driver.UpdateQCHigh(pro.QuorumCert())
 }
 
 func (rot *rotator) nextLeader() int {

@@ -12,7 +12,7 @@ import (
 	"github.com/wooyang2018/posv-blockchain/core"
 )
 
-type InnerState struct {
+type innerState struct {
 	bVote  atomic.Value
 	bExec  atomic.Value
 	qcHigh atomic.Value
@@ -24,8 +24,8 @@ type InnerState struct {
 	mtx      sync.RWMutex
 }
 
-func newInnerState(b0 *core.Block, q0 *core.QuorumCert) *InnerState {
-	s := new(InnerState)
+func newInnerState(b0 *core.Block, q0 *core.QuorumCert) *innerState {
+	s := new(innerState)
 	s.setBVote(b0)
 	s.setBLeaf(b0)
 	s.setBExec(b0)
@@ -34,40 +34,40 @@ func newInnerState(b0 *core.Block, q0 *core.QuorumCert) *InnerState {
 	return s
 }
 
-func (s *InnerState) setBVote(b *core.Block)        { s.bVote.Store(b) }
-func (s *InnerState) setBExec(b *core.Block)        { s.bExec.Store(b) }
-func (s *InnerState) setBLeaf(b *core.Block)        { s.bLeaf.Store(b) }
-func (s *InnerState) setQCHigh(qc *core.QuorumCert) { s.qcHigh.Store(qc) }
-func (s *InnerState) setView(num uint32)            { atomic.StoreUint32(&s.view, num) }
+func (s *innerState) setBVote(b *core.Block)        { s.bVote.Store(b) }
+func (s *innerState) setBExec(b *core.Block)        { s.bExec.Store(b) }
+func (s *innerState) setBLeaf(b *core.Block)        { s.bLeaf.Store(b) }
+func (s *innerState) setQCHigh(qc *core.QuorumCert) { s.qcHigh.Store(qc) }
+func (s *innerState) setView(num uint32)            { atomic.StoreUint32(&s.view, num) }
 
-func (s *InnerState) GetBVote() *core.Block {
+func (s *innerState) GetBVote() *core.Block {
 	return s.bVote.Load().(*core.Block)
 }
 
-func (s *InnerState) GetBExec() *core.Block {
+func (s *innerState) GetBExec() *core.Block {
 	return s.bExec.Load().(*core.Block)
 }
 
-func (s *InnerState) GetBLeaf() *core.Block {
+func (s *innerState) GetBLeaf() *core.Block {
 	return s.bLeaf.Load().(*core.Block)
 }
 
-func (s *InnerState) GetQCHigh() *core.QuorumCert {
+func (s *innerState) GetQCHigh() *core.QuorumCert {
 	return s.qcHigh.Load().(*core.QuorumCert)
 }
 
-func (s *InnerState) GetView() uint32 {
+func (s *innerState) GetView() uint32 {
 	return atomic.LoadUint32(&s.view)
 }
 
-func (s *InnerState) IsProposing() bool {
+func (s *innerState) IsProposing() bool {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 
 	return s.proposal != nil
 }
 
-func (s *InnerState) startProposal(b *core.Proposal) {
+func (s *innerState) startProposal(b *core.Proposal) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
@@ -75,7 +75,7 @@ func (s *InnerState) startProposal(b *core.Proposal) {
 	s.votes = make(map[string]*core.Vote)
 }
 
-func (s *InnerState) endProposal() {
+func (s *innerState) endProposal() {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
@@ -83,7 +83,7 @@ func (s *InnerState) endProposal() {
 	s.votes = nil
 }
 
-func (s *InnerState) addVote(vote *core.Vote) error {
+func (s *innerState) addVote(vote *core.Vote) error {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
@@ -105,14 +105,14 @@ func (s *InnerState) addVote(vote *core.Vote) error {
 	return nil
 }
 
-func (s *InnerState) GetVoteCount() int {
+func (s *innerState) GetVoteCount() int {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 
 	return len(s.votes)
 }
 
-func (s *InnerState) GetVotes() []*core.Vote {
+func (s *innerState) GetVotes() []*core.Vote {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 
@@ -124,7 +124,7 @@ func (s *InnerState) GetVotes() []*core.Vote {
 }
 
 // CanVote returns true if the posv instance can vote the given block
-func (s *InnerState) CanVote(blk *core.Block) bool {
+func (s *innerState) CanVote(blk *core.Block) bool {
 	bVote := s.GetBVote()
 	if bytes.Equal(bVote.Hash(), blk.ParentHash()) {
 		return true

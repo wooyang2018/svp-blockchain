@@ -66,5 +66,5 @@ func (pm *pacemaker) newProposal() {
 		"height", pro.Block().Height(), "qc", pm.driver.qcRefHeight(pro.QuorumCert()), "txs", len(pro.Block().Transactions()))
 	vote := pro.Vote(pm.resources.Signer)
 	pm.driver.OnReceiveVote(vote)
-	pm.driver.Update(pro.QuorumCert())
+	pm.driver.UpdateQCHigh(pro.QuorumCert())
 }

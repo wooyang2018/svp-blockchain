@@ -21,7 +21,7 @@ func setupTestDriver() *driver {
 		resources:  resources,
 		config:     DefaultConfig,
 		state:      newState(resources),
-		innerState: new(InnerState),
+		innerState: new(innerState),
 	}
 }
 
@@ -63,7 +63,7 @@ func TestDriver_CreateProposal(t *testing.T) {
 	asrt.EqualValues(2, blk.ExecHeight())
 	asrt.Equal([]byte("merkle-root"), blk.MerkleRoot())
 	asrt.NotEmpty(blk.Timestamp(), "should add timestamp")
-	asrt.NotNil(d.state.getBlock(blk.Hash()), "should store leaf block in InnerState")
+	asrt.NotNil(d.state.getBlock(blk.Hash()), "should store leaf block in innerState")
 }
 
 func TestDriver_VoteBlock(t *testing.T) {
@@ -170,9 +170,9 @@ func TestDriver_Commit(t *testing.T) {
 
 	asrt := assert.New(t)
 	asrt.NotNil(d.state.getBlockFromState(bexec.Hash()),
-		"should not delete bexec from InnerState")
+		"should not delete bexec from innerState")
 	asrt.Nil(d.state.getBlockFromState(bfolk.Hash()),
-		"should delete folked block from InnerState")
+		"should delete folked block from innerState")
 }
 
 func TestDriver_CreateQC(t *testing.T) {

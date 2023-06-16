@@ -17,7 +17,7 @@ type driver struct {
 	resources     *Resources
 	config        Config
 	state         *state
-	innerState    *InnerState
+	innerState    *innerState
 	tester        *tester
 	qcHighEmitter *emitter.Emitter
 }
@@ -29,10 +29,6 @@ func newDriver(resources *Resources, config Config, state *state) *driver {
 		state:         state,
 		qcHighEmitter: emitter.New(),
 	}
-}
-
-func (d *driver) setupInnerState(b0 *core.Block, q0 *core.QuorumCert) {
-	d.innerState = newInnerState(b0, q0)
 }
 
 func (d *driver) CreateProposal() *core.Proposal {
@@ -206,14 +202,6 @@ func (d *driver) OnReceiveVote(vote *core.Vote) error {
 	return nil
 }
 
-func (d *driver) Update(qc *core.QuorumCert) {
-	d.UpdateQCHigh(qc)
-	b := d.state.getBlock(qc.BlockHash())
-	if b != nil {
-		d.CommitRecursive(b)
-	}
-}
-
 func (d *driver) CommitRecursive(b *core.Block) { // prepare phase for b2
 	t1 := time.Now().UnixNano()
 	d.onCommit(b)
@@ -289,13 +277,15 @@ func (d *driver) cmpQCPriority(qc1, qc2 *core.QuorumCert) int {
 
 // UpdateQCHigh replaces qcHigh if the block of given qc is higher than the qcHigh block
 func (d *driver) UpdateQCHigh(qc *core.QuorumCert) {
-	if d.cmpQCPriority(qc, d.innerState.GetQCHigh()) == 1 {
-		blk := d.state.getBlock(qc.BlockHash())
-		logger.I().Debugw("posv updated high qc", "height", blk.Height())
-		d.innerState.setQCHigh(qc)
-		d.innerState.setBLeaf(blk)
-		d.qcHighEmitter.Emit(qc)
+	if d.cmpQCPriority(qc, d.innerState.GetQCHigh()) < 1 {
+		return
 	}
+	blk := d.state.getBlock(qc.BlockHash())
+	logger.I().Debugw("posv updated high qc", "height", blk.Height())
+	d.innerState.setQCHigh(qc)
+	d.innerState.setBLeaf(blk)
+	d.CommitRecursive(blk)
+	d.qcHighEmitter.Emit(qc)
 }
 
 func (d *driver) SubscribeNewQCHigh() *emitter.Subscription {
