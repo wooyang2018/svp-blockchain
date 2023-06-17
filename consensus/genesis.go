@@ -20,9 +20,9 @@ import (
 
 type genesis struct {
 	resources *Resources
-	config    Config
+	chainID   int64
 
-	// collect votes from all validators instead of majority for genesis block
+	// collect votes for genesis block from all validators instead of majority
 	votes   map[string]*core.Vote
 	mtxVote sync.Mutex
 
@@ -81,7 +81,7 @@ func (gns *genesis) propose() {
 func (gns *genesis) createGenesisProposal() *core.Proposal {
 	blk := core.NewBlock().
 		SetHeight(0).
-		SetParentHash(hashChainID(gns.config.ChainID)).
+		SetParentHash(hashChainID(gns.chainID)).
 		SetTimestamp(time.Now().UnixNano()).
 		Sign(gns.resources.Signer)
 	return core.NewProposal().
@@ -163,7 +163,7 @@ func (gns *genesis) newViewLoop() {
 			return
 
 		case e := <-sub.Events():
-			if err := gns.onReceiveNewView(e.(*core.QuorumCert)); err != nil {
+			if err := gns.onReceiveQC(e.(*core.QuorumCert)); err != nil {
 				logger.I().Warnf("receive new view failed, %+v", err)
 			}
 		}
@@ -178,7 +178,7 @@ func (gns *genesis) onReceiveProposal(pro *core.Proposal) error {
 		logger.I().Info("left behind, fetching genesis block...")
 		return gns.fetchGenesisBlockAndQC(pro.Proposer())
 	}
-	if !bytes.Equal(hashChainID(gns.config.ChainID), pro.Block().ParentHash()) {
+	if !bytes.Equal(hashChainID(gns.chainID), pro.Block().ParentHash()) {
 		return fmt.Errorf("different chain id genesis")
 	}
 	if !gns.isLeader(pro.Proposer()) {
@@ -277,7 +277,7 @@ func (gns *genesis) broadcastQC() {
 	}
 }
 
-func (gns *genesis) onReceiveNewView(qc *core.QuorumCert) error {
+func (gns *genesis) onReceiveQC(qc *core.QuorumCert) error {
 	if err := qc.Validate(gns.resources.VldStore); err != nil {
 		return err
 	}

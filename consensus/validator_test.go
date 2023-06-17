@@ -70,7 +70,7 @@ func TestValidator_verifyProposalToVote(t *testing.T) {
 		state:     newState(resources),
 	}
 	vld.state.committedHeight = mStrg.GetBlockHeight()
-	vld.state.setLeaderIndex(1)
+	vld.driver.setLeaderIndex(1)
 
 	type testCase struct {
 		name     string

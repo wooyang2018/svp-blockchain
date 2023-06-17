@@ -14,13 +14,15 @@ import (
 type Consensus struct {
 	resources *Resources
 	config    Config
-	startTime int64
 	state     *state
-	logfile   *os.File
 	driver    *driver
+
 	validator *validator
 	pacemaker *pacemaker
 	rotator   *rotator
+
+	startTime int64
+	logfile   *os.File
 }
 
 func New(resources *Resources, config Config) *Consensus {
@@ -90,7 +92,7 @@ func (cons *Consensus) getInitialBlockAndQC() (*core.Block, *core.QuorumCert) {
 	// chain not started, create genesis block
 	genesis := &genesis{
 		resources: cons.resources,
-		config:    cons.config,
+		chainID:   cons.config.ChainID,
 	}
 	return genesis.run()
 }
@@ -98,9 +100,8 @@ func (cons *Consensus) getInitialBlockAndQC() (*core.Block, *core.QuorumCert) {
 func (cons *Consensus) setupDriver(b0 *core.Block, q0 *core.QuorumCert) {
 	cons.state = newState(cons.resources)
 	cons.state.setBlock(b0)
-	cons.state.setLeaderIndex(cons.resources.VldStore.GetWorkerIndex(b0.Proposer()))
 	cons.driver = newDriver(cons.resources, cons.config, cons.state)
-	cons.driver.innerState = newInnerState(b0, q0)
+	cons.driver.setInnerState(b0, q0)
 	if cons.config.BenchmarkPath != "" {
 		var err error
 		cons.logfile, err = os.Create(cons.config.BenchmarkPath)
@@ -114,7 +115,6 @@ func (cons *Consensus) setupDriver(b0 *core.Block, q0 *core.QuorumCert) {
 func (cons *Consensus) setupValidator() {
 	cons.validator = &validator{
 		resources: cons.resources,
-		config:    cons.config,
 		state:     cons.state,
 		driver:    cons.driver,
 	}
@@ -123,7 +123,6 @@ func (cons *Consensus) setupValidator() {
 func (cons *Consensus) setupPacemaker() {
 	cons.pacemaker = &pacemaker{
 		resources: cons.resources,
-		config:    cons.config,
 		state:     cons.state,
 		driver:    cons.driver,
 	}
@@ -146,13 +145,14 @@ func (cons *Consensus) getStatus() (status Status) {
 	status.CommittedTxCount = cons.state.getCommittedTxCount()
 	status.BlockPoolSize = cons.state.getBlockPoolSize()
 	status.QCPoolSize = cons.state.getQCPoolSize()
-	status.LeaderIndex = cons.state.getLeaderIndex()
-	status.ViewStart = cons.rotator.getViewStart()
-	status.ViewChange = cons.driver.getViewChange()
 
-	status.BLeaf = cons.driver.innerState.GetBLeaf().Height()
-	status.BExec = cons.driver.innerState.GetBExec().Height()
-	status.View = cons.driver.innerState.GetView()
-	status.QCHigh = cons.driver.qcRefHeight(cons.driver.innerState.GetQCHigh())
+	status.ViewStart = cons.rotator.getViewStart()
+	status.ViewChange = cons.rotator.getViewChange()
+	status.LeaderIndex = cons.driver.getLeaderIndex()
+
+	status.BLeaf = cons.driver.getBLeaf().Height()
+	status.BExec = cons.driver.getBExec().Height()
+	status.View = cons.driver.getView()
+	status.QCHigh = cons.driver.qcRefHeight(cons.driver.getQCHigh())
 	return status
 }

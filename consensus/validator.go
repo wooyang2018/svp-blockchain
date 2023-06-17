@@ -15,7 +15,6 @@ import (
 
 type validator struct {
 	resources   *Resources
-	config      Config
 	state       *state
 	driver      *driver
 	mtxProposal sync.Mutex
@@ -108,7 +107,7 @@ func (vld *validator) onReceiveProposal(pro *core.Proposal) error {
 
 	blk := pro.Block()
 	if blk == nil { //received new view proposal
-		blk = vld.state.getBlock(pro.QuorumCert().BlockHash())
+		blk = vld.driver.getBlockByHash(pro.QuorumCert().BlockHash())
 		if blk == nil {
 			blk, _ = vld.requestBlock(pro.Proposer(), pro.QuorumCert().BlockHash())
 			if blk == nil {
@@ -181,6 +180,37 @@ func (vld *validator) syncForwardCommittedBlocks(peer *core.PublicKey, start, en
 	return nil
 }
 
+func (vld *validator) requestBlockByHeight(peer *core.PublicKey, height uint64) (*core.Block, error) {
+	blk, err := vld.resources.MsgSvc.RequestBlockByHeight(peer, height)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get block by height %d, %w", height, err)
+	}
+	if err := blk.Validate(vld.resources.VldStore); err != nil {
+		return nil, fmt.Errorf("validate block error, %w", err)
+	}
+	return blk, nil
+}
+
+func (vld *validator) verifyParentAndCommitRecursive(peer *core.PublicKey, blk, parent *core.Block) error {
+	if blk.Height() != parent.Height()+1 {
+		return fmt.Errorf("invalid block height %d, parent %d",
+			blk.Height(), parent.Height())
+	}
+	if ExecuteTxFlag {
+		// must sync transactions before updating block to posv
+		if err := vld.resources.TxPool.SyncTxs(peer, blk.Transactions()); err != nil {
+			return err
+		}
+	}
+	vld.state.setBlock(blk)
+
+	vld.driver.mtxUpdate.Lock()
+	defer vld.driver.mtxUpdate.Unlock()
+	vld.driver.CommitRecursive(blk)
+
+	return nil
+}
+
 func (vld *validator) syncMissingParentRecursive(peer *core.PublicKey, blk *core.Block) (*core.Block, error) {
 	parent := vld.state.getBlock(blk.ParentHash())
 	if parent != nil {
@@ -216,37 +246,6 @@ func (vld *validator) requestBlock(peer *core.PublicKey, hash []byte) (*core.Blo
 	return blk, nil
 }
 
-func (vld *validator) requestBlockByHeight(peer *core.PublicKey, height uint64) (*core.Block, error) {
-	blk, err := vld.resources.MsgSvc.RequestBlockByHeight(peer, height)
-	if err != nil {
-		return nil, fmt.Errorf("cannot get block by height %d, %w", height, err)
-	}
-	if err := blk.Validate(vld.resources.VldStore); err != nil {
-		return nil, fmt.Errorf("validate block error, %w", err)
-	}
-	return blk, nil
-}
-
-func (vld *validator) verifyParentAndCommitRecursive(peer *core.PublicKey, blk, parent *core.Block) error {
-	if blk.Height() != parent.Height()+1 {
-		return fmt.Errorf("invalid block height %d, parent %d",
-			blk.Height(), parent.Height())
-	}
-	if ExecuteTxFlag {
-		// must sync transactions before updating block to posv
-		if err := vld.resources.TxPool.SyncTxs(peer, blk.Transactions()); err != nil {
-			return err
-		}
-	}
-	vld.state.setBlock(blk)
-
-	vld.state.mtxUpdate.Lock()
-	defer vld.state.mtxUpdate.Unlock()
-	vld.driver.CommitRecursive(blk)
-
-	return nil
-}
-
 func (vld *validator) updatePoSVAndVote(peer *core.PublicKey, pro *core.Proposal, blk *core.Block, newView bool) error {
 	if ExecuteTxFlag { // must sync transactions before updating block to posv
 		if err := vld.resources.TxPool.SyncTxs(peer, blk.Transactions()); err != nil {
@@ -255,11 +254,12 @@ func (vld *validator) updatePoSVAndVote(peer *core.PublicKey, pro *core.Proposal
 	}
 	vld.state.setBlock(blk)
 
-	vld.state.mtxUpdate.Lock()
-	defer vld.state.mtxUpdate.Unlock()
+	vld.driver.mtxUpdate.Lock()
+	defer vld.driver.mtxUpdate.Unlock()
 
+	vld.driver.proEmitter.Emit(pro)
 	vld.driver.UpdateQCHigh(pro.QuorumCert())
-	if !vld.state.isLeader(pro.Proposer()) {
+	if !vld.driver.isLeader(pro.Proposer()) {
 		pidx := vld.resources.VldStore.GetWorkerIndex(pro.Proposer())
 		return fmt.Errorf("proposer %d is not leader", pidx)
 	}
@@ -267,9 +267,6 @@ func (vld *validator) updatePoSVAndVote(peer *core.PublicKey, pro *core.Proposal
 		if err := vld.verifyBlockToVote(blk); err != nil {
 			return err
 		}
-	}
-	if !vld.driver.CanVote(pro) {
-		return fmt.Errorf("can not vote proposal height %d", blk.Height())
 	}
 	vld.driver.VoteProposal(pro, blk)
 

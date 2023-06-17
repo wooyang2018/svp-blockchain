@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/wooyang2018/posv-blockchain/logger"
 
 	"github.com/wooyang2018/posv-blockchain/core"
 	"github.com/wooyang2018/posv-blockchain/storage"
@@ -18,10 +19,9 @@ func setupTestDriver() *driver {
 		Signer: core.GenerateKey(nil),
 	}
 	return &driver{
-		resources:  resources,
-		config:     DefaultConfig,
-		state:      newState(resources),
-		innerState: new(innerState),
+		resources:    resources,
+		blockTxLimit: DefaultConfig.BlockTxLimit,
+		state:        newState(resources),
 	}
 }
 
@@ -29,16 +29,16 @@ func TestDriver_CreateProposal(t *testing.T) {
 	d := setupTestDriver()
 	parent := core.NewBlock().SetHeight(4).Sign(d.resources.Signer)
 	d.state.setBlock(parent)
-	d.innerState.setBLeaf(parent)
+	d.setBLeaf(parent)
 	qc := core.NewQuorumCert()
-	d.innerState.setQCHigh(qc)
+	d.setQCHigh(qc)
 
 	txsInQ := [][]byte{[]byte("tx1"), []byte("tx2")}
 	txPool := new(MockTxPool)
 	if PreserveTxFlag {
-		txPool.On("GetTxsFromQueue", d.config.BlockTxLimit).Return(txsInQ)
+		txPool.On("GetTxsFromQueue", d.blockTxLimit).Return(txsInQ)
 	} else {
-		txPool.On("PopTxsFromQueue", d.config.BlockTxLimit).Return(txsInQ)
+		txPool.On("PopTxsFromQueue", d.blockTxLimit).Return(txsInQ)
 	}
 	d.resources.TxPool = txPool
 
@@ -169,9 +169,9 @@ func TestDriver_Commit(t *testing.T) {
 	storage.AssertExpectations(t)
 
 	asrt := assert.New(t)
-	asrt.NotNil(d.state.getBlockFromState(bexec.Hash()),
+	asrt.NotNil(d.state.getBlock(bexec.Hash()),
 		"should not delete bexec from innerState")
-	asrt.Nil(d.state.getBlockFromState(bfolk.Hash()),
+	asrt.Nil(d.state.getBlock(bfolk.Hash()),
 		"should delete folked block from innerState")
 }
 
@@ -198,7 +198,10 @@ func TestDriver_BroadcastProposal(t *testing.T) {
 	msgSvc.On("BroadcastProposal", pro).Return(nil)
 	d.resources.MsgSvc = msgSvc
 
-	d.BroadcastProposal(pro)
+	err := d.resources.MsgSvc.BroadcastProposal(pro)
+	if err != nil {
+		logger.I().Errorw("broadcast proposal failed", "error", err)
+	}
 
 	msgSvc.AssertExpectations(t)
 }

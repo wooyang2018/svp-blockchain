@@ -11,7 +11,6 @@ import (
 
 type pacemaker struct {
 	resources *Resources
-	config    Config
 	state     *state
 	driver    *driver
 	stopCh    chan struct{}
@@ -41,7 +40,7 @@ func (pm *pacemaker) stop() {
 }
 
 func (pm *pacemaker) run() {
-	qc := pm.driver.SubscribeNewQC()
+	qc := pm.driver.SubscribeQC()
 	defer qc.Unsubscribe()
 	time.Sleep(time.Second)
 	pm.newProposal()
@@ -56,10 +55,10 @@ func (pm *pacemaker) run() {
 }
 
 func (pm *pacemaker) newProposal() {
-	pm.driver.Lock()
-	defer pm.driver.Unlock()
+	pm.driver.mtxUpdate.Lock()
+	defer pm.driver.mtxUpdate.Unlock()
 
-	if !pm.state.isThisNodeLeader() {
+	if pm.driver.isLeader(pm.resources.Signer.PublicKey()) {
 		return
 	}
 

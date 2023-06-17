@@ -22,7 +22,8 @@ type rotator struct {
 	viewTimer          *time.Timer
 	leaderTimeoutCount int
 
-	viewStart int64 // start timestamp of current view
+	viewStart  int64 // start timestamp of current view
+	viewChange int32 // -1:failed ; 0:success ; 1:ongoing
 
 	stopCh chan struct{}
 }
@@ -52,8 +53,8 @@ func (rot *rotator) stop() {
 }
 
 func (rot *rotator) run() {
-	subQC := rot.driver.SubscribeNewQCHigh()
-	defer subQC.Unsubscribe()
+	pro := rot.driver.SubscribeProposal()
+	defer pro.Unsubscribe()
 
 	rot.viewTimer = time.NewTimer(rot.config.ViewWidth)
 	defer rot.viewTimer.Stop()
@@ -72,31 +73,21 @@ func (rot *rotator) run() {
 		case <-rot.leaderTimer.C:
 			rot.onLeaderTimeout()
 
-		case e := <-subQC.Events():
-			rot.onNewQCHigh(e.(*core.QuorumCert))
-		}
-	}
-}
-
-func (rot *rotator) drainStopTimer(timer *time.Timer) {
-	if !timer.Stop() { // timer triggered before another stop/reset call
-		t := time.NewTimer(5 * time.Millisecond)
-		defer t.Stop()
-		select {
-		case <-timer.C:
-		case <-t.C: // to make sure it's not stuck more than 5ms
+		case e := <-pro.Events():
+			rot.onNewProposal(e.(*core.Proposal))
 		}
 	}
 }
 
 func (rot *rotator) onLeaderTimeout() {
-	logger.I().Warnw("leader timeout", "leader", rot.state.getLeaderIndex())
+	logger.I().Warnw("leader timeout", "leader", rot.driver.getLeaderIndex())
 	rot.leaderTimeoutCount++
 	rot.changeView()
 	rot.drainStopTimer(rot.leaderTimer)
-	if rot.leaderTimeoutCount > rot.state.getFaultyCount() {
+	faultyCount := rot.resources.VldStore.ValidatorCount() - rot.resources.VldStore.MajorityValidatorCount()
+	if rot.leaderTimeoutCount > faultyCount {
 		rot.leaderTimer.Stop()
-		rot.driver.setViewChange(-1) //failed to change view when leader timeout
+		rot.setViewChange(-1) //failed to change view when leader timeout
 	} else {
 		rot.leaderTimer.Reset(rot.config.LeaderTimeout)
 	}
@@ -109,7 +100,7 @@ func (rot *rotator) onViewTimeout() {
 }
 
 func (rot *rotator) changeView() {
-	rot.driver.setViewChange(1)
+	rot.setViewChange(1)
 	t := time.NewTimer(rot.config.Delta)
 	select {
 	case <-rot.stopCh:
@@ -118,18 +109,18 @@ func (rot *rotator) changeView() {
 	}
 
 	rot.setViewStart()
-	leaderIdx := rot.nextLeader()
-	rot.state.setLeaderIndex(leaderIdx)
+	leaderIdx := rot.driver.nextLeader()
+	rot.driver.setLeaderIndex(leaderIdx)
 	leader := rot.resources.VldStore.GetWorker(leaderIdx)
-	err := rot.resources.MsgSvc.SendQC(leader, rot.driver.innerState.GetQCHigh())
+	err := rot.resources.MsgSvc.SendQC(leader, rot.driver.getQCHigh())
 	if err != nil {
 		logger.I().Errorw("send high qc to new leader failed", "idx", leaderIdx, "error", err)
 	}
-	rot.driver.innerState.setView(rot.driver.innerState.GetView() + 1)
-	logger.I().Infow("view changed", "view", rot.driver.innerState.GetView(),
-		"leader", leaderIdx, "qc", rot.driver.qcRefHeight(rot.driver.innerState.GetQCHigh()))
+	rot.driver.setView(rot.driver.getView() + 1)
+	logger.I().Infow("view changed", "view", rot.driver.getView(),
+		"leader", leaderIdx, "qc", rot.driver.qcRefHeight(rot.driver.getQCHigh()))
 
-	if rot.state.isThisNodeLeader() {
+	if rot.driver.isLeader(rot.resources.Signer.PublicKey()) {
 		t := time.NewTimer(rot.config.Delta * 2)
 		select {
 		case <-rot.stopCh:
@@ -141,30 +132,21 @@ func (rot *rotator) changeView() {
 }
 
 func (rot *rotator) newViewProposal() {
-	rot.driver.Lock()
-	defer rot.driver.Unlock()
+	rot.driver.mtxUpdate.Lock()
+	defer rot.driver.mtxUpdate.Unlock()
 
-	pro := rot.driver.NewViewPropose()
+	pro := rot.driver.OnNewPropose()
 	logger.I().Debugw("proposed new view proposal", "view", pro.View(), "qc", rot.driver.qcRefHeight(pro.QuorumCert()))
 	vote := pro.Vote(rot.resources.Signer)
 	rot.driver.OnReceiveVote(vote)
 	rot.driver.UpdateQCHigh(pro.QuorumCert())
 }
 
-func (rot *rotator) nextLeader() int {
-	leaderIdx := rot.state.getLeaderIndex() + 1
-	if leaderIdx >= rot.resources.VldStore.WorkerCount() {
-		leaderIdx = 0
-	}
-	return leaderIdx
-}
-
-func (rot *rotator) onNewQCHigh(qc *core.QuorumCert) {
-	rot.state.setQC(qc)
-	proposer := rot.resources.VldStore.GetWorkerIndex(rot.driver.qcRefProposer(qc))
-	logger.I().Debugw("updated qc", "proposer", proposer, "qc", rot.driver.qcRefHeight(qc))
+func (rot *rotator) onNewProposal(pro *core.Proposal) {
+	proposer := rot.resources.VldStore.GetWorkerIndex(pro.Proposer())
+	logger.I().Debugw("updated proposal", "proposer", proposer, "qc", rot.driver.qcRefHeight(pro.QuorumCert()))
 	var ltreset, vtreset bool
-	if proposer == rot.state.getLeaderIndex() { // if qc is from current leader
+	if proposer == rot.driver.getLeaderIndex() { // if pro is from current leader
 		ltreset = true
 	}
 	if rot.isNewViewApproval(proposer) {
@@ -183,18 +165,29 @@ func (rot *rotator) onNewQCHigh(qc *core.QuorumCert) {
 }
 
 func (rot *rotator) isNewViewApproval(proposer int) bool {
-	leaderIdx := rot.state.getLeaderIndex()
-	pending := rot.driver.getViewChange()
+	leaderIdx := rot.driver.getLeaderIndex()
+	pending := rot.getViewChange()
 	return (pending == 0 && proposer != leaderIdx) || // node first run or out of sync
 		(pending == 1 && proposer == leaderIdx) // expecting leader
 }
 
 func (rot *rotator) approveViewLeader(proposer int) {
-	rot.driver.setViewChange(0)
-	rot.state.setLeaderIndex(proposer)
+	rot.setViewChange(0)
+	rot.driver.setLeaderIndex(proposer)
 	rot.setViewStart()
-	logger.I().Infow("approved leader", "leader", rot.state.getLeaderIndex())
+	logger.I().Infow("approved leader", "leader", rot.driver.getLeaderIndex())
 	rot.leaderTimeoutCount = 0
+}
+
+func (rot *rotator) drainStopTimer(timer *time.Timer) {
+	if !timer.Stop() { // timer triggered before another stop/reset call
+		t := time.NewTimer(5 * time.Millisecond)
+		defer t.Stop()
+		select {
+		case <-timer.C:
+		case <-t.C: // to make sure it's not stuck more than 5ms
+		}
+	}
 }
 
 func (rot *rotator) setViewStart() {
@@ -203,4 +196,12 @@ func (rot *rotator) setViewStart() {
 
 func (rot *rotator) getViewStart() int64 {
 	return atomic.LoadInt64(&rot.viewStart)
+}
+
+func (rot *rotator) setViewChange(val int32) {
+	atomic.StoreInt32(&rot.viewChange, val)
+}
+
+func (rot *rotator) getViewChange() int32 {
+	return atomic.LoadInt32(&rot.viewChange)
 }

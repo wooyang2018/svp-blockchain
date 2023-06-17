@@ -34,8 +34,8 @@ func setupRotator() (*rotator, *core.Proposal) {
 		resources: resources,
 		state:     state,
 	}
-	posvState := newInnerState(b0.Block(), q0)
-	driver.innerState = posvState
+
+	driver.setInnerState(b0.Block(), q0)
 	driver.tester = newTester(nil)
 
 	return &rotator{
@@ -50,7 +50,7 @@ func TestRotator_changeView(t *testing.T) {
 	asrt := assert.New(t)
 
 	rot, b0 := setupRotator()
-	rot.state.setLeaderIndex(1)
+	rot.driver.setLeaderIndex(1)
 
 	msgSvc := new(MockMsgService)
 	msgSvc.On("SendQC", rot.resources.VldStore.GetWorker(0), b0.QuorumCert()).Return(nil)
@@ -60,7 +60,7 @@ func TestRotator_changeView(t *testing.T) {
 
 	msgSvc.AssertExpectations(t)
 	asrt.EqualValues(rot.getViewChange(), 1)
-	asrt.EqualValues(rot.state.getLeaderIndex(), 0)
+	asrt.EqualValues(rot.driver.getLeaderIndex(), 0)
 }
 
 func Test_rotator_isNewViewApproval(t *testing.T) {
@@ -99,5 +99,5 @@ func TestRotator_resetViewTimer(t *testing.T) {
 	rot.approveViewLeader(1)
 
 	asrt.EqualValues(rot.getViewChange(), 0)
-	asrt.EqualValues(rot.state.getLeaderIndex(), 1)
+	asrt.EqualValues(rot.driver.getLeaderIndex(), 1)
 }

@@ -22,10 +22,6 @@ type state struct {
 	qcs    map[string]*core.QuorumCert // qc by block hash
 	mtxQCs sync.RWMutex
 
-	mtxUpdate sync.Mutex // lock for posv update call
-
-	leaderIndex int64
-
 	// committed block height. on node restart, it's zero until a block is committed
 	committedHeight uint64
 	// committed tx count, since last node start
@@ -54,19 +50,6 @@ func (state *state) setBlock(blk *core.Block) {
 }
 
 func (state *state) getBlock(hash []byte) *core.Block {
-	blk := state.getBlockFromState(hash)
-	if blk != nil {
-		return blk
-	}
-	blk, _ = state.resources.Storage.GetBlock(hash)
-	if blk == nil {
-		return nil
-	}
-	state.setBlock(blk)
-	return blk
-}
-
-func (state *state) getBlockFromState(hash []byte) *core.Block {
 	state.mtxBlocks.RLock()
 	defer state.mtxBlocks.RUnlock()
 	return state.blocks[string(hash)]
@@ -156,45 +139,6 @@ func (state *state) getUncommittedOlderBlocks(bexec *core.Block) []*core.Block {
 		}
 	}
 	return ret
-}
-
-func (state *state) isThisNodeLeader() bool {
-	return state.isLeader(state.resources.Signer.PublicKey())
-}
-
-func (state *state) isThisNodeWorker() bool {
-	return state.isWorker(state.resources.Signer.PublicKey())
-}
-
-func (state *state) isThisNodeVoter() bool {
-	return state.isVoter(state.resources.Signer.PublicKey())
-}
-
-func (state *state) isLeader(pubKey *core.PublicKey) bool {
-	if !state.resources.VldStore.IsWorker(pubKey) {
-		return false
-	}
-	return state.getLeaderIndex() == state.resources.VldStore.GetWorkerIndex(pubKey)
-}
-
-func (state *state) isWorker(pubKey *core.PublicKey) bool {
-	return state.resources.VldStore.IsWorker(pubKey)
-}
-
-func (state *state) isVoter(pubKey *core.PublicKey) bool {
-	return state.resources.VldStore.IsVoter(pubKey)
-}
-
-func (state *state) setLeaderIndex(idx int) {
-	atomic.StoreInt64(&state.leaderIndex, int64(idx))
-}
-
-func (state *state) getLeaderIndex() int {
-	return int(atomic.LoadInt64(&state.leaderIndex))
-}
-
-func (state *state) getFaultyCount() int {
-	return state.resources.VldStore.ValidatorCount() - state.resources.VldStore.MajorityValidatorCount()
 }
 
 func (state *state) addCommittedTxCount(count int) {
