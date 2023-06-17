@@ -29,7 +29,7 @@ func TestValidator_verifyProposalToVote(t *testing.T) {
 		priv1.PublicKey().String(),
 	}
 	resources := &Resources{
-		VldStore: core.NewValidatorStore(keys, []int{1, 1}, keys),
+		RoleStore: core.NewRoleStore(keys),
 	}
 	mStrg := new(MockStorage)
 	mTxPool := new(MockTxPool)
@@ -67,7 +67,8 @@ func TestValidator_verifyProposalToVote(t *testing.T) {
 
 	vld := &validator{
 		resources: resources,
-		state:     newState(resources),
+		state:     newState(),
+		driver:    new(driver),
 	}
 	vld.state.committedHeight = mStrg.GetBlockHeight()
 	vld.driver.setLeaderIndex(1)

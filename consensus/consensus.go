@@ -55,6 +55,8 @@ func (cons *Consensus) GetQC(blkHash []byte) *core.QuorumCert {
 func (cons *Consensus) start() {
 	cons.startTime = time.Now().UnixNano()
 	b0, q0 := cons.getInitialBlockAndQC()
+	cons.state = newState()
+	cons.state.setBlock(b0)
 	cons.setupDriver(b0, q0)
 	cons.setupValidator()
 	cons.setupPacemaker()
@@ -98,10 +100,8 @@ func (cons *Consensus) getInitialBlockAndQC() (*core.Block, *core.QuorumCert) {
 }
 
 func (cons *Consensus) setupDriver(b0 *core.Block, q0 *core.QuorumCert) {
-	cons.state = newState(cons.resources)
-	cons.state.setBlock(b0)
 	cons.driver = newDriver(cons.resources, cons.config, cons.state)
-	cons.driver.setInnerState(b0, q0)
+	cons.driver.setupInnerState(b0, q0)
 	if cons.config.BenchmarkPath != "" {
 		var err error
 		cons.logfile, err = os.Create(cons.config.BenchmarkPath)

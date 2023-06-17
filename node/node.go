@@ -30,7 +30,7 @@ type Node struct {
 	peers   []*p2p.Peer
 	genesis *Genesis
 
-	vldStore  core.ValidatorStore
+	roleStore core.RoleStore
 	storage   *storage.Storage
 	host      *p2p.Host
 	msgSvc    *p2p.MsgService
@@ -96,7 +96,7 @@ func (node *Node) readFiles() {
 }
 
 func (node *Node) setupComponents() {
-	node.setupValidatorStore()
+	node.setupRoleStore()
 	node.setupStorage()
 	node.setupHost()
 	logger.I().Infow("setup p2p host", "port", node.config.Port, "broadcast-tx", node.config.BroadcastTx)
@@ -108,8 +108,8 @@ func (node *Node) setupComponents() {
 	serveNodeAPI(node)
 }
 
-func (node *Node) setupValidatorStore() {
-	node.vldStore = core.NewValidatorStore(node.genesis.Workers, node.genesis.Weights, node.genesis.Voters)
+func (node *Node) setupRoleStore() {
+	node.roleStore = core.NewRoleStore(node.genesis.Validators)
 }
 
 func (node *Node) setupStorage() {
@@ -142,7 +142,7 @@ func (node *Node) setupHost() {
 func (node *Node) setupConsensus() {
 	node.consensus = consensus.New(&consensus.Resources{
 		Signer:    node.privKey,
-		VldStore:  node.vldStore,
+		RoleStore: node.roleStore,
 		Storage:   node.storage,
 		MsgSvc:    node.msgSvc,
 		TxPool:    node.txpool,

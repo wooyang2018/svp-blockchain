@@ -51,7 +51,7 @@ func TestVote(t *testing.T) {
 			asrt.NoError(err)
 
 			vs := new(MockValidatorStore)
-			vs.On("IsVoter", mock.Anything).Return(true)
+			vs.On("IsValidator", mock.Anything).Return(true)
 
 			err = vote.Validate(vs)
 			if tt.validateErr {

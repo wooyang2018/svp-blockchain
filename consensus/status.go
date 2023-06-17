@@ -20,7 +20,6 @@ type Status struct {
 	LeaderIndex int
 
 	// posv state (block heights)
-	BLock  uint64
 	BExec  uint64
 	BLeaf  uint64
 	QCHigh uint64

@@ -17,7 +17,7 @@ var (
 	ErrNotEnoughSig     = errors.New("not enough signatures in qc")
 	ErrDuplicateSig     = errors.New("duplicate signature in qc")
 	ErrInvalidSig       = errors.New("invalid signature")
-	ErrInvalidValidator = errors.New("voter is not a validator")
+	ErrInvalidValidator = errors.New("invalid validator")
 )
 
 // QuorumCert type
@@ -32,17 +32,17 @@ func NewQuorumCert() *QuorumCert {
 	}
 }
 
-func (qc *QuorumCert) Validate(vs ValidatorStore) error {
+func (qc *QuorumCert) Validate(rs RoleStore) error {
 	if qc.data == nil {
 		return ErrNilQC
 	}
-	if len(qc.sigs) < vs.MajorityValidatorCount() {
+	if len(qc.sigs) < rs.MajorityValidatorCount() {
 		return ErrNotEnoughSig
 	}
 	if qc.sigs.hasDuplicate() {
 		return ErrDuplicateSig
 	}
-	if qc.sigs.hasInvalidValidator(vs) {
+	if qc.sigs.hasInvalidValidator(rs) {
 		return ErrInvalidValidator
 	}
 	if qc.sigs.hasInvalidSig(qc.data.BlockHash) {

@@ -11,15 +11,8 @@ import (
 )
 
 func newProposal(privKey *PrivateKey) *Proposal {
-	blk := NewBlock().
-		SetHeight(4).
-		SetParentHash([]byte{1}).
-		SetExecHeight(2).
-		SetMerkleRoot([]byte{1}).
-		SetTransactions([][]byte{{1}}).
-		Sign(privKey)
 	pro := NewProposal().
-		SetBlock(blk).
+		SetBlock(newBlock(privKey)).
 		SetView(1).
 		Sign(privKey)
 	return pro
@@ -28,8 +21,8 @@ func newProposal(privKey *PrivateKey) *Proposal {
 func TestProposal(t *testing.T) {
 	asrt := assert.New(t)
 	privKey := GenerateKey(nil)
-	pro := newProposal(privKey)
 
+	pro := newProposal(privKey)
 	v := pro.Vote(privKey)
 	qc := NewQuorumCert().Build([]*Vote{v})
 	pro.SetQuorumCert(qc).Sign(privKey)
@@ -40,10 +33,8 @@ func TestProposal(t *testing.T) {
 
 	vs := new(MockValidatorStore)
 	vs.On("MajorityValidatorCount").Return(1)
-	vs.On("IsVoter", privKey.PublicKey()).Return(true)
-	vs.On("IsVoter", mock.Anything).Return(false)
-	vs.On("IsWorker", privKey.PublicKey()).Return(true)
-	vs.On("IsWorker", mock.Anything).Return(false)
+	vs.On("IsValidator", privKey.PublicKey()).Return(true)
+	vs.On("IsValidator", mock.Anything).Return(false)
 
 	bOk, err := pro.Marshal()
 	asrt.NoError(err)
@@ -51,10 +42,7 @@ func TestProposal(t *testing.T) {
 	privKey1 := GenerateKey(nil)
 	bInvalidValidator, _ := pro.Sign(privKey1).Marshal()
 
-	bNilQC, _ := pro.
-		SetQuorumCert(NewQuorumCert()).
-		Sign(privKey).
-		Marshal()
+	bNilQC, _ := pro.SetQuorumCert(NewQuorumCert()).Sign(privKey).Marshal()
 
 	pro.data.Hash = []byte("invalid hash")
 	bInvalidHash, _ := pro.Marshal()
@@ -92,12 +80,13 @@ func TestProposal(t *testing.T) {
 func TestProposal_Vote(t *testing.T) {
 	asrt := assert.New(t)
 	privKey := GenerateKey(nil)
+
 	pro := newProposal(privKey)
 	vote := pro.Vote(privKey)
 	asrt.Equal(pro.Block().Hash(), vote.BlockHash())
 
 	vs := new(MockValidatorStore)
-	vs.On("IsVoter", privKey.PublicKey()).Return(true)
+	vs.On("IsValidator", privKey.PublicKey()).Return(true)
 
 	err := vote.Validate(vs)
 	asrt.NoError(err)

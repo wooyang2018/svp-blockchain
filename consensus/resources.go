@@ -67,7 +67,7 @@ var _ Execution = (*execution.Execution)(nil)
 
 type Resources struct {
 	Signer    core.Signer
-	VldStore  core.ValidatorStore
+	RoleStore core.RoleStore
 	Storage   Storage
 	MsgSvc    MsgService
 	TxPool    TxPool

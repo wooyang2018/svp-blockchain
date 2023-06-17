@@ -7,20 +7,21 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/wooyang2018/posv-blockchain/core"
+	"github.com/wooyang2018/posv-blockchain/emitter"
 )
 
 func setupRotator() (*rotator, *core.Proposal) {
 	key1 := core.GenerateKey(nil)
 	key2 := core.GenerateKey(nil)
-	workers := []string{
+	validators := []string{
 		key1.PublicKey().String(),
 		key2.PublicKey().String(),
 	}
-	weights := []int{1, 1}
 	resources := &Resources{
-		Signer:   key1,
-		VldStore: core.NewValidatorStore(workers, weights, workers),
+		Signer:    key1,
+		RoleStore: core.NewRoleStore(validators),
 	}
 
 	blk := core.NewBlock().Sign(key1)
@@ -28,14 +29,15 @@ func setupRotator() (*rotator, *core.Proposal) {
 	q0 := core.NewQuorumCert().Build([]*core.Vote{b0.Vote(key1)})
 	b0.SetQuorumCert(q0)
 
-	state := newState(resources)
+	state := newState()
 	state.setBlock(b0.Block())
 	driver := &driver{
-		resources: resources,
-		state:     state,
+		resources:  resources,
+		state:      state,
+		proEmitter: emitter.New(),
 	}
 
-	driver.setInnerState(b0.Block(), q0)
+	driver.setupInnerState(b0.Block(), q0)
 	driver.tester = newTester(nil)
 
 	return &rotator{
@@ -53,7 +55,8 @@ func TestRotator_changeView(t *testing.T) {
 	rot.driver.setLeaderIndex(1)
 
 	msgSvc := new(MockMsgService)
-	msgSvc.On("SendQC", rot.resources.VldStore.GetWorker(0), b0.QuorumCert()).Return(nil)
+	msgSvc.On("SendQC", rot.resources.RoleStore.GetValidator(0), b0.QuorumCert()).Return(nil)
+	msgSvc.On("BroadcastProposal", mock.Anything).Return(nil)
 	rot.resources.MsgSvc = msgSvc
 
 	rot.changeView()

@@ -10,29 +10,32 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func TestBlock(t *testing.T) {
-	asrt := assert.New(t)
-	privKey := GenerateKey(nil)
+func newBlock(privKey *PrivateKey) *Block {
 	blk := NewBlock().
 		SetHeight(4).
 		SetParentHash([]byte{1}).
-		SetExecHeight(0).
+		SetExecHeight(3).
 		SetMerkleRoot([]byte{1}).
 		SetTransactions([][]byte{{1}}).
 		Sign(privKey)
+	return blk
+}
+
+func TestBlock(t *testing.T) {
+	asrt := assert.New(t)
+	privKey := GenerateKey(nil)
+	blk := newBlock(privKey)
 
 	asrt.Equal(uint64(4), blk.Height())
 	asrt.Equal([]byte{1}, blk.ParentHash())
 	asrt.Equal(privKey.PublicKey().Bytes(), blk.data.Signature.PubKey)
-	asrt.Equal(uint64(0), blk.ExecHeight())
+	asrt.Equal(uint64(3), blk.ExecHeight())
 	asrt.Equal([]byte{1}, blk.MerkleRoot())
 	asrt.Equal([][]byte{{1}}, blk.Transactions())
 
 	vs := new(MockValidatorStore)
-	vs.On("IsVoter", privKey.PublicKey()).Return(true)
-	vs.On("IsVoter", mock.Anything).Return(false)
-	vs.On("IsWorker", privKey.PublicKey()).Return(true)
-	vs.On("IsWorker", mock.Anything).Return(false)
+	vs.On("IsValidator", privKey.PublicKey()).Return(true)
+	vs.On("IsValidator", mock.Anything).Return(false)
 
 	bOk, err := blk.Marshal()
 	asrt.NoError(err)

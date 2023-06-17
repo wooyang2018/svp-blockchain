@@ -31,7 +31,7 @@ type driver struct {
 	votes    map[string]*core.Vote
 	mtx      sync.RWMutex
 
-	mtxUpdate   sync.Mutex // lock for posv update call
+	mtxUpdate   sync.Mutex // lock for update call
 	leaderIndex int64
 
 	tester     *tester
@@ -49,20 +49,20 @@ func newDriver(resources *Resources, config Config, state *state) *driver {
 	}
 }
 
-func (d *driver) setInnerState(b0 *core.Block, q0 *core.QuorumCert) {
+func (d *driver) setupInnerState(b0 *core.Block, q0 *core.QuorumCert) {
 	d.setBLeaf(b0)
 	d.setBExec(b0)
 	d.setQCHigh(q0)
 	d.setView(q0.View())
 	// proposer of b0 may not be leader, but it doesn't matter
-	d.setLeaderIndex(d.resources.VldStore.GetWorkerIndex(b0.Proposer()))
+	d.setLeaderIndex(d.resources.RoleStore.GetValidatorIndex(b0.Proposer()))
 }
 
-func (d *driver) setBExec(b *core.Block)        { d.bExec.Store(b) }
-func (d *driver) setBLeaf(b *core.Block)        { d.bLeaf.Store(b) }
+func (d *driver) setBExec(blk *core.Block)      { d.bExec.Store(blk) }
+func (d *driver) setBLeaf(blk *core.Block)      { d.bLeaf.Store(blk) }
 func (d *driver) setQCHigh(qc *core.QuorumCert) { d.qcHigh.Store(qc) }
-func (d *driver) setView(num uint32)            { atomic.StoreUint32(&d.view, num) }
-func (d *driver) setLeaderIndex(idx int)        { atomic.StoreInt64(&d.leaderIndex, int64(idx)) }
+func (d *driver) setView(view uint32)           { atomic.StoreUint32(&d.view, view) }
+func (d *driver) setLeaderIndex(index int)      { atomic.StoreInt64(&d.leaderIndex, int64(index)) }
 
 func (d *driver) getBExec() *core.Block       { return d.bExec.Load().(*core.Block) }
 func (d *driver) getBLeaf() *core.Block       { return d.bLeaf.Load().(*core.Block) }
@@ -70,14 +70,14 @@ func (d *driver) getQCHigh() *core.QuorumCert { return d.qcHigh.Load().(*core.Qu
 func (d *driver) getView() uint32             { return atomic.LoadUint32(&d.view) }
 func (d *driver) getLeaderIndex() int         { return int(atomic.LoadInt64(&d.leaderIndex)) }
 
-func (d *driver) startProposal(b *core.Proposal) {
+func (d *driver) startProposal(pro *core.Proposal) {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
 
-	d.proposal = b
-	d.block = b.Block()
+	d.proposal = pro
+	d.block = pro.Block()
 	if d.block == nil { //received new view proposal
-		d.block = d.state.getBlock(b.QuorumCert().BlockHash())
+		d.block = d.state.getBlock(pro.QuorumCert().BlockHash())
 		if d.block == nil {
 			panic("received proposal with nil block")
 		}
@@ -134,28 +134,28 @@ func (d *driver) getVotes() []*core.Vote {
 }
 
 func (d *driver) isLeader(pubKey *core.PublicKey) bool {
-	if !d.resources.VldStore.IsWorker(pubKey) {
+	if !d.resources.RoleStore.IsValidator(pubKey) {
 		return false
 	}
-	return d.getLeaderIndex() == d.resources.VldStore.GetWorkerIndex(pubKey)
+	return d.getLeaderIndex() == d.resources.RoleStore.GetValidatorIndex(pubKey)
 }
 
 func (d *driver) nextLeader() int {
 	leaderIdx := d.getLeaderIndex() + 1
-	if leaderIdx >= d.resources.VldStore.WorkerCount() {
+	if leaderIdx >= d.resources.RoleStore.ValidatorCount() {
 		leaderIdx = 0
 	}
 	return leaderIdx
 }
 
-func (d *driver) cleanStateOnCommitted(bexec *core.Block) {
+func (d *driver) cleanStateOnCommitted(blk *core.Block) {
 	// qc for bexec is no longer needed here after committed to storage
-	d.state.deleteQC(bexec.Hash())
+	d.state.deleteQC(blk.Hash())
 	if !PreserveTxFlag {
-		d.resources.TxPool.RemoveTxs(bexec.Transactions())
+		d.resources.TxPool.RemoveTxs(blk.Transactions())
 	}
-	d.state.setCommittedBlock(bexec)
-	blocks := d.state.getUncommittedOlderBlocks(bexec)
+	d.state.setCommittedBlock(blk)
+	blocks := d.state.getUncommittedOlderBlocks(blk)
 	for _, blk := range blocks {
 		// put transactions from forked block back to queue
 		d.resources.TxPool.PutTxsToQueue(blk.Transactions())
@@ -163,7 +163,7 @@ func (d *driver) cleanStateOnCommitted(bexec *core.Block) {
 		d.state.deleteQC(blk.Hash())
 	}
 	//delete committed older blocks
-	height := bexec.Height()
+	height := blk.Height()
 	if height < 20 {
 		return
 	}
@@ -185,6 +185,19 @@ func (d *driver) getBlockByHash(hash []byte) *core.Block {
 	}
 	d.state.setBlock(blk)
 	return blk
+}
+
+func (d *driver) getQCByBlockHash(blkHash []byte) *core.QuorumCert {
+	qc := d.state.getQC(blkHash)
+	if qc != nil {
+		return qc
+	}
+	qc, _ = d.resources.Storage.GetQC(blkHash)
+	if qc == nil {
+		return nil
+	}
+	d.state.setQC(qc)
+	return qc
 }
 
 func (d *driver) qcRefHeight(qc *core.QuorumCert) (height uint64) {
@@ -233,14 +246,14 @@ func (d *driver) SubscribeProposal() *emitter.Subscription {
 
 func (d *driver) VoteProposal(pro *core.Proposal, blk *core.Block) {
 	if d.cmpQCPriority(pro.QuorumCert(), d.getQCHigh()) < 0 {
-		logger.I().Warnf("can not vote proposal height %d", blk.Height())
+		logger.I().Warnw("can not vote for proposal,", "height", blk.Height())
 		return
 	}
 	vote := pro.Vote(d.resources.Signer)
 	if !PreserveTxFlag {
 		d.resources.TxPool.SetTxsPending(blk.Transactions())
 	}
-	proposer := d.resources.VldStore.GetWorkerIndex(pro.Proposer())
+	proposer := d.resources.RoleStore.GetValidatorIndex(pro.Proposer())
 	if proposer != d.getLeaderIndex() {
 		logger.I().Warnf("can not vote proposal height %d", blk.Height())
 		return // view changed happened
@@ -294,7 +307,7 @@ func (d *driver) CreateProposal() *core.Proposal {
 	return pro
 }
 
-func (d *driver) OnNewPropose() *core.Proposal {
+func (d *driver) OnNewViewPropose() *core.Proposal {
 	qcHigh := d.getQCHigh()
 	pro := core.NewProposal().
 		SetQuorumCert(qcHigh).
@@ -322,23 +335,14 @@ func (d *driver) OnReceiveVote(vote *core.Vote) error {
 	}
 	blk := d.state.getBlock(vote.BlockHash())
 	logger.I().Debugw("received vote", "height", blk.Height())
-	if d.getVoteCount() >= d.resources.VldStore.MajorityValidatorCount() {
+	if d.getVoteCount() >= d.resources.RoleStore.MajorityValidatorCount() {
 		votes := d.getVotes()
 		d.endProposal()
-		qc := d.CreateQuorumCert(votes)
+		qc := core.NewQuorumCert().Build(votes)
 		d.UpdateQCHigh(qc)
 		d.qcEmitter.Emit(qc)
 	}
 	return nil
-}
-
-func (d *driver) CreateQuorumCert(iVotes []*core.Vote) *core.QuorumCert {
-	votes := make([]*core.Vote, len(iVotes))
-	for i, v := range iVotes {
-		votes[i] = v
-	}
-	qc := core.NewQuorumCert().Build(votes)
-	return qc
 }
 
 // UpdateQCHigh replaces high qc if the given qc is higher than it
@@ -349,55 +353,53 @@ func (d *driver) UpdateQCHigh(qc *core.QuorumCert) {
 		d.setQCHigh(qc)
 		d.setBLeaf(blk)
 		d.CommitRecursive(blk)
-	} else {
-		logger.I().Warnw("failed to update high qc", "view", qc.View(), "height", d.qcRefHeight(qc))
 	}
 }
 
-func (d *driver) CommitRecursive(b *core.Block) { // prepare phase for b2
+func (d *driver) CommitRecursive(blk *core.Block) { // prepare phase for b2
 	t1 := time.Now().UnixNano()
-	d.OnCommit(b)
-	d.setBExec(b)
+	d.OnCommit(blk)
+	d.setBExec(blk)
 	t2 := time.Now().UnixNano()
-	d.tester.saveItem(b.Height(), b.Timestamp(), t1, t2, len(b.Transactions()))
+	d.tester.saveItem(blk.Height(), blk.Timestamp(), t1, t2, len(blk.Transactions()))
 }
 
-func (d *driver) OnCommit(b *core.Block) {
-	if d.cmpBlockHeight(b, d.getBExec()) == 1 {
+func (d *driver) OnCommit(blk *core.Block) {
+	if d.cmpBlockHeight(blk, d.getBExec()) == 1 {
 		// commit parent blocks recursively
-		d.OnCommit(d.getBlockByHash(b.ParentHash()))
-		d.Commit(b)
-	} else if !bytes.Equal(d.getBExec().Hash(), b.Hash()) {
-		logger.I().Fatalw("safety breached", "hash", b.Hash(), "height", b.Height())
+		d.OnCommit(d.getBlockByHash(blk.ParentHash()))
+		d.Commit(blk)
+	} else if !bytes.Equal(d.getBExec().Hash(), blk.Hash()) {
+		logger.I().Fatalw("safety breached", "hash", blk.Hash(), "height", blk.Height())
 	}
 }
 
-func (d *driver) Commit(bexec *core.Block) {
+func (d *driver) Commit(blk *core.Block) {
 	start := time.Now()
-	rawTxs := bexec.Transactions()
+	rawTxs := blk.Transactions()
 	var txCount int
 	var data *storage.CommitData
 	if ExecuteTxFlag {
 		txs, old := d.resources.TxPool.GetTxsToExecute(rawTxs)
 		txCount = len(txs)
-		logger.I().Debugw("committing block", "height", bexec.Height(), "txs", txCount)
-		bcm, txcs := d.resources.Execution.Execute(bexec, txs)
+		logger.I().Debugw("committing block", "height", blk.Height(), "txs", txCount)
+		bcm, txcs := d.resources.Execution.Execute(blk, txs)
 		bcm.SetOldBlockTxs(old)
 		data = &storage.CommitData{
-			Block:        bexec,
-			QC:           d.state.getQC(bexec.Hash()),
+			Block:        blk,
+			QC:           d.getQCByBlockHash(blk.Hash()),
 			Transactions: txs,
 			BlockCommit:  bcm,
 			TxCommits:    txcs,
 		}
 	} else {
 		txCount = len(rawTxs)
-		logger.I().Debugw("committing block", "height", bexec.Height(), "txs", txCount)
-		bcm, txcs := d.resources.Execution.MockExecute(bexec)
+		logger.I().Debugw("committing block", "height", blk.Height(), "txs", txCount)
+		bcm, txcs := d.resources.Execution.MockExecute(blk)
 		bcm.SetOldBlockTxs(rawTxs)
 		data = &storage.CommitData{
-			Block:        bexec,
-			QC:           d.state.getQC(bexec.Hash()),
+			Block:        blk,
+			QC:           d.getQCByBlockHash(blk.Hash()),
 			Transactions: nil,
 			BlockCommit:  bcm,
 			TxCommits:    txcs,
@@ -408,9 +410,9 @@ func (d *driver) Commit(bexec *core.Block) {
 		logger.I().Fatalf("commit storage error: %+v", err)
 	}
 	d.state.addCommittedTxCount(txCount)
-	d.cleanStateOnCommitted(bexec)
+	d.cleanStateOnCommitted(blk)
 	logger.I().Debugw("committed bock",
-		"height", bexec.Height(),
+		"height", blk.Height(),
 		"txs", txCount,
 		"elapsed", time.Since(start))
 }

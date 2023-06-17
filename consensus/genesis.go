@@ -28,10 +28,8 @@ type genesis struct {
 
 	v0    uint32
 	mtxV0 sync.RWMutex
-
 	b0    *core.Block
 	mtxB0 sync.RWMutex
-
 	q0    *core.QuorumCert
 	mtxQ0 sync.RWMutex
 
@@ -70,7 +68,7 @@ func (gns *genesis) propose() {
 	if !gns.isLeader(gns.resources.Signer.PublicKey()) {
 		return
 	}
-	gns.votes = make(map[string]*core.Vote, gns.resources.VldStore.MajorityValidatorCount())
+	gns.votes = make(map[string]*core.Vote, gns.resources.RoleStore.MajorityValidatorCount())
 	pro := gns.createGenesisProposal()
 	gns.setB0(pro.Block())
 	logger.I().Infow("created genesis block, broadcasting...")
@@ -85,6 +83,7 @@ func (gns *genesis) createGenesisProposal() *core.Proposal {
 		SetTimestamp(time.Now().UnixNano()).
 		Sign(gns.resources.Signer)
 	return core.NewProposal().
+		SetView(0).
 		SetBlock(blk).
 		Sign(gns.resources.Signer)
 }
@@ -104,19 +103,6 @@ func (gns *genesis) broadcastProposalLoop() {
 		}
 		time.Sleep(2 * time.Second)
 	}
-}
-
-func (gns *genesis) isLeader(pubKey *core.PublicKey) bool {
-	if !gns.resources.VldStore.IsWorker(pubKey) {
-		return false
-	}
-	return gns.resources.VldStore.GetWorkerIndex(pubKey) == 0
-}
-
-func hashChainID(chainID int64) []byte {
-	h := sha3.New256()
-	binary.Write(h, binary.BigEndian, chainID)
-	return h.Sum(nil)
 }
 
 func (gns *genesis) proposalLoop() {
@@ -171,7 +157,7 @@ func (gns *genesis) newViewLoop() {
 }
 
 func (gns *genesis) onReceiveProposal(pro *core.Proposal) error {
-	if err := pro.Validate(gns.resources.VldStore); err != nil {
+	if err := pro.Validate(gns.resources.RoleStore); err != nil {
 		return err
 	}
 	if pro.Block().Height() != 0 {
@@ -218,7 +204,7 @@ func (gns *genesis) requestBlockByHeight(peer *core.PublicKey, height uint64) (*
 	if err != nil {
 		return nil, fmt.Errorf("cannot get proposal by height %d, %w", height, err)
 	}
-	if err := blk.Validate(gns.resources.VldStore); err != nil {
+	if err := blk.Validate(gns.resources.RoleStore); err != nil {
 		return nil, fmt.Errorf("validate proposal %d, %w", height, err)
 	}
 	return blk, nil
@@ -229,7 +215,7 @@ func (gns *genesis) requestQC(peer *core.PublicKey, blkHash []byte) (*core.Quoru
 	if err != nil {
 		return nil, fmt.Errorf("request qc failed, %w", err)
 	}
-	if err := qc.Validate(gns.resources.VldStore); err != nil {
+	if err := qc.Validate(gns.resources.RoleStore); err != nil {
 		return nil, fmt.Errorf("validate qc failed, %w", err)
 	}
 	return qc, nil
@@ -239,7 +225,7 @@ func (gns *genesis) onReceiveVote(vote *core.Vote) error {
 	if gns.votes == nil {
 		return errors.New("not accepting votes")
 	}
-	if err := vote.Validate(gns.resources.VldStore); err != nil {
+	if err := vote.Validate(gns.resources.RoleStore); err != nil {
 		return err
 	}
 	gns.acceptVote(vote)
@@ -251,7 +237,7 @@ func (gns *genesis) acceptVote(vote *core.Vote) {
 	defer gns.mtxVote.Unlock()
 
 	gns.votes[vote.Voter().String()] = vote
-	if len(gns.votes) < gns.resources.VldStore.MajorityValidatorCount() {
+	if len(gns.votes) < gns.resources.RoleStore.MajorityValidatorCount() {
 		return
 	}
 	vlist := make([]*core.Vote, 0, len(gns.votes))
@@ -278,7 +264,7 @@ func (gns *genesis) broadcastQC() {
 }
 
 func (gns *genesis) onReceiveQC(qc *core.QuorumCert) error {
-	if err := qc.Validate(gns.resources.VldStore); err != nil {
+	if err := qc.Validate(gns.resources.RoleStore); err != nil {
 		return err
 	}
 	b0 := gns.getB0()
@@ -293,8 +279,6 @@ func (gns *genesis) onReceiveQC(qc *core.QuorumCert) error {
 }
 
 func (gns *genesis) acceptQC(qc *core.QuorumCert) {
-	gns.mtxV0.Lock()
-	defer gns.mtxV0.Unlock()
 	select {
 	case <-gns.done: // already done genesis
 		return
@@ -307,16 +291,16 @@ func (gns *genesis) acceptQC(qc *core.QuorumCert) {
 	close(gns.done) // when qc is accepted, genesis creation is done
 }
 
-func (gns *genesis) setB0(val *core.Block) {
+func (gns *genesis) setB0(blk *core.Block) {
 	gns.mtxB0.Lock()
 	defer gns.mtxB0.Unlock()
-	gns.b0 = val
+	gns.b0 = blk
 }
 
-func (gns *genesis) setQ0(val *core.QuorumCert) {
+func (gns *genesis) setQ0(qc *core.QuorumCert) {
 	gns.mtxQ0.Lock()
 	defer gns.mtxQ0.Unlock()
-	gns.q0 = val
+	gns.q0 = qc
 }
 
 func (gns *genesis) getB0() *core.Block {
@@ -329,4 +313,17 @@ func (gns *genesis) getQ0() *core.QuorumCert {
 	gns.mtxQ0.RLock()
 	defer gns.mtxQ0.RUnlock()
 	return gns.q0
+}
+
+func (gns *genesis) isLeader(pubKey *core.PublicKey) bool {
+	if !gns.resources.RoleStore.IsValidator(pubKey) {
+		return false
+	}
+	return gns.resources.RoleStore.GetValidatorIndex(pubKey) == 0
+}
+
+func hashChainID(chainID int64) []byte {
+	h := sha3.New256()
+	binary.Write(h, binary.BigEndian, chainID)
+	return h.Sum(nil)
 }

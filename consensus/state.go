@@ -11,8 +11,6 @@ import (
 )
 
 type state struct {
-	resources *Resources
-
 	blocks    map[string]*core.Block
 	mtxBlocks sync.RWMutex
 
@@ -28,9 +26,8 @@ type state struct {
 	committedTxCount uint64
 }
 
-func newState(resources *Resources) *state {
+func newState() *state {
 	return &state{
-		resources: resources,
 		blocks:    make(map[string]*core.Block),
 		committed: make(map[string]struct{}),
 		qcs:       make(map[string]*core.QuorumCert),
@@ -74,19 +71,6 @@ func (state *state) setQC(qc *core.QuorumCert) {
 }
 
 func (state *state) getQC(blkHash []byte) *core.QuorumCert {
-	qc := state.getQCFromState(blkHash)
-	if qc != nil {
-		return qc
-	}
-	qc, _ = state.resources.Storage.GetQC(blkHash)
-	if qc == nil {
-		return nil
-	}
-	state.setQC(qc)
-	return qc
-}
-
-func (state *state) getQCFromState(blkHash []byte) *core.QuorumCert {
 	state.mtxQCs.RLock()
 	defer state.mtxQCs.RUnlock()
 	return state.qcs[string(blkHash)]
@@ -105,10 +89,10 @@ func (state *state) setCommittedBlock(blk *core.Block) {
 	atomic.StoreUint64(&state.committedHeight, blk.Height())
 }
 
-func (state *state) deleteCommitted(blkhash []byte) {
+func (state *state) deleteCommitted(blkHash []byte) {
 	state.mtxCommitted.Lock()
 	defer state.mtxCommitted.Unlock()
-	delete(state.committed, string(blkhash))
+	delete(state.committed, string(blkHash))
 }
 
 func (state *state) getOlderBlocks(height uint64) []*core.Block {
@@ -123,7 +107,7 @@ func (state *state) getOlderBlocks(height uint64) []*core.Block {
 	return ret
 }
 
-func (state *state) getUncommittedOlderBlocks(bexec *core.Block) []*core.Block {
+func (state *state) getUncommittedOlderBlocks(blk *core.Block) []*core.Block {
 	state.mtxBlocks.RLock()
 	defer state.mtxBlocks.RUnlock()
 
@@ -132,7 +116,7 @@ func (state *state) getUncommittedOlderBlocks(bexec *core.Block) []*core.Block {
 
 	ret := make([]*core.Block, 0)
 	for _, b := range state.blocks {
-		if b.Height() < bexec.Height() {
+		if b.Height() < blk.Height() {
 			if _, committed := state.committed[string(b.Hash())]; !committed {
 				ret = append(ret, b)
 			}

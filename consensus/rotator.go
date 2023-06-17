@@ -84,7 +84,7 @@ func (rot *rotator) onLeaderTimeout() {
 	rot.leaderTimeoutCount++
 	rot.changeView()
 	rot.drainStopTimer(rot.leaderTimer)
-	faultyCount := rot.resources.VldStore.ValidatorCount() - rot.resources.VldStore.MajorityValidatorCount()
+	faultyCount := rot.resources.RoleStore.ValidatorCount() - rot.resources.RoleStore.MajorityValidatorCount()
 	if rot.leaderTimeoutCount > faultyCount {
 		rot.leaderTimer.Stop()
 		rot.setViewChange(-1) //failed to change view when leader timeout
@@ -111,7 +111,7 @@ func (rot *rotator) changeView() {
 	rot.setViewStart()
 	leaderIdx := rot.driver.nextLeader()
 	rot.driver.setLeaderIndex(leaderIdx)
-	leader := rot.resources.VldStore.GetWorker(leaderIdx)
+	leader := rot.resources.RoleStore.GetValidator(leaderIdx)
 	err := rot.resources.MsgSvc.SendQC(leader, rot.driver.getQCHigh())
 	if err != nil {
 		logger.I().Errorw("send high qc to new leader failed", "idx", leaderIdx, "error", err)
@@ -135,7 +135,7 @@ func (rot *rotator) newViewProposal() {
 	rot.driver.mtxUpdate.Lock()
 	defer rot.driver.mtxUpdate.Unlock()
 
-	pro := rot.driver.OnNewPropose()
+	pro := rot.driver.OnNewViewPropose()
 	logger.I().Debugw("proposed new view proposal", "view", pro.View(), "qc", rot.driver.qcRefHeight(pro.QuorumCert()))
 	vote := pro.Vote(rot.resources.Signer)
 	rot.driver.OnReceiveVote(vote)
@@ -143,7 +143,7 @@ func (rot *rotator) newViewProposal() {
 }
 
 func (rot *rotator) onNewProposal(pro *core.Proposal) {
-	proposer := rot.resources.VldStore.GetWorkerIndex(pro.Proposer())
+	proposer := rot.resources.RoleStore.GetValidatorIndex(pro.Proposer())
 	logger.I().Debugw("updated proposal", "proposer", proposer, "qc", rot.driver.qcRefHeight(pro.QuorumCert()))
 	var ltreset, vtreset bool
 	if proposer == rot.driver.getLeaderIndex() { // if pro is from current leader

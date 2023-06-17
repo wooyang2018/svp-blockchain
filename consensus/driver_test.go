@@ -18,11 +18,12 @@ func setupTestDriver() *driver {
 	resources := &Resources{
 		Signer: core.GenerateKey(nil),
 	}
-	return &driver{
+	d := &driver{
 		resources:    resources,
 		blockTxLimit: DefaultConfig.BlockTxLimit,
-		state:        newState(resources),
+		state:        newState(),
 	}
+	return d
 }
 
 func TestDriver_CreateProposal(t *testing.T) {
@@ -75,7 +76,8 @@ func TestDriver_VoteBlock(t *testing.T) {
 		pro2.Vote(d.resources.Signer),
 		pro2.Vote(core.GenerateKey(nil)),
 	}
-	qc2 := d.CreateQuorumCert(votes)
+	qc2 := core.NewQuorumCert().Build(votes)
+	d.setQCHigh(qc2)
 
 	proposer := core.GenerateKey(nil)
 	blk3 := newTestBlock(4, 3, nil, nil, d.resources.Signer)
@@ -84,7 +86,7 @@ func TestDriver_VoteBlock(t *testing.T) {
 		SetQuorumCert(qc2).
 		Sign(proposer)
 	validators := []string{pro.Proposer().String()}
-	d.resources.VldStore = core.NewValidatorStore(validators, []int{1}, validators)
+	d.resources.RoleStore = core.NewRoleStore(validators)
 
 	txPool := new(MockTxPool)
 	if !PreserveTxFlag {
@@ -184,7 +186,7 @@ func TestDriver_CreateQC(t *testing.T) {
 		pro.Vote(d.resources.Signer),
 		pro.Vote(core.GenerateKey(nil)),
 	}
-	qc := d.CreateQuorumCert(votes)
+	qc := core.NewQuorumCert().Build(votes)
 	assert.Equal(t, pro.Block(), d.state.getBlock(qc.BlockHash()), "should get qc reference block")
 }
 

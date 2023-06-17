@@ -58,7 +58,7 @@ func (pm *pacemaker) newProposal() {
 	pm.driver.mtxUpdate.Lock()
 	defer pm.driver.mtxUpdate.Unlock()
 
-	if pm.driver.isLeader(pm.resources.Signer.PublicKey()) {
+	if !pm.driver.isLeader(pm.resources.Signer.PublicKey()) {
 		return
 	}
 

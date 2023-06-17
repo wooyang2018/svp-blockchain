@@ -51,7 +51,7 @@ func (blk *Block) Sum() []byte {
 }
 
 // Validate block
-func (blk *Block) Validate(vs ValidatorStore) error {
+func (blk *Block) Validate(rs RoleStore) error {
 	if blk.data == nil {
 		return ErrNilBlock
 	}
@@ -62,7 +62,7 @@ func (blk *Block) Validate(vs ValidatorStore) error {
 	if err != nil {
 		return err
 	}
-	if !vs.IsVoter(sig.PublicKey()) && !vs.IsWorker(sig.PublicKey()) {
+	if !rs.IsValidator(sig.PublicKey()) {
 		return ErrInvalidValidator
 	}
 	if !sig.Verify(blk.data.Hash) {

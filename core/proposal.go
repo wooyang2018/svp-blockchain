@@ -51,17 +51,17 @@ func (pro *Proposal) Sum() []byte {
 }
 
 // Validate proposal
-func (pro *Proposal) Validate(vs ValidatorStore) error {
+func (pro *Proposal) Validate(rs RoleStore) error {
 	if pro.data == nil {
 		return ErrNilProposal
 	}
 	if pro.block != nil {
-		if err := pro.block.Validate(vs); err != nil {
+		if err := pro.block.Validate(rs); err != nil {
 			return err
 		}
 	}
 	if pro.quorumCert != nil { // skip quorum cert validation for genesis block
-		if err := pro.quorumCert.Validate(vs); err != nil {
+		if err := pro.quorumCert.Validate(rs); err != nil {
 			return err
 		}
 	}
@@ -69,7 +69,7 @@ func (pro *Proposal) Validate(vs ValidatorStore) error {
 		return ErrInvalidProposalHash
 	}
 	sig, err := newSignature(pro.data.Signature)
-	if !vs.IsWorker(sig.PublicKey()) {
+	if !rs.IsValidator(sig.PublicKey()) {
 		return ErrInvalidValidator
 	}
 	if err != nil {

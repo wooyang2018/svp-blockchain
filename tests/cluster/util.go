@@ -80,14 +80,10 @@ func SetupTemplateDir(dir string, keys []*core.PrivateKey, vlds []node.Peer) err
 		return err
 	}
 	genesis := &node.Genesis{
-		Workers: make([]string, 0, 0),
-		Voters:  make([]string, 0, 0),
-		Weights: make([]int, 0, 0),
+		Validators: make([]string, 0, 0),
 	}
 	for _, v := range keys {
-		genesis.Voters = append(genesis.Voters, v.PublicKey().String())
-		genesis.Workers = append(genesis.Workers, v.PublicKey().String())
-		genesis.Weights = append(genesis.Weights, 1)
+		genesis.Validators = append(genesis.Validators, v.PublicKey().String())
 	}
 	for i, key := range keys {
 		d := path.Join(dir, strconv.Itoa(i))

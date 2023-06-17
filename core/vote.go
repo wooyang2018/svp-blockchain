@@ -28,7 +28,7 @@ func NewVote() *Vote {
 }
 
 // Validate vote
-func (vote *Vote) Validate(vs ValidatorStore) error {
+func (vote *Vote) Validate(rs RoleStore) error {
 	if vote.data == nil {
 		return ErrNilVote
 	}
@@ -36,7 +36,7 @@ func (vote *Vote) Validate(vs ValidatorStore) error {
 	if err != nil {
 		return err
 	}
-	if !(vs.IsVoter(sig.PublicKey()) || vs.IsWorker(sig.PublicKey())) {
+	if !rs.IsValidator(sig.PublicKey()) {
 		return ErrInvalidValidator
 	}
 	if !sig.Verify(vote.data.BlockHash) {

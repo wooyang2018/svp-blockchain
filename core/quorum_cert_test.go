@@ -13,24 +13,19 @@ import (
 
 func TestQuorumCert(t *testing.T) {
 	asrt := assert.New(t)
-	privKeys := make([]*PrivateKey, 5)
+	privKeys := make([]*PrivateKey, 6)
 
 	vs := new(MockValidatorStore)
-	vs.On("VoterCount").Return(4)
-	vs.On("WorkerCount").Return(3)
+	vs.On("ValidatorCount").Return(5)
 	vs.On("MajorityValidatorCount").Return(3)
 
 	for i := range privKeys {
 		privKeys[i] = GenerateKey(nil)
-		if i != 4 {
-			vs.On("IsVoter", privKeys[i].pubKey).Return(true)
-		}
-		if i != 3 && i != 4 {
-			vs.On("IsWorker", privKeys[i].pubKey).Return(true)
+		if i > 0 {
+			vs.On("IsValidator", privKeys[i].pubKey).Return(true)
 		}
 	}
-	vs.On("IsVoter", mock.Anything).Return(false)
-	vs.On("IsWorker", mock.Anything).Return(false)
+	vs.On("IsValidator", mock.Anything).Return(false)
 
 	blockHash := []byte{1}
 	votes := make([]*Vote, len(privKeys))
@@ -46,26 +41,26 @@ func TestQuorumCert(t *testing.T) {
 	invalidSigVote := NewVote()
 	invalidSigVote.setData(&pb.Vote{
 		BlockHash: blockHash,
-		Signature: privKeys[4].Sign([]byte("wrong data")).data,
+		Signature: privKeys[1].Sign([]byte("wrong data")).data,
 	})
 
-	qc := NewQuorumCert().Build([]*Vote{votes[2], votes[1], votes[0]})
+	qc := NewQuorumCert().Build([]*Vote{votes[3], votes[2], votes[1]})
 	qcValid, err := qc.Marshal()
 	asrt.NoError(err)
 
-	qc = NewQuorumCert().Build([]*Vote{votes[2], votes[1], votes[0], votes[3]})
+	qc = NewQuorumCert().Build([]*Vote{votes[5], votes[4], votes[3], votes[2], votes[1]})
 	qcValidFull, _ := qc.Marshal()
 
-	qc = NewQuorumCert().Build([]*Vote{votes[1], votes[0]})
+	qc = NewQuorumCert().Build([]*Vote{votes[2], votes[1]})
 	qcNotEnoughSig, _ := qc.Marshal()
 
-	qc = NewQuorumCert().Build([]*Vote{votes[2], votes[3], votes[0], votes[2]})
+	qc = NewQuorumCert().Build([]*Vote{votes[3], votes[3], votes[2], votes[1]})
 	qcDuplicateKey, _ := qc.Marshal()
 
-	qc = NewQuorumCert().Build([]*Vote{votes[1], votes[3], votes[0], votes[4]})
+	qc = NewQuorumCert().Build([]*Vote{votes[3], votes[2], votes[1], votes[0]})
 	qcInvalidValidator, _ := qc.Marshal()
 
-	qc = NewQuorumCert().Build([]*Vote{votes[2], votes[1], votes[0], invalidSigVote})
+	qc = NewQuorumCert().Build([]*Vote{votes[3], votes[2], votes[1], invalidSigVote})
 	qcInvalidSig, _ := qc.Marshal()
 
 	// test validate
