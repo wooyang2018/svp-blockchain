@@ -40,6 +40,6 @@ func (expm *NetworkDelay) Run(cls *cluster.Cluster) error {
 
 	cls.RemoveEffects()
 	fmt.Println("Removed effects")
-	testutil.Sleep(10 * time.Second)
+	testutil.Sleep(20 * time.Second)
 	return nil
 }

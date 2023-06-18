@@ -106,7 +106,7 @@ func (gns *genesis) broadcastProposalLoop() {
 }
 
 func (gns *genesis) proposalLoop() {
-	sub := gns.resources.MsgSvc.SubscribeProposal(10)
+	sub := gns.resources.MsgSvc.SubscribeProposal(1)
 	defer sub.Unsubscribe()
 
 	for {
@@ -123,7 +123,7 @@ func (gns *genesis) proposalLoop() {
 }
 
 func (gns *genesis) voteLoop() {
-	sub := gns.resources.MsgSvc.SubscribeVote(100)
+	sub := gns.resources.MsgSvc.SubscribeVote(10)
 	defer sub.Unsubscribe()
 
 	for {

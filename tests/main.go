@@ -24,8 +24,8 @@ var (
 	WorkDir   = "./workdir"
 	NodeCount = 4
 
-	LoadTxPerSec    = 100
-	LoadJobPerTick  = 1000
+	LoadTxPerSec    = 10  //tps for client to submit tx during functional testing
+	LoadJobPerTick  = 100 //num of tasks to be completed per tick
 	LoadSubmitNodes = []int{}
 	LoadBatchSubmit = true //whether to enable batch transaction submission
 

@@ -29,7 +29,7 @@ func SubmitTxAndWait(cls *cluster.Cluster, tx *core.Transaction) (int, error) {
 		if err := WaitTxCommitted(cls.GetNode(idx), tx); err != nil {
 			// maybe current leader doesn't receive tx
 			// resubmit tx again
-			time.Sleep(50 * time.Millisecond)
+			time.Sleep(1 * time.Second)
 			return SubmitTxAndWait(cls, tx)
 		} else {
 			return idx, nil

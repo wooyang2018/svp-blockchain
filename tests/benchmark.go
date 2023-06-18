@@ -142,7 +142,7 @@ func (bm *Benchmark) runAsync(loadCtx context.Context, done chan struct{}) {
 		return
 	}
 	fmt.Println("Started cluster")
-	testutil.Sleep(10 * time.Second)
+	testutil.Sleep(20 * time.Second)
 
 	fmt.Println("Setting up load generator")
 	bm.err = bm.loadGen.SetupOnCluster(bm.cluster)

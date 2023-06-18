@@ -45,7 +45,7 @@ func (vld *validator) stop() {
 }
 
 func (vld *validator) proposalLoop() {
-	sub := vld.resources.MsgSvc.SubscribeProposal(100)
+	sub := vld.resources.MsgSvc.SubscribeProposal(1)
 	defer sub.Unsubscribe()
 
 	for {
@@ -62,7 +62,7 @@ func (vld *validator) proposalLoop() {
 }
 
 func (vld *validator) voteLoop() {
-	sub := vld.resources.MsgSvc.SubscribeVote(1000)
+	sub := vld.resources.MsgSvc.SubscribeVote(10)
 	defer sub.Unsubscribe()
 
 	for {
@@ -79,7 +79,7 @@ func (vld *validator) voteLoop() {
 }
 
 func (vld *validator) newViewLoop() {
-	sub := vld.resources.MsgSvc.SubscribeQC(100)
+	sub := vld.resources.MsgSvc.SubscribeQC(10)
 	defer sub.Unsubscribe()
 
 	for {

@@ -83,7 +83,7 @@ func (r *ExperimentRunner) runSingleExperiment(expm Experiment) error {
 			return
 		}
 		fmt.Println("Started cluster")
-		testutil.Sleep(10 * time.Second)
+		testutil.Sleep(20 * time.Second)
 
 		fmt.Println("Setting up load generator")
 		err = r.loadGen.SetupOnCluster(cls)
@@ -92,7 +92,7 @@ func (r *ExperimentRunner) runSingleExperiment(expm Experiment) error {
 		}
 		go r.loadGen.Run(loadCtx)
 		fmt.Println("Load generator running")
-		testutil.Sleep(10 * time.Second)
+		testutil.Sleep(20 * time.Second)
 
 		if err = health.CheckAllNodes(cls); err != nil {
 			fmt.Printf("health check failed before experiment, %+v\n", err)

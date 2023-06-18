@@ -153,7 +153,6 @@ func (rot *rotator) onNewProposal(pro *core.Proposal) {
 	var ltreset, vtreset bool
 	if rot.isNormalApproval(pro.View(), proposer) {
 		ltreset = true
-		logger.I().Infow("refresh leader", "view", pro.View(), "leader", rot.driver.getLeaderIndex())
 	}
 	if rot.isNewViewApproval(pro.View(), proposer) {
 		ltreset = true
@@ -183,7 +182,8 @@ func (rot *rotator) isNewViewApproval(view uint32, proposer uint32) bool {
 
 func (rot *rotator) isNormalApproval(view uint32, proposer uint32) bool {
 	leaderIdx := rot.driver.getLeaderIndex()
-	return view == rot.driver.getView() && proposer == leaderIdx
+	pending := rot.getViewChange()
+	return pending == 0 && view == rot.driver.getView() && proposer == leaderIdx
 }
 
 func (rot *rotator) approveViewLeader(view uint32, proposer uint32) {
