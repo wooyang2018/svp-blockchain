@@ -57,6 +57,7 @@ func (cons *Consensus) start() {
 	b0, q0 := cons.getInitialBlockAndQC()
 	cons.state = newState()
 	cons.state.setBlock(b0)
+	cons.state.setQC(q0)
 	cons.setupDriver(b0, q0)
 	cons.setupValidator()
 	cons.setupPacemaker()

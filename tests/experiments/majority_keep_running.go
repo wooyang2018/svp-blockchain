@@ -30,7 +30,7 @@ func (expm *MajorityKeepRunning) Run(cls *cluster.Cluster) error {
 	}
 	fmt.Printf("Stopped %d out of %d nodes: %v\n", len(faulty), total, faulty)
 
-	testutil.Sleep(10 * time.Second)
+	testutil.Sleep(20 * time.Second)
 	if err := health.CheckMajorityNodes(cls); err != nil {
 		return err
 	}
@@ -41,6 +41,6 @@ func (expm *MajorityKeepRunning) Run(cls *cluster.Cluster) error {
 	}
 	fmt.Printf("Started nodes: %v\n", faulty)
 	// stopped nodes should sync with the majority after some duration
-	testutil.Sleep(30 * time.Second)
+	testutil.Sleep(40 * time.Second)
 	return nil
 }

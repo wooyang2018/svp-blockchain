@@ -110,8 +110,9 @@ func (vld *validator) onReceiveProposal(pro *core.Proposal) error {
 		return err
 	}
 
+	vld.state.setQC(pro.QuorumCert())
 	pidx := vld.resources.RoleStore.GetValidatorIndex(pro.Proposer())
-	logger.I().Debugw("received proposal", "view", pro.View(), "proposer", pidx, "height", blk.Height(), "txs", len(blk.Transactions()))
+	logger.I().Debugw("received proposal", "view", pro.View(), "proposer", pidx, "height", blk.Height(), "exec", blk.ExecHeight(), "txs", len(blk.Transactions()))
 
 	return vld.updateQCHighAndVote(pro, blk)
 }
@@ -332,6 +333,10 @@ func (vld *validator) onReceiveVote(vote *core.Vote) error {
 	if err := vote.Validate(vld.resources.RoleStore); err != nil {
 		return err
 	}
+
+	vld.driver.mtxUpdate.Lock()
+	defer vld.driver.mtxUpdate.Unlock()
+
 	return vld.driver.OnReceiveVote(vote)
 }
 
@@ -343,6 +348,11 @@ func (vld *validator) onReceiveQC(qc *core.QuorumCert) error {
 	if _, err = vld.syncBlockByHash(qc.Proposer(), qc.BlockHash()); err != nil {
 		return err
 	}
+	vld.state.setQC(qc)
+
+	vld.driver.mtxUpdate.Lock()
+	defer vld.driver.mtxUpdate.Unlock()
+
 	vld.driver.UpdateQCHigh(qc)
 	return nil
 }

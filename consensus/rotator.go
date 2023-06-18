@@ -153,6 +153,7 @@ func (rot *rotator) onNewProposal(pro *core.Proposal) {
 	var ltreset, vtreset bool
 	if rot.isNormalApproval(pro.View(), proposer) {
 		ltreset = true
+		logger.I().Infow("refresh leader", "view", pro.View(), "leader", rot.driver.getLeaderIndex())
 	}
 	if rot.isNewViewApproval(pro.View(), proposer) {
 		ltreset = true

@@ -85,6 +85,6 @@ func (hc *checker) shouldEqualLeader(changedView map[int]*consensus.Status) erro
 			return nil
 		}
 	}
-	fmt.Printf("view status: %v\n", equalCount)
+	fmt.Printf("View status map[leader]count: %v\n", equalCount)
 	return fmt.Errorf("inconsistant view change")
 }

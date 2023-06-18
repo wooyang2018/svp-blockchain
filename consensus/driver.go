@@ -339,6 +339,7 @@ func (d *driver) OnReceiveVote(vote *core.Vote) error {
 		votes := d.getVotes()
 		d.endProposal()
 		qc := core.NewQuorumCert().Build(d.resources.Signer, votes)
+		d.state.setQC(qc)
 		d.UpdateQCHigh(qc)
 		d.qcEmitter.Emit(qc)
 	}
@@ -377,6 +378,7 @@ func (d *driver) OnCommit(blk *core.Block) {
 func (d *driver) Commit(blk *core.Block) {
 	start := time.Now()
 	rawTxs := blk.Transactions()
+	qc := d.getQCByBlockHash(blk.Hash())
 	var txCount int
 	var data *storage.CommitData
 	if ExecuteTxFlag {
@@ -387,7 +389,7 @@ func (d *driver) Commit(blk *core.Block) {
 		bcm.SetOldBlockTxs(old)
 		data = &storage.CommitData{
 			Block:        blk,
-			QC:           d.getQCByBlockHash(blk.Hash()),
+			QC:           qc,
 			Transactions: txs,
 			BlockCommit:  bcm,
 			TxCommits:    txcs,
@@ -399,7 +401,7 @@ func (d *driver) Commit(blk *core.Block) {
 		bcm.SetOldBlockTxs(rawTxs)
 		data = &storage.CommitData{
 			Block:        blk,
-			QC:           d.getQCByBlockHash(blk.Hash()),
+			QC:           qc,
 			Transactions: nil,
 			BlockCommit:  bcm,
 			TxCommits:    txcs,
