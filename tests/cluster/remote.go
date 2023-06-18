@@ -300,7 +300,7 @@ func (node *RemoteNode) EffectDelay(d time.Duration) error {
 	return cmd.Run()
 }
 
-func (node *RemoteNode) EffectLoss(percent float32) error {
+func (node *RemoteNode) EffectLoss(percent float64) error {
 	cmd := exec.Command("ssh",
 		"-i", node.keySSH,
 		fmt.Sprintf("%s@%s", node.loginName, node.host),

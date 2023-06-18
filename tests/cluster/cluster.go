@@ -13,7 +13,7 @@ type Node interface {
 	Start() error
 	Stop()
 	EffectDelay(d time.Duration) error
-	EffectLoss(percent float32) error
+	EffectLoss(percent float64) error
 	RemoveEffect()
 	IsRunning() bool
 	GetEndpoint() string

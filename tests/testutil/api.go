@@ -90,6 +90,8 @@ func GetStatusAll(cls *cluster.Cluster) map[int]*consensus.Status {
 				mtx.Lock()
 				defer mtx.Unlock()
 				resps[i] = resp
+			} else {
+				fmt.Println(err)
 			}
 		}(i)
 	}

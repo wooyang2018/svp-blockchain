@@ -36,11 +36,13 @@ var (
 	BroadcastTx    = true
 
 	// run tests in remote linux cluster
-	RemoteLinuxCluster    = false // if false it'll use local cluster (running multiple nodes on single local machine)
+	RemoteLinuxCluster    = true // if false it'll use local cluster (running multiple nodes on single local machine)
 	RemoteSetupRequired   = true
 	RemoteInstallRequired = false // if false it will not try to install dstat on remote machine
 	RemoteKeySSH          = "~/.ssh/id_rsa"
 	RemoteHostsPath       = "hosts"
+	RemoteNetworkDelay    = 500 * time.Millisecond
+	RemoteNetworkLoss     = 10.0
 
 	// run benchmark, otherwise run experiments
 	RunBenchmark  = false
@@ -65,10 +67,10 @@ func setupExperiments() []Experiment {
 	expms := make([]Experiment, 0)
 	if RemoteLinuxCluster {
 		expms = append(expms, &experiments.NetworkDelay{
-			Delay: 100 * time.Millisecond,
+			Delay: RemoteNetworkDelay,
 		})
 		expms = append(expms, &experiments.NetworkPacketLoss{
-			Percent: 10,
+			Percent: RemoteNetworkLoss,
 		})
 	}
 	expms = append(expms, &experiments.MajorityKeepRunning{})

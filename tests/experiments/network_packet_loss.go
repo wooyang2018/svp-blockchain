@@ -14,7 +14,7 @@ import (
 )
 
 type NetworkPacketLoss struct {
-	Percent float32
+	Percent float64
 }
 
 func (expm *NetworkPacketLoss) Name() string {
@@ -24,7 +24,7 @@ func (expm *NetworkPacketLoss) Name() string {
 func (expm *NetworkPacketLoss) Run(cls *cluster.Cluster) error {
 	effects := make([]string, cls.NodeCount())
 	for i := 0; i < cls.NodeCount(); i++ {
-		percent := expm.Percent + rand.Float32()
+		percent := expm.Percent + rand.Float64()
 		if err := cls.GetNode(i).EffectLoss(percent); err != nil {
 			fmt.Println(err)
 		}

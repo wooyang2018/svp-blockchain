@@ -147,7 +147,7 @@ func (node *LocalNode) EffectDelay(d time.Duration) error {
 	return nil
 }
 
-func (node *LocalNode) EffectLoss(percent float32) error {
+func (node *LocalNode) EffectLoss(percent float64) error {
 	// no network loss for local node
 	return nil
 }
