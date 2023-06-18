@@ -21,18 +21,18 @@ type driver struct {
 	state        *state
 	blockTxLimit int
 
-	bExec  atomic.Value
-	qcHigh atomic.Value
-	bLeaf  atomic.Value
-	view   uint32
+	bExec       atomic.Value
+	qcHigh      atomic.Value
+	bLeaf       atomic.Value
+	view        uint32
+	leaderIndex uint32
 
 	proposal *core.Proposal
 	block    *core.Block
 	votes    map[string]*core.Vote
 	mtx      sync.RWMutex
 
-	mtxUpdate   sync.Mutex // lock for update call
-	leaderIndex int64
+	mtxUpdate sync.Mutex // lock for update call
 
 	tester     *tester
 	qcEmitter  *emitter.Emitter
@@ -53,22 +53,22 @@ func (d *driver) setupInnerState(b0 *core.Block, q0 *core.QuorumCert) {
 	d.setBLeaf(b0)
 	d.setBExec(b0)
 	d.setQCHigh(q0)
-	d.setView(q0.View())
 	// proposer of b0 may not be leader, but it doesn't matter
-	d.setLeaderIndex(d.resources.RoleStore.GetValidatorIndex(b0.Proposer()))
+	d.setView(q0.View())
+	d.setLeaderIndex(uint32(d.resources.RoleStore.GetValidatorIndex(b0.Proposer())))
 }
 
 func (d *driver) setBExec(blk *core.Block)      { d.bExec.Store(blk) }
 func (d *driver) setBLeaf(blk *core.Block)      { d.bLeaf.Store(blk) }
 func (d *driver) setQCHigh(qc *core.QuorumCert) { d.qcHigh.Store(qc) }
 func (d *driver) setView(view uint32)           { atomic.StoreUint32(&d.view, view) }
-func (d *driver) setLeaderIndex(index int)      { atomic.StoreInt64(&d.leaderIndex, int64(index)) }
+func (d *driver) setLeaderIndex(index uint32)   { atomic.StoreUint32(&d.leaderIndex, index) }
 
 func (d *driver) getBExec() *core.Block       { return d.bExec.Load().(*core.Block) }
 func (d *driver) getBLeaf() *core.Block       { return d.bLeaf.Load().(*core.Block) }
 func (d *driver) getQCHigh() *core.QuorumCert { return d.qcHigh.Load().(*core.QuorumCert) }
 func (d *driver) getView() uint32             { return atomic.LoadUint32(&d.view) }
-func (d *driver) getLeaderIndex() int         { return int(atomic.LoadInt64(&d.leaderIndex)) }
+func (d *driver) getLeaderIndex() uint32      { return atomic.LoadUint32(&d.leaderIndex) }
 
 func (d *driver) startProposal(pro *core.Proposal) {
 	d.mtx.Lock()
@@ -77,7 +77,7 @@ func (d *driver) startProposal(pro *core.Proposal) {
 	d.proposal = pro
 	d.block = pro.Block()
 	if d.block == nil { //received new view proposal
-		d.block = d.state.getBlock(pro.QuorumCert().BlockHash())
+		d.block = d.getBlockByHash(pro.QuorumCert().BlockHash())
 		if d.block == nil {
 			panic("received proposal with nil block")
 		}
@@ -137,11 +137,11 @@ func (d *driver) isLeader(pubKey *core.PublicKey) bool {
 	if !d.resources.RoleStore.IsValidator(pubKey) {
 		return false
 	}
-	return d.getLeaderIndex() == d.resources.RoleStore.GetValidatorIndex(pubKey)
+	return d.getLeaderIndex() == uint32(d.resources.RoleStore.GetValidatorIndex(pubKey))
 }
 
 func (d *driver) nextLeader() int {
-	leaderIdx := d.getLeaderIndex() + 1
+	leaderIdx := int(d.getLeaderIndex()) + 1
 	if leaderIdx >= d.resources.RoleStore.ValidatorCount() {
 		leaderIdx = 0
 	}
@@ -200,7 +200,7 @@ func (d *driver) getQCByBlockHash(blkHash []byte) *core.QuorumCert {
 	return qc
 }
 
-func (d *driver) qcRefHeight(qc *core.QuorumCert) (height uint64) {
+func (d *driver) qcRefHeight(qc *core.QuorumCert) uint64 {
 	return d.getBlockByHash(qc.BlockHash()).Height()
 }
 
@@ -254,7 +254,7 @@ func (d *driver) VoteProposal(pro *core.Proposal, blk *core.Block) {
 		d.resources.TxPool.SetTxsPending(blk.Transactions())
 	}
 	proposer := d.resources.RoleStore.GetValidatorIndex(pro.Proposer())
-	if proposer != d.getLeaderIndex() {
+	if uint32(proposer) != d.getLeaderIndex() {
 		logger.I().Warnf("can not vote proposal height %d", blk.Height())
 		return // view changed happened
 	}
@@ -316,7 +316,7 @@ func (d *driver) OnNewViewPropose() *core.Proposal {
 	if pro == nil {
 		return nil
 	}
-	blk := d.state.getBlock(qcHigh.BlockHash())
+	blk := d.getBlockByHash(qcHigh.BlockHash())
 	d.setBLeaf(blk)
 	d.startProposal(pro)
 	d.proEmitter.Emit(pro)
@@ -333,7 +333,7 @@ func (d *driver) OnReceiveVote(vote *core.Vote) error {
 	if err != nil {
 		return err
 	}
-	blk := d.state.getBlock(vote.BlockHash())
+	blk := d.getBlockByHash(vote.BlockHash())
 	logger.I().Debugw("received vote", "height", blk.Height())
 	if d.getVoteCount() >= d.resources.RoleStore.MajorityValidatorCount() {
 		votes := d.getVotes()
@@ -352,7 +352,7 @@ func (d *driver) UpdateQCHigh(qc *core.QuorumCert) {
 		logger.I().Debugw("updated high qc", "view", qc.View(), "height", d.qcRefHeight(qc))
 		d.setQCHigh(qc)
 		d.setBLeaf(blk)
-		d.CommitRecursive(blk)
+		d.CommitRecursive(blk) // TODO 提交阻塞
 	}
 }
 

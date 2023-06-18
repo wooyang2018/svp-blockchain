@@ -96,7 +96,8 @@ func (vld *validator) newViewLoop() {
 }
 
 func (vld *validator) onReceiveProposal(pro *core.Proposal) error {
-	if err := pro.Validate(vld.resources.RoleStore); err != nil {
+	var err error
+	if err = pro.Validate(vld.resources.RoleStore); err != nil {
 		return err
 	}
 
@@ -104,16 +105,15 @@ func (vld *validator) onReceiveProposal(pro *core.Proposal) error {
 	if blk == nil { //received new view proposal
 		blk = vld.driver.getBlockByHash(pro.QuorumCert().BlockHash())
 		if blk == nil {
-			blk, _ = vld.requestBlock(pro.Proposer(), pro.QuorumCert().BlockHash())
-			if blk == nil {
-				panic("received proposal with nil block")
+			if blk, err = vld.requestBlock(pro.Proposer(), pro.QuorumCert().BlockHash()); err != nil {
+				return err
 			}
 		}
 	}
 
 	pidx := vld.resources.RoleStore.GetValidatorIndex(pro.Proposer())
 	logger.I().Debugw("received proposal", "view", pro.View(), "proposer", pidx, "height", blk.Height(), "txs", len(blk.Transactions()))
-	if _, err := vld.getParentBlock(blk); err != nil {
+	if _, err = vld.getParentBlock(blk); err != nil {
 		return err
 	}
 
@@ -121,7 +121,10 @@ func (vld *validator) onReceiveProposal(pro *core.Proposal) error {
 }
 
 func (vld *validator) getParentBlock(blk *core.Block) (*core.Block, error) {
-	parent := vld.state.getBlock(blk.ParentHash())
+	if blk.Height() == 0 { // genesis block
+		return nil, nil
+	}
+	parent := vld.driver.getBlockByHash(blk.ParentHash())
 	if parent != nil {
 		return parent, nil
 	}
@@ -141,7 +144,7 @@ func (vld *validator) syncMissingCommittedBlocks(blk *core.Block) error {
 	if blk.Height() == 0 {
 		return fmt.Errorf("genesis block proposal")
 	}
-	qcRef := vld.state.getBlock(blk.ParentHash())
+	qcRef := vld.driver.getBlockByHash(blk.ParentHash())
 	if qcRef == nil {
 		var err error
 		qcRef, err = vld.requestBlock(blk.Proposer(), blk.ParentHash())
@@ -163,7 +166,7 @@ func (vld *validator) syncForwardCommittedBlocks(peer *core.PublicKey, start, en
 		if err != nil {
 			return err
 		}
-		parent := vld.state.getBlock(blk.ParentHash())
+		parent := vld.driver.getBlockByHash(blk.ParentHash())
 		if parent == nil {
 			return fmt.Errorf("cannot connect chain, parent not found")
 		}
@@ -207,7 +210,7 @@ func (vld *validator) verifyParentAndCommitRecursive(peer *core.PublicKey, blk, 
 }
 
 func (vld *validator) syncMissingParentRecursive(peer *core.PublicKey, blk *core.Block) (*core.Block, error) {
-	parent := vld.state.getBlock(blk.ParentHash())
+	parent := vld.driver.getBlockByHash(blk.ParentHash())
 	if parent != nil {
 		return parent, nil // not missing
 	}
@@ -327,6 +330,13 @@ func (vld *validator) onReceiveVote(vote *core.Vote) error {
 func (vld *validator) onReceiveQC(qc *core.QuorumCert) error {
 	if err := qc.Validate(vld.resources.RoleStore); err != nil {
 		return err
+	}
+	blk := vld.driver.getBlockByHash(qc.BlockHash()) //TODO
+	if blk == nil {
+		leader := vld.resources.RoleStore.GetValidator(int(vld.driver.getLeaderIndex()))
+		if _, err := vld.requestBlock(leader, qc.BlockHash()); err != nil {
+			return err
+		}
 	}
 	vld.driver.UpdateQCHigh(qc)
 	return nil

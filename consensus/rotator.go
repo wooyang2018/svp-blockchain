@@ -110,17 +110,13 @@ func (rot *rotator) changeView() {
 
 	rot.setViewStart()
 	leaderIdx := rot.driver.nextLeader()
-	rot.driver.setLeaderIndex(leaderIdx)
-	leader := rot.resources.RoleStore.GetValidator(leaderIdx)
-	err := rot.resources.MsgSvc.SendQC(leader, rot.driver.getQCHigh())
-	if err != nil {
-		logger.I().Errorw("send high qc to new leader failed", "idx", leaderIdx, "error", err)
-	}
+	rot.driver.setLeaderIndex(uint32(leaderIdx))
 	rot.driver.setView(rot.driver.getView() + 1)
 	logger.I().Infow("view changed", "view", rot.driver.getView(),
 		"leader", leaderIdx, "qc", rot.driver.qcRefHeight(rot.driver.getQCHigh()))
 
-	if rot.driver.isLeader(rot.resources.Signer.PublicKey()) {
+	isLeader := rot.driver.isLeader(rot.resources.Signer.PublicKey())
+	if isLeader {
 		t := time.NewTimer(rot.config.Delta * 2)
 		select {
 		case <-rot.stopCh:
@@ -128,12 +124,22 @@ func (rot *rotator) changeView() {
 		case <-t.C:
 			rot.newViewProposal()
 		}
+	} else {
+		leader := rot.resources.RoleStore.GetValidator(leaderIdx)
+		err := rot.resources.MsgSvc.SendQC(leader, rot.driver.getQCHigh())
+		if err != nil {
+			logger.I().Errorw("send high qc to new leader failed", "idx", leaderIdx, "error", err)
+		}
 	}
 }
 
 func (rot *rotator) newViewProposal() {
 	rot.driver.mtxUpdate.Lock()
 	defer rot.driver.mtxUpdate.Unlock()
+
+	if !rot.driver.isLeader(rot.resources.Signer.PublicKey()) {
+		return
+	}
 
 	pro := rot.driver.OnNewViewPropose()
 	logger.I().Debugw("proposed new view proposal", "view", pro.View(), "qc", rot.driver.qcRefHeight(pro.QuorumCert()))
@@ -143,16 +149,15 @@ func (rot *rotator) newViewProposal() {
 }
 
 func (rot *rotator) onNewProposal(pro *core.Proposal) {
-	proposer := rot.resources.RoleStore.GetValidatorIndex(pro.Proposer())
-	logger.I().Debugw("updated proposal", "proposer", proposer, "qc", rot.driver.qcRefHeight(pro.QuorumCert()))
+	proposer := uint32(rot.resources.RoleStore.GetValidatorIndex(pro.Proposer()))
 	var ltreset, vtreset bool
-	if proposer == rot.driver.getLeaderIndex() { // if pro is from current leader
+	if rot.isNormalApproval(pro.View(), proposer) {
 		ltreset = true
 	}
-	if rot.isNewViewApproval(proposer) {
+	if rot.isNewViewApproval(pro.View(), proposer) {
 		ltreset = true
 		vtreset = true
-		rot.approveViewLeader(proposer)
+		rot.approveViewLeader(pro.View(), proposer)
 	}
 	if ltreset {
 		rot.drainStopTimer(rot.leaderTimer)
@@ -164,18 +169,24 @@ func (rot *rotator) onNewProposal(pro *core.Proposal) {
 	}
 }
 
-func (rot *rotator) isNewViewApproval(proposer int) bool {
+func (rot *rotator) isNewViewApproval(view uint32, proposer uint32) bool {
 	leaderIdx := rot.driver.getLeaderIndex()
 	pending := rot.getViewChange()
-	return (pending == 0 && proposer != leaderIdx) || // node first run or out of sync
+	return view > rot.driver.getView() || (pending == 0 && proposer != leaderIdx) || // node first run or out of sync
 		(pending == 1 && proposer == leaderIdx) // expecting leader
 }
 
-func (rot *rotator) approveViewLeader(proposer int) {
+func (rot *rotator) isNormalApproval(view uint32, proposer uint32) bool {
+	leaderIdx := rot.driver.getLeaderIndex()
+	return view == rot.driver.getView() && proposer == leaderIdx
+}
+
+func (rot *rotator) approveViewLeader(view uint32, proposer uint32) {
 	rot.setViewChange(0)
+	rot.driver.setView(view)
 	rot.driver.setLeaderIndex(proposer)
 	rot.setViewStart()
-	logger.I().Infow("approved leader", "leader", rot.driver.getLeaderIndex())
+	logger.I().Infow("approved leader", "view", view, "leader", rot.driver.getLeaderIndex())
 	rot.leaderTimeoutCount = 0
 }
 

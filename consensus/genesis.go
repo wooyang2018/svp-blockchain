@@ -160,7 +160,7 @@ func (gns *genesis) onReceiveProposal(pro *core.Proposal) error {
 	if err := pro.Validate(gns.resources.RoleStore); err != nil {
 		return err
 	}
-	if pro.Block().Height() != 0 {
+	if pro.Block() == nil || pro.Block().Height() != 0 {
 		logger.I().Info("left behind, fetching genesis block...")
 		return gns.fetchGenesisBlockAndQC(pro.Proposer())
 	}

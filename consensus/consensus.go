@@ -63,7 +63,7 @@ func (cons *Consensus) start() {
 	cons.setupRotator()
 
 	status := cons.GetStatus()
-	logger.I().Infow("starting consensus", "leader", status.LeaderIndex, "bLeaf", status.BLeaf, "qc", status.QCHigh)
+	logger.I().Infow("starting consensus", "view", status.View, "leader", status.LeaderIndex, "bLeaf", status.BLeaf, "qc", status.QCHigh)
 
 	cons.validator.start()
 	cons.pacemaker.start()
@@ -148,11 +148,11 @@ func (cons *Consensus) getStatus() (status Status) {
 
 	status.ViewStart = cons.rotator.getViewStart()
 	status.ViewChange = cons.rotator.getViewChange()
-	status.LeaderIndex = cons.driver.getLeaderIndex()
 
 	status.BLeaf = cons.driver.getBLeaf().Height()
 	status.BExec = cons.driver.getBExec().Height()
 	status.View = cons.driver.getView()
+	status.LeaderIndex = cons.driver.getLeaderIndex()
 	status.QCHigh = cons.driver.qcRefHeight(cons.driver.getQCHigh())
 	return status
 }

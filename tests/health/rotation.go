@@ -75,7 +75,7 @@ func (hc *checker) hasViewChanged(status, last *consensus.Status) bool {
 }
 
 func (hc *checker) shouldEqualLeader(changedView map[int]*consensus.Status) error {
-	equalCount := make(map[int]int)
+	equalCount := make(map[uint32]int)
 	for _, status := range changedView {
 		equalCount[status.LeaderIndex]++
 	}

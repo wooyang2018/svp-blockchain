@@ -4,8 +4,6 @@
 package consensus
 
 import (
-	"time"
-
 	"github.com/wooyang2018/posv-blockchain/logger"
 )
 
@@ -42,8 +40,7 @@ func (pm *pacemaker) stop() {
 func (pm *pacemaker) run() {
 	qc := pm.driver.SubscribeQC()
 	defer qc.Unsubscribe()
-	time.Sleep(time.Second)
-	pm.newProposal()
+
 	for {
 		select {
 		case <-pm.stopCh:

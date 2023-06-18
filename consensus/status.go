@@ -13,15 +13,14 @@ type Status struct {
 
 	// start timestamp of current view
 	ViewStart int64
-
 	// set to true when current view timeout
 	// set to false once the view leader created the first qc
-	ViewChange  int32
-	LeaderIndex int
+	ViewChange int32
 
 	// posv state (block heights)
-	BExec  uint64
-	BLeaf  uint64
-	QCHigh uint64
-	View   uint32
+	BExec       uint64
+	BLeaf       uint64
+	QCHigh      uint64
+	View        uint32
+	LeaderIndex uint32
 }
