@@ -244,7 +244,7 @@ func (gns *genesis) acceptVote(vote *core.Vote) {
 	for _, vote := range gns.votes {
 		vlist = append(vlist, vote)
 	}
-	gns.setQ0(core.NewQuorumCert().Build(vlist))
+	gns.setQ0(core.NewQuorumCert().Build(gns.resources.Signer, vlist))
 	logger.I().Infow("created qc, broadcasting...")
 	gns.broadcastQC()
 }

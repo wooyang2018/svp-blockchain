@@ -25,8 +25,8 @@ var (
 type Proposal struct {
 	data       *pb.Proposal
 	block      *Block
-	signature  *Signature
 	quorumCert *QuorumCert
+	signature  *Signature
 }
 
 var _ json.Marshaler = (*Proposal)(nil)
@@ -45,6 +45,7 @@ func (pro *Proposal) Sum() []byte {
 	}
 	if pro.data.QuorumCert != nil {
 		h.Write(pro.data.QuorumCert.BlockHash) // qc reference block hash
+		binary.Write(h, binary.BigEndian, pro.data.QuorumCert.View)
 	}
 	binary.Write(h, binary.BigEndian, pro.data.View)
 	return h.Sum(nil)
@@ -69,11 +70,11 @@ func (pro *Proposal) Validate(rs RoleStore) error {
 		return ErrInvalidProposalHash
 	}
 	sig, err := newSignature(pro.data.Signature)
-	if !rs.IsValidator(sig.PublicKey()) {
-		return ErrInvalidValidator
-	}
 	if err != nil {
 		return err
+	}
+	if !rs.IsValidator(sig.PublicKey()) {
+		return ErrInvalidValidator
 	}
 	if !sig.Verify(pro.data.Hash) {
 		return ErrInvalidSig
@@ -89,7 +90,8 @@ func (pro *Proposal) Vote(signer Signer) *Vote {
 	} else {
 		vote.BlockHash = pro.quorumCert.BlockHash()
 	}
-	vote.Signature = signer.Sign(vote.BlockHash).data
+	hash := castViewAndHashBytes(vote.View, vote.BlockHash)
+	vote.Signature = signer.Sign(hash).data
 	res := NewVote()
 	res.setData(vote)
 	return res

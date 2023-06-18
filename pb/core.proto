@@ -43,6 +43,7 @@ message QuorumCert {
   uint32 view = 1;
   bytes blockHash = 2;
   repeated Signature signatures = 3;
+  Signature signature  = 4;
 }
 
 message Vote {

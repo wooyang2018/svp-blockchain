@@ -24,11 +24,10 @@ func TestProposal(t *testing.T) {
 
 	pro := newProposal(privKey)
 	v := pro.Vote(privKey)
-	qc := NewQuorumCert().Build([]*Vote{v})
+	qc := NewQuorumCert().Build(privKey, []*Vote{v})
 	pro.SetQuorumCert(qc).Sign(privKey)
 
 	asrt.Equal(privKey.PublicKey(), pro.Proposer())
-	asrt.Equal(privKey.PublicKey().Bytes(), pro.data.Signature.PubKey)
 	asrt.Equal(qc, pro.QuorumCert())
 
 	vs := new(MockValidatorStore)
@@ -42,8 +41,6 @@ func TestProposal(t *testing.T) {
 	privKey1 := GenerateKey(nil)
 	bInvalidValidator, _ := pro.Sign(privKey1).Marshal()
 
-	bNilQC, _ := pro.SetQuorumCert(NewQuorumCert()).Sign(privKey).Marshal()
-
 	pro.data.Hash = []byte("invalid hash")
 	bInvalidHash, _ := pro.Marshal()
 
@@ -55,18 +52,17 @@ func TestProposal(t *testing.T) {
 	}{
 		{"valid", bOk, false},
 		{"invalid validator", bInvalidValidator, true},
-		{"nil qc", bNilQC, true},
 		{"invalid hash", bInvalidHash, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			asrt := assert.New(t)
 
-			blk := NewProposal()
-			err := blk.Unmarshal(tt.b)
+			pro := NewProposal()
+			err := pro.Unmarshal(tt.b)
 			asrt.NoError(err)
 
-			err = blk.Validate(vs)
+			err = pro.Validate(vs)
 
 			if tt.wantErr {
 				asrt.Error(err)

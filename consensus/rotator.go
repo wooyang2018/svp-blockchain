@@ -170,10 +170,14 @@ func (rot *rotator) onNewProposal(pro *core.Proposal) {
 }
 
 func (rot *rotator) isNewViewApproval(view uint32, proposer uint32) bool {
-	leaderIdx := rot.driver.getLeaderIndex()
-	pending := rot.getViewChange()
-	return view > rot.driver.getView() || (pending == 0 && proposer != leaderIdx) || // node first run or out of sync
-		(pending == 1 && proposer == leaderIdx) // expecting leader
+	if view > rot.driver.getView() {
+		return true
+	} else if view == rot.driver.getView() {
+		leaderIdx := rot.driver.getLeaderIndex()
+		pending := rot.getViewChange()
+		return pending == 0 && proposer != leaderIdx || pending == 1 && proposer == leaderIdx
+	}
+	return false
 }
 
 func (rot *rotator) isNormalApproval(view uint32, proposer uint32) bool {

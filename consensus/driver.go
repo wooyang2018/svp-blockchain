@@ -338,7 +338,7 @@ func (d *driver) OnReceiveVote(vote *core.Vote) error {
 	if d.getVoteCount() >= d.resources.RoleStore.MajorityValidatorCount() {
 		votes := d.getVotes()
 		d.endProposal()
-		qc := core.NewQuorumCert().Build(votes)
+		qc := core.NewQuorumCert().Build(d.resources.Signer, votes)
 		d.UpdateQCHigh(qc)
 		d.qcEmitter.Emit(qc)
 	}

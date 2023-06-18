@@ -4,6 +4,7 @@
 package core
 
 import (
+	"encoding/binary"
 	"errors"
 
 	"github.com/wooyang2018/posv-blockchain/pb"
@@ -22,8 +23,9 @@ var (
 
 // QuorumCert type
 type QuorumCert struct {
-	data *pb.QuorumCert
-	sigs sigList
+	data      *pb.QuorumCert
+	sigs      sigList
+	signature *Signature
 }
 
 func NewQuorumCert() *QuorumCert {
@@ -45,7 +47,17 @@ func (qc *QuorumCert) Validate(rs RoleStore) error {
 	if qc.sigs.hasInvalidValidator(rs) {
 		return ErrInvalidValidator
 	}
-	if qc.sigs.hasInvalidSig(qc.data.BlockHash) {
+	if qc.sigs.hasInvalidSig(castViewAndHashBytes(qc.data.View, qc.data.BlockHash)) {
+		return ErrInvalidSig
+	}
+	sig, err := newSignature(qc.data.Signature)
+	if err != nil {
+		return err
+	}
+	if !rs.IsValidator(sig.PublicKey()) {
+		return ErrInvalidValidator
+	}
+	if !sig.Verify(castViewAndHashBytes(qc.data.View, qc.data.BlockHash)) {
 		return ErrInvalidSig
 	}
 	return nil
@@ -53,6 +65,12 @@ func (qc *QuorumCert) Validate(rs RoleStore) error {
 
 func (qc *QuorumCert) setData(data *pb.QuorumCert) error {
 	qc.data = data
+	signature, err := newSignature(qc.data.Signature)
+	if err != nil {
+		return err
+	}
+	qc.signature = signature
+
 	sigs, err := newSigList(qc.data.Signatures)
 	if err != nil {
 		return err
@@ -61,7 +79,7 @@ func (qc *QuorumCert) setData(data *pb.QuorumCert) error {
 	return nil
 }
 
-func (qc *QuorumCert) Build(votes []*Vote) *QuorumCert {
+func (qc *QuorumCert) Build(signer Signer, votes []*Vote) *QuorumCert {
 	qc.data.Signatures = make([]*pb.Signature, len(votes))
 	qc.sigs = make(sigList, len(votes))
 	for i, vote := range votes {
@@ -75,12 +93,15 @@ func (qc *QuorumCert) Build(votes []*Vote) *QuorumCert {
 			pubKey: vote.voter.pubKey,
 		}
 	}
+	qc.signature = signer.Sign(castViewAndHashBytes(qc.data.View, qc.data.BlockHash))
+	qc.data.Signature = qc.signature.data
 	return qc
 }
 
 func (qc *QuorumCert) BlockHash() []byte        { return qc.data.BlockHash }
 func (qc *QuorumCert) Signatures() []*Signature { return qc.sigs }
 func (qc *QuorumCert) View() uint32             { return qc.data.View }
+func (qc *QuorumCert) Proposer() *PublicKey     { return qc.signature.pubKey }
 
 // Marshal encodes quorum cert as bytes
 func (qc *QuorumCert) Marshal() ([]byte, error) {
@@ -94,4 +115,10 @@ func (qc *QuorumCert) Unmarshal(b []byte) error {
 		return err
 	}
 	return qc.setData(data)
+}
+
+func castViewAndHashBytes(view uint32, hash []byte) []byte {
+	buf := make([]byte, 4)
+	binary.LittleEndian.PutUint32(buf, view)
+	return append(buf, hash...)
 }

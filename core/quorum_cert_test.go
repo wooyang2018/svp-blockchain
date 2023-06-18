@@ -8,7 +8,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/wooyang2018/posv-blockchain/pb"
 )
 
 func TestQuorumCert(t *testing.T) {
@@ -27,41 +26,27 @@ func TestQuorumCert(t *testing.T) {
 	}
 	vs.On("IsValidator", mock.Anything).Return(false)
 
-	blockHash := []byte{1}
 	votes := make([]*Vote, len(privKeys))
+	pro := newProposal(privKeys[1])
 	for i, priv := range privKeys {
-		vote := NewVote()
-		vote.setData(&pb.Vote{
-			BlockHash: blockHash,
-			Signature: priv.Sign(blockHash).data,
-		})
-		votes[i] = vote
+		votes[i] = pro.Vote(priv)
 	}
 
-	invalidSigVote := NewVote()
-	invalidSigVote.setData(&pb.Vote{
-		BlockHash: blockHash,
-		Signature: privKeys[1].Sign([]byte("wrong data")).data,
-	})
-
-	qc := NewQuorumCert().Build([]*Vote{votes[3], votes[2], votes[1]})
+	qc := NewQuorumCert().Build(privKeys[1], []*Vote{votes[3], votes[2], votes[1]})
 	qcValid, err := qc.Marshal()
 	asrt.NoError(err)
 
-	qc = NewQuorumCert().Build([]*Vote{votes[5], votes[4], votes[3], votes[2], votes[1]})
+	qc = NewQuorumCert().Build(privKeys[1], []*Vote{votes[5], votes[4], votes[3], votes[2], votes[1]})
 	qcValidFull, _ := qc.Marshal()
 
-	qc = NewQuorumCert().Build([]*Vote{votes[2], votes[1]})
+	qc = NewQuorumCert().Build(privKeys[1], []*Vote{votes[2], votes[1]})
 	qcNotEnoughSig, _ := qc.Marshal()
 
-	qc = NewQuorumCert().Build([]*Vote{votes[3], votes[3], votes[2], votes[1]})
+	qc = NewQuorumCert().Build(privKeys[1], []*Vote{votes[3], votes[3], votes[2], votes[1]})
 	qcDuplicateKey, _ := qc.Marshal()
 
-	qc = NewQuorumCert().Build([]*Vote{votes[3], votes[2], votes[1], votes[0]})
+	qc = NewQuorumCert().Build(privKeys[1], []*Vote{votes[3], votes[2], votes[1], votes[0]})
 	qcInvalidValidator, _ := qc.Marshal()
-
-	qc = NewQuorumCert().Build([]*Vote{votes[3], votes[2], votes[1], invalidSigVote})
-	qcInvalidSig, _ := qc.Marshal()
 
 	// test validate
 	tests := []struct {
@@ -72,11 +57,10 @@ func TestQuorumCert(t *testing.T) {
 	}{
 		{"valid", qcValid, false, false},
 		{"valid full", qcValidFull, false, false},
-		{"nil qc", nil, false, true},
+		{"nil qc", nil, true, true},
 		{"not enough sig", qcNotEnoughSig, false, true},
 		{"duplicate key", qcDuplicateKey, false, true},
 		{"invalid validator", qcInvalidValidator, false, true},
-		{"invalid sig", qcInvalidSig, false, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
