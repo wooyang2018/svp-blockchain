@@ -37,7 +37,7 @@ type driver struct {
 	mtxUpdate sync.Mutex // lock for update call
 
 	tester     *tester
-	checkDelay time.Duration // latency to check tx num and view change
+	checkDelay time.Duration // latency to check tx num in pool
 	qcEmitter  *emitter.Emitter
 	proEmitter *emitter.Emitter
 }
@@ -148,14 +148,6 @@ func (d *driver) isLeader(pubKey *core.PublicKey) bool {
 	return d.getLeaderIndex() == uint32(d.resources.RoleStore.GetValidatorIndex(pubKey))
 }
 
-func (d *driver) nextLeader() int {
-	leaderIdx := int(d.getLeaderIndex()) + 1
-	if leaderIdx >= d.resources.RoleStore.ValidatorCount() {
-		leaderIdx = 0
-	}
-	return leaderIdx
-}
-
 func (d *driver) cleanStateOnCommitted(blk *core.Block) {
 	// qc for bexec is no longer needed here after committed to storage
 	d.state.deleteQC(blk.Hash())
@@ -242,18 +234,6 @@ func (d *driver) cmpQCPriority(qc1, qc2 *core.QuorumCert) int {
 		}
 	}
 	return 0
-}
-
-func (d *driver) delayProposeWhenViewChange() bool {
-	t := time.NewTimer(5 * d.config.Delta)
-	for d.getViewChange() != 0 {
-		select {
-		case <-t.C:
-			return false
-		case <-time.After(d.checkDelay):
-		}
-	}
-	return true
 }
 
 func (d *driver) delayProposeWhenNoTxs() {
@@ -367,7 +347,7 @@ func (d *driver) OnReceiveVote(vote *core.Vote) error {
 		qc := core.NewQuorumCert().Build(d.resources.Signer, votes)
 		d.state.setQC(qc)
 		d.UpdateQCHigh(qc)
-		d.qcEmitter.Emit(qc)
+		d.qcEmitter.Emit(struct{}{})
 	}
 	return nil
 }
@@ -376,7 +356,7 @@ func (d *driver) OnReceiveVote(vote *core.Vote) error {
 func (d *driver) UpdateQCHigh(qc *core.QuorumCert) {
 	if d.cmpQCPriority(qc, d.getQCHigh()) == 1 {
 		blk := d.getBlockByHash(qc.BlockHash())
-		logger.I().Debugw("updated high qc", "view", qc.View(), "height", d.qcRefHeight(qc))
+		logger.I().Debugw("updated high qc", "view", qc.View(), "qc", d.qcRefHeight(qc))
 		d.setQCHigh(qc)
 		d.setBLeaf(blk)
 		d.CommitRecursive(blk) // TODO 提交阻塞

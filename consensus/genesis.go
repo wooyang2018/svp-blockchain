@@ -26,8 +26,6 @@ type genesis struct {
 	votes   map[string]*core.Vote
 	mtxVote sync.Mutex
 
-	v0    uint32
-	mtxV0 sync.RWMutex
 	b0    *core.Block
 	mtxB0 sync.RWMutex
 	q0    *core.QuorumCert

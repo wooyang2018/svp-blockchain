@@ -96,46 +96,27 @@ func (rot *rotator) onViewTimeout() {
 
 func (rot *rotator) changeView() {
 	rot.driver.setViewChange(1)
-	t := time.NewTimer(rot.config.Delta)
-	select {
-	case <-rot.stopCh:
-		return
-	case <-t.C:
+	rot.sleepTime(rot.config.DeltaTime)
+	if err := rot.resources.MsgSvc.BroadcastQC(rot.driver.getQCHigh()); err != nil {
+		logger.I().Errorw("send high qc to new leader failed", "error", err)
 	}
-
+	rot.sleepTime(rot.config.DeltaTime * 2)
 	rot.driver.setViewStart()
-	leaderIdx := rot.driver.nextLeader()
-	rot.driver.setLeaderIndex(uint32(leaderIdx))
 	rot.driver.setView(rot.driver.getView() + 1)
+	leaderIdx := rot.driver.getView() % uint32(rot.resources.RoleStore.ValidatorCount())
+	rot.driver.setLeaderIndex(leaderIdx)
 	logger.I().Infow("view changed", "view", rot.driver.getView(),
-		"leader", leaderIdx, "qc", rot.driver.qcRefHeight(rot.driver.getQCHigh()))
-
-	isLeader := rot.driver.isLeader(rot.resources.Signer.PublicKey())
-	if isLeader {
-		t := time.NewTimer(rot.config.Delta * 2)
-		select {
-		case <-rot.stopCh:
-			return
-		case <-t.C:
-			rot.newViewProposal()
-		}
-	} else {
-		leader := rot.resources.RoleStore.GetValidator(leaderIdx)
-		err := rot.resources.MsgSvc.SendQC(leader, rot.driver.getQCHigh())
-		if err != nil {
-			logger.I().Errorw("send high qc to new leader failed", "idx", leaderIdx, "error", err)
-		}
-	}
+		"leader", rot.driver.getLeaderIndex(), "qc", rot.driver.qcRefHeight(rot.driver.getQCHigh()))
+	rot.newViewProposal()
 }
 
 func (rot *rotator) newViewProposal() {
-	if !rot.driver.isLeader(rot.resources.Signer.PublicKey()) {
-		return
-	}
-
 	rot.driver.mtxUpdate.Lock()
 	defer rot.driver.mtxUpdate.Unlock()
 
+	if !rot.driver.isLeader(rot.resources.Signer.PublicKey()) {
+		return
+	}
 	pro := rot.driver.OnNewViewPropose()
 	logger.I().Debugw("proposed new view proposal", "view", pro.View(), "qc", rot.driver.qcRefHeight(pro.QuorumCert()))
 	vote := pro.Vote(rot.resources.Signer)
@@ -148,6 +129,7 @@ func (rot *rotator) onNewProposal(pro *core.Proposal) {
 	var ltreset, vtreset bool
 	if rot.isNormalApproval(pro.View(), proposer) {
 		ltreset = true
+		logger.I().Debugw("refresh leader", "view", pro.View(), "proposer", proposer)
 	}
 	if rot.isNewViewApproval(pro.View(), proposer) {
 		ltreset = true
@@ -188,8 +170,21 @@ func (rot *rotator) approveViewLeader(view uint32, proposer uint32) {
 	rot.driver.setView(view)
 	rot.driver.setLeaderIndex(proposer)
 	rot.driver.setViewStart()
-	logger.I().Infow("approved leader", "view", view, "leader", rot.driver.getLeaderIndex())
 	rot.leaderTimeoutCount = 0
+	if rot.driver.isLeader(rot.resources.Signer.PublicKey()) {
+		rot.driver.qcEmitter.Emit(struct{}{})
+	}
+	logger.I().Infow("approved leader", "view", view, "leader", proposer)
+}
+
+func (rot *rotator) sleepTime(delta time.Duration) {
+	t := time.NewTimer(delta)
+	defer t.Stop()
+	select {
+	case <-rot.stopCh:
+		return
+	case <-t.C:
+	}
 }
 
 func (rot *rotator) drainStopTimer(timer *time.Timer) {

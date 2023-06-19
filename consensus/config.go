@@ -30,7 +30,7 @@ const (
 	FlagTxWaitTime    = "consensus-txWaitTime"
 	FlagViewWidth     = "consensus-viewWidth"
 	FlagLeaderTimeout = "consensus-leaderTimeout"
-	FlagDelta         = "consensus-delta"
+	FlagDeltaTime     = "consensus-deltaTime"
 	FlagBenchmarkPath = "consensus-benchmarkPath"
 )
 
@@ -50,7 +50,7 @@ type Config struct {
 	LeaderTimeout time.Duration
 
 	// upper bound of message latency in a synchronous network
-	Delta time.Duration
+	DeltaTime time.Duration
 
 	// path to save the benchmark log of the consensus algorithm (it will not be saved if blank)
 	BenchmarkPath string
@@ -58,9 +58,9 @@ type Config struct {
 
 var DefaultConfig = Config{
 	BlockTxLimit:  500,
-	TxWaitTime:    1 * time.Second,
+	TxWaitTime:    500 * time.Second,
 	ViewWidth:     60 * time.Second,
 	LeaderTimeout: 20 * time.Second,
-	Delta:         3 * time.Second,
+	DeltaTime:     3 * time.Second,
 	BenchmarkPath: "",
 }

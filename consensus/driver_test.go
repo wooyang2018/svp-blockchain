@@ -8,8 +8,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/wooyang2018/posv-blockchain/logger"
-
 	"github.com/wooyang2018/posv-blockchain/core"
 	"github.com/wooyang2018/posv-blockchain/storage"
 )
@@ -118,13 +116,10 @@ func TestDriver_VoteBlock(t *testing.T) {
 
 func TestDriver_Commit(t *testing.T) {
 	d := setupTestDriver()
-	parent := core.NewBlock().SetHeight(10).Sign(d.resources.Signer)
-	bfolk := core.NewBlock().SetTransactions([][]byte{[]byte("txfromfolk")}).
-		SetHeight(10).Sign(d.resources.Signer)
-
+	parent := newTestBlock(d.resources.Signer, 10, 9, nil, nil, nil)
+	bfolk := newTestBlock(d.resources.Signer, 10, 9, nil, nil, [][]byte{[]byte("tx from folk")})
 	tx := core.NewTransaction().Sign(d.resources.Signer)
-	bexec := core.NewBlock().SetTransactions([][]byte{tx.Hash()}).SetParentHash(parent.Hash()).
-		SetHeight(11).Sign(d.resources.Signer)
+	bexec := newTestBlock(d.resources.Signer, 11, 10, parent.Hash(), nil, [][]byte{tx.Hash()})
 	d.state.setBlock(parent)
 	d.state.setCommittedBlock(parent)
 	d.state.setBlock(bfolk)
@@ -179,31 +174,13 @@ func TestDriver_Commit(t *testing.T) {
 
 func TestDriver_CreateQC(t *testing.T) {
 	d := setupTestDriver()
-	blk := core.NewBlock().SetHeight(10).Sign(d.resources.Signer)
+	blk := newTestBlock(d.resources.Signer, 10, 9, nil, nil)
 	pro := core.NewProposal().SetBlock(blk).Sign(d.resources.Signer)
-	d.state.setBlock(pro.Block())
+	d.state.setBlock(blk)
 	votes := []*core.Vote{
 		pro.Vote(d.resources.Signer),
 		pro.Vote(core.GenerateKey(nil)),
 	}
 	qc := core.NewQuorumCert().Build(d.resources.Signer, votes)
-	assert.Equal(t, pro.Block(), d.state.getBlock(qc.BlockHash()), "should get qc reference block")
-}
-
-func TestDriver_BroadcastProposal(t *testing.T) {
-	d := setupTestDriver()
-	blk := newTestBlock(d.resources.Signer, 10, 9, nil, nil)
-	d.state.setBlock(blk)
-	pro := core.NewProposal().SetBlock(blk).Sign(d.resources.Signer)
-
-	msgSvc := new(MockMsgService)
-	msgSvc.On("BroadcastProposal", pro).Return(nil)
-	d.resources.MsgSvc = msgSvc
-
-	err := d.resources.MsgSvc.BroadcastProposal(pro)
-	if err != nil {
-		logger.I().Errorw("broadcast proposal failed", "error", err)
-	}
-
-	msgSvc.AssertExpectations(t)
+	assert.Equal(t, blk, d.state.getBlock(qc.BlockHash()), "should get qc reference block")
 }

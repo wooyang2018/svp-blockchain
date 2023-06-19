@@ -52,17 +52,14 @@ func (pm *pacemaker) run() {
 }
 
 func (pm *pacemaker) newProposal() {
-	if !pm.driver.delayProposeWhenViewChange() {
-		return
-	}
-	if !pm.driver.isLeader(pm.resources.Signer.PublicKey()) {
-		return
-	}
+	pm.driver.delayProposeWhenNoTxs()
 
 	pm.driver.mtxUpdate.Lock()
 	defer pm.driver.mtxUpdate.Unlock()
 
-	pm.driver.delayProposeWhenNoTxs()
+	if pm.driver.getViewChange() != 0 || !pm.driver.isLeader(pm.resources.Signer.PublicKey()) {
+		return
+	}
 	pro := pm.driver.OnPropose()
 	logger.I().Debugw("proposed proposal", "view", pro.View(),
 		"height", pro.Block().Height(), "exec", pro.Block().ExecHeight(), "qc", pm.driver.qcRefHeight(pro.QuorumCert()), "txs", len(pro.Block().Transactions()))

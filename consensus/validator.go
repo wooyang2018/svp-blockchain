@@ -89,7 +89,7 @@ func (vld *validator) newViewLoop() {
 
 		case e := <-sub.Events():
 			if err := vld.onReceiveQC(e.(*core.QuorumCert)); err != nil {
-				logger.I().Warnf("received new view failed, %+v", err)
+				logger.I().Warnf("received qc failed, %+v", err)
 			}
 		}
 	}
@@ -270,6 +270,9 @@ func (vld *validator) updateQCHighAndVote(pro *core.Proposal, blk *core.Block) e
 		pidx := vld.resources.RoleStore.GetValidatorIndex(pro.Proposer())
 		return fmt.Errorf("proposer %d is not leader", pidx)
 	}
+	if vld.driver.getView() != pro.View() {
+		return fmt.Errorf("not same view")
+	}
 	if pro.Block() != nil { //new view proposal
 		if err := vld.verifyBlockToVote(blk); err != nil {
 			return err
@@ -350,10 +353,19 @@ func (vld *validator) onReceiveQC(qc *core.QuorumCert) error {
 	}
 	vld.state.setQC(qc)
 
+	if qc.View() > vld.driver.getView() {
+		vld.driver.setViewStart()
+		vld.driver.setView(qc.View())
+		leaderIdx := vld.driver.getView() % uint32(vld.resources.RoleStore.ValidatorCount())
+		vld.driver.setLeaderIndex(leaderIdx)
+		logger.I().Infow("view changed by higher qc", "view", vld.driver.getView(),
+			"leader", vld.driver.getLeaderIndex(), "qc", vld.driver.qcRefHeight(vld.driver.getQCHigh()))
+	}
+
 	vld.driver.mtxUpdate.Lock()
 	defer vld.driver.mtxUpdate.Unlock()
-
 	vld.driver.UpdateQCHigh(qc)
+
 	return nil
 }
 

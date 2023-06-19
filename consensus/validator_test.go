@@ -11,10 +11,11 @@ import (
 	"github.com/wooyang2018/posv-blockchain/core"
 )
 
-func newTestBlock(priv core.Signer, height, execHeight uint64, mRoot []byte, txs [][]byte) *core.Block {
+func newTestBlock(priv core.Signer, height, execHeight uint64, parentHash []byte, mRoot []byte, txs [][]byte) *core.Block {
 	return core.NewBlock().
 		SetHeight(height).
 		SetExecHeight(execHeight).
+		SetParentHash(parentHash).
 		SetMerkleRoot(mRoot).
 		SetTransactions(txs).
 		Sign(priv)
@@ -79,27 +80,27 @@ func TestValidator_verifyProposalToVote(t *testing.T) {
 	}
 	tests := []testCase{
 		{"valid", true, core.NewProposal().
-			SetBlock(newTestBlock(priv1, 14, 10, mRoot, [][]byte{tx1.Hash(), tx4.Hash()})).
+			SetBlock(newTestBlock(priv1, 14, 10, nil, mRoot, [][]byte{tx1.Hash(), tx4.Hash()})).
 			Sign(priv1)},
 		{"proposer is not leader", true, core.NewProposal().
-			SetBlock(newTestBlock(priv0, 14, 10, mRoot, [][]byte{tx1.Hash(), tx4.Hash()})).
+			SetBlock(newTestBlock(priv0, 14, 10, nil, mRoot, [][]byte{tx1.Hash(), tx4.Hash()})).
 			Sign(priv0)},
 		{"different exec height", false, core.NewProposal().
-			SetBlock(newTestBlock(priv1, 14, 9, mRoot, [][]byte{tx1.Hash(), tx4.Hash()})).
+			SetBlock(newTestBlock(priv1, 14, 9, nil, mRoot, [][]byte{tx1.Hash(), tx4.Hash()})).
 			Sign(priv1)}}
 	if ExecuteTxFlag {
 		tests = append(tests, []testCase{
 			{"different merkle root", false, core.NewProposal().
-				SetBlock(newTestBlock(priv1, 14, 10, []byte("different"), [][]byte{tx1.Hash(), tx4.Hash()})).
+				SetBlock(newTestBlock(priv1, 14, 10, nil, []byte("different"), [][]byte{tx1.Hash(), tx4.Hash()})).
 				Sign(priv1)},
 			{"committed tx", false, core.NewProposal().
-				SetBlock(newTestBlock(priv1, 14, 10, mRoot, [][]byte{tx1.Hash(), tx2.Hash(), tx4.Hash()})).
+				SetBlock(newTestBlock(priv1, 14, 10, nil, mRoot, [][]byte{tx1.Hash(), tx2.Hash(), tx4.Hash()})).
 				Sign(priv1)},
 			{"expired tx", false, core.NewProposal().
-				SetBlock(newTestBlock(priv1, 14, 10, mRoot, [][]byte{tx1.Hash(), tx3.Hash(), tx4.Hash()})).
+				SetBlock(newTestBlock(priv1, 14, 10, nil, mRoot, [][]byte{tx1.Hash(), tx3.Hash(), tx4.Hash()})).
 				Sign(priv1)},
 			{"not found tx", false, core.NewProposal().
-				SetBlock(newTestBlock(priv1, 14, 10, mRoot, [][]byte{tx1.Hash(), tx5.Hash(), tx4.Hash()})).
+				SetBlock(newTestBlock(priv1, 14, 10, nil, mRoot, [][]byte{tx1.Hash(), tx5.Hash(), tx4.Hash()})).
 				Sign(priv1)}}...)
 	}
 	for _, tt := range tests {
