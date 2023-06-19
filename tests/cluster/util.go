@@ -107,7 +107,7 @@ func RunCommand(cmd *exec.Cmd) error {
 	return cmd.Run()
 }
 
-func AddPoSVFlags(cmd *exec.Cmd, config *node.Config) {
+func AddCmdFlags(cmd *exec.Cmd, config *node.Config) {
 	cmd.Args = append(cmd.Args, "-d", config.Datadir)
 	cmd.Args = append(cmd.Args, "-p", strconv.Itoa(config.Port))
 	cmd.Args = append(cmd.Args, "-P", strconv.Itoa(config.APIPort))
@@ -133,6 +133,9 @@ func AddPoSVFlags(cmd *exec.Cmd, config *node.Config) {
 
 	cmd.Args = append(cmd.Args, "--"+consensus.FlagBlockTxLimit,
 		strconv.Itoa(config.ConsensusConfig.BlockTxLimit))
+
+	cmd.Args = append(cmd.Args, "--"+consensus.FlagTxWaitTime,
+		config.ConsensusConfig.TxWaitTime.String())
 
 	cmd.Args = append(cmd.Args, "--"+consensus.FlagViewWidth,
 		config.ConsensusConfig.ViewWidth.String())

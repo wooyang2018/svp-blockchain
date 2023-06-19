@@ -27,6 +27,7 @@ const (
 	// consensus
 	FlagChainID       = "consensus-chainID"
 	FlagBlockTxLimit  = "consensus-blockTxLimit"
+	FlagTxWaitTime    = "consensus-txWaitTime"
 	FlagViewWidth     = "consensus-viewWidth"
 	FlagLeaderTimeout = "consensus-leaderTimeout"
 	FlagDelta         = "consensus-delta"
@@ -38,6 +39,9 @@ type Config struct {
 
 	// maximum tx count in a block
 	BlockTxLimit int
+
+	// proposal creation delay if no transactions in the pool
+	TxWaitTime time.Duration
 
 	// view duration for a leader
 	ViewWidth time.Duration
@@ -54,6 +58,7 @@ type Config struct {
 
 var DefaultConfig = Config{
 	BlockTxLimit:  200,
+	TxWaitTime:    1 * time.Second,
 	ViewWidth:     60 * time.Second,
 	LeaderTimeout: 20 * time.Second,
 	Delta:         3 * time.Second,

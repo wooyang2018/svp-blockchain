@@ -17,15 +17,17 @@ import (
 )
 
 type driver struct {
-	resources    *Resources
-	state        *state
-	blockTxLimit int
+	resources *Resources
+	config    Config
+	state     *state
 
 	bExec       atomic.Value
 	qcHigh      atomic.Value
 	bLeaf       atomic.Value
 	view        uint32
 	leaderIndex uint32
+	viewStart   int64 // start timestamp of current view
+	viewChange  int32 // -1:failed ; 0:success ; 1:ongoing
 
 	proposal *core.Proposal
 	block    *core.Block
@@ -34,16 +36,18 @@ type driver struct {
 
 	mtxUpdate sync.Mutex // lock for update call
 
-	tester     *tester
-	qcEmitter  *emitter.Emitter
-	proEmitter *emitter.Emitter
+	tester       *tester
+	checkTxDelay time.Duration // latency to check tx num in pool
+	qcEmitter    *emitter.Emitter
+	proEmitter   *emitter.Emitter
 }
 
 func newDriver(resources *Resources, config Config, state *state) *driver {
 	return &driver{
 		resources:    resources,
-		blockTxLimit: config.BlockTxLimit,
+		config:       config,
 		state:        state,
+		checkTxDelay: 100 * time.Millisecond,
 		qcEmitter:    emitter.New(),
 		proEmitter:   emitter.New(),
 	}
@@ -63,12 +67,16 @@ func (d *driver) setBLeaf(blk *core.Block)      { d.bLeaf.Store(blk) }
 func (d *driver) setQCHigh(qc *core.QuorumCert) { d.qcHigh.Store(qc) }
 func (d *driver) setView(view uint32)           { atomic.StoreUint32(&d.view, view) }
 func (d *driver) setLeaderIndex(index uint32)   { atomic.StoreUint32(&d.leaderIndex, index) }
+func (d *driver) setViewStart()                 { atomic.StoreInt64(&d.viewStart, time.Now().Unix()) }
+func (d *driver) setViewChange(val int32)       { atomic.StoreInt32(&d.viewChange, val) }
 
 func (d *driver) getBExec() *core.Block       { return d.bExec.Load().(*core.Block) }
 func (d *driver) getBLeaf() *core.Block       { return d.bLeaf.Load().(*core.Block) }
 func (d *driver) getQCHigh() *core.QuorumCert { return d.qcHigh.Load().(*core.QuorumCert) }
 func (d *driver) getView() uint32             { return atomic.LoadUint32(&d.view) }
 func (d *driver) getLeaderIndex() uint32      { return atomic.LoadUint32(&d.leaderIndex) }
+func (d *driver) getViewStart() int64         { return atomic.LoadInt64(&d.viewStart) }
+func (d *driver) getViewChange() int32        { return atomic.LoadInt32(&d.viewChange) }
 
 func (d *driver) startProposal(pro *core.Proposal) {
 	d.mtx.Lock()
@@ -268,10 +276,8 @@ func (d *driver) VoteProposal(pro *core.Proposal, blk *core.Block) {
 
 // OnPropose is called to propose a new proposal
 func (d *driver) OnPropose() *core.Proposal {
+	d.delayProposeWhenNoTxs()
 	pro := d.CreateProposal()
-	if pro == nil {
-		return nil
-	}
 	d.setBLeaf(pro.Block())
 	d.startProposal(pro)
 	d.proEmitter.Emit(pro)
@@ -282,12 +288,24 @@ func (d *driver) OnPropose() *core.Proposal {
 	return pro
 }
 
+func (d *driver) delayProposeWhenNoTxs() {
+	timer := time.NewTimer(d.config.TxWaitTime)
+	defer timer.Stop()
+	for d.resources.TxPool.GetStatus().Total == 0 {
+		select {
+		case <-timer.C:
+			return
+		case <-time.After(d.checkTxDelay):
+		}
+	}
+}
+
 func (d *driver) CreateProposal() *core.Proposal {
 	var txs [][]byte
 	if PreserveTxFlag {
-		txs = d.resources.TxPool.GetTxsFromQueue(d.blockTxLimit)
+		txs = d.resources.TxPool.GetTxsFromQueue(d.config.BlockTxLimit)
 	} else {
-		txs = d.resources.TxPool.PopTxsFromQueue(d.blockTxLimit)
+		txs = d.resources.TxPool.PopTxsFromQueue(d.config.BlockTxLimit)
 	}
 	parent := d.getBLeaf()
 	blk := core.NewBlock().
@@ -313,9 +331,6 @@ func (d *driver) OnNewViewPropose() *core.Proposal {
 		SetQuorumCert(qcHigh).
 		SetView(d.getView()).
 		Sign(d.resources.Signer)
-	if pro == nil {
-		return nil
-	}
 	blk := d.getBlockByHash(qcHigh.BlockHash())
 	d.setBLeaf(blk)
 	d.startProposal(pro)

@@ -146,14 +146,12 @@ func (cons *Consensus) getStatus() (status Status) {
 	status.CommittedTxCount = cons.state.getCommittedTxCount()
 	status.BlockPoolSize = cons.state.getBlockPoolSize()
 	status.QCPoolSize = cons.state.getQCPoolSize()
-
-	status.ViewStart = cons.rotator.getViewStart()
-	status.ViewChange = cons.rotator.getViewChange()
-
 	status.BLeaf = cons.driver.getBLeaf().Height()
 	status.BExec = cons.driver.getBExec().Height()
 	status.View = cons.driver.getView()
 	status.LeaderIndex = cons.driver.getLeaderIndex()
+	status.ViewStart = cons.driver.getViewStart()
+	status.ViewChange = cons.driver.getViewChange()
 	status.QCHigh = cons.driver.qcRefHeight(cons.driver.getQCHigh())
 	return status
 }

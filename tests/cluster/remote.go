@@ -112,7 +112,7 @@ func (ftry *RemoteFactory) setup() error {
 	if err := ftry.setupRemoteServers(); err != nil {
 		return err
 	}
-	if err := ftry.sendPoSV(); err != nil {
+	if err := ftry.sendChain(); err != nil {
 		return err
 	}
 	return ftry.sendTemplate()
@@ -165,9 +165,9 @@ func (ftry *RemoteFactory) setupRemoteServerOne(i int) error {
 	return RunCommand(cmd)
 }
 
-func (ftry *RemoteFactory) sendPoSV() error {
+func (ftry *RemoteFactory) sendChain() error {
 	for i := 0; i < ftry.params.NodeCount; i++ {
-		err := ftry.sendPoSVOne(i)
+		err := ftry.sendChainOne(i)
 		if err != nil {
 			return err
 		}
@@ -175,7 +175,7 @@ func (ftry *RemoteFactory) sendPoSV() error {
 	return nil
 }
 
-func (ftry *RemoteFactory) sendPoSVOne(i int) error {
+func (ftry *RemoteFactory) sendChainOne(i int) error {
 	cmd := exec.Command("scp",
 		"-i", ftry.params.KeySSH,
 		ftry.params.BinPath,
@@ -273,7 +273,7 @@ func (node *RemoteNode) Start() error {
 		fmt.Sprintf("%s@%s", node.loginName, node.host),
 		"nohup", node.binPath,
 	)
-	AddPoSVFlags(cmd, &node.config)
+	AddCmdFlags(cmd, &node.config)
 	cmd.Args = append(cmd.Args,
 		">>", path.Join(node.config.Datadir, "log.txt"), "2>&1", "&",
 	)
@@ -386,6 +386,6 @@ func (node *RemoteNode) GetEndpoint() string {
 
 func (node *RemoteNode) PrintCmd() string {
 	cmd := exec.Command(node.binPath)
-	AddPoSVFlags(cmd, &node.config)
+	AddCmdFlags(cmd, &node.config)
 	return cmd.String()
 }

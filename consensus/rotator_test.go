@@ -25,8 +25,8 @@ func setupRotator() (*rotator, *core.Proposal) {
 	}
 
 	blk := core.NewBlock().Sign(key1)
-	b0 := core.NewProposal().SetBlock(blk).Sign(key1)
-	q0 := core.NewQuorumCert().Build([]*core.Vote{b0.Vote(key1)})
+	b0 := core.NewProposal().SetBlock(blk).SetView(1).Sign(key1)
+	q0 := core.NewQuorumCert().Build(key1, []*core.Vote{b0.Vote(key1)})
 	b0.SetQuorumCert(q0)
 
 	state := newState()
@@ -51,18 +51,17 @@ func setupRotator() (*rotator, *core.Proposal) {
 func TestRotator_changeView(t *testing.T) {
 	asrt := assert.New(t)
 
-	rot, b0 := setupRotator()
+	rot, _ := setupRotator()
 	rot.driver.setLeaderIndex(1)
 
 	msgSvc := new(MockMsgService)
-	msgSvc.On("SendQC", rot.resources.RoleStore.GetValidator(0), b0.QuorumCert()).Return(nil)
 	msgSvc.On("BroadcastProposal", mock.Anything).Return(nil)
 	rot.resources.MsgSvc = msgSvc
 
 	rot.changeView()
 
 	msgSvc.AssertExpectations(t)
-	asrt.EqualValues(rot.getViewChange(), 1)
+	asrt.EqualValues(rot.driver.getViewChange(), 1)
 	asrt.EqualValues(rot.driver.getLeaderIndex(), 0)
 }
 
@@ -72,13 +71,13 @@ func Test_rotator_isNewViewApproval(t *testing.T) {
 	rot1, _ := setupRotator()
 	rot2, _ := setupRotator()
 
-	rot1.setViewChange(1)
-	rot2.setViewChange(0)
+	rot1.driver.setViewChange(1)
+	rot2.driver.setViewChange(0)
 
 	tests := []struct {
 		name        string
 		rot         *rotator
-		proposerIdx int
+		proposerIdx uint32
 		want        bool
 	}{
 		{"pending and same leader", rot1, 0, true},
@@ -88,7 +87,7 @@ func Test_rotator_isNewViewApproval(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			asrt.EqualValues(tt.want, tt.rot.isNewViewApproval(tt.proposerIdx))
+			asrt.EqualValues(tt.want, tt.rot.isNewViewApproval(1, tt.proposerIdx))
 		})
 	}
 }
@@ -97,10 +96,10 @@ func TestRotator_resetViewTimer(t *testing.T) {
 	asrt := assert.New(t)
 
 	rot, _ := setupRotator()
-	rot.setViewChange(1)
+	rot.driver.setViewChange(1)
 
-	rot.approveViewLeader(1)
+	rot.approveViewLeader(1, 1)
 
-	asrt.EqualValues(rot.getViewChange(), 0)
+	asrt.EqualValues(rot.driver.getViewChange(), 0)
 	asrt.EqualValues(rot.driver.getLeaderIndex(), 1)
 }

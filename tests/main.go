@@ -31,7 +31,7 @@ var (
 
 	//chaincode priority: empty > pcoin bincc > pcoin
 	EmptyChainCode = false // deploy empty chaincode instead of pcoin
-	PCoinBinCC     = true  // deploy pcoin chaincode as bincc type (not embeded in posv node)
+	PCoinBinCC     = true  // deploy pcoin chaincode as bincc type (not embeded in node)
 	CheckRotation  = true
 	BroadcastTx    = true
 
@@ -82,7 +82,7 @@ func setupExperiments() []Experiment {
 func main() {
 	printAndCheckVars()
 	os.Mkdir(WorkDir, 0755)
-	buildPoSV()
+	buildChain()
 	setupTransport()
 
 	if RunBenchmark {
@@ -149,6 +149,8 @@ func printAndCheckVars() {
 	fmt.Println("CheckRotation =", CheckRotation)
 	fmt.Println("BroadcastTx =", BroadcastTx)
 	fmt.Println("RemoteLinuxCluster =", RemoteLinuxCluster)
+	fmt.Println("RemoteNetworkDelay =", RemoteNetworkDelay)
+	fmt.Println("RemoteNetworkLoss =", RemoteNetworkLoss)
 	fmt.Println("RunBenchmark =", RunBenchmark)
 	fmt.Println("BenchLoads =", BenchLoads)
 	fmt.Println("SetupClusterTemplate =", SetupClusterTemplate)
@@ -213,7 +215,7 @@ func printAndCheckVars() {
 	fmt.Println()
 }
 
-func buildPoSV() {
+func buildChain() {
 	cmd := exec.Command("go", "build", "../cmd/chain")
 	if RemoteLinuxCluster {
 		cmd.Env = os.Environ()

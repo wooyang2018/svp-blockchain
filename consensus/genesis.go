@@ -34,6 +34,7 @@ type genesis struct {
 	mtxQ0 sync.RWMutex
 
 	done chan struct{}
+	once sync.Once //guarantee channel is closed only once
 }
 
 func (gns *genesis) run() (*core.Block, *core.QuorumCert) {
@@ -195,7 +196,9 @@ func (gns *genesis) fetchGenesisBlockAndQC(peer *core.PublicKey) error {
 	}
 	gns.setB0(b0)
 	gns.setQ0(qc)
-	close(gns.done)
+	gns.once.Do(func() {
+		close(gns.done)
+	})
 	return nil
 }
 

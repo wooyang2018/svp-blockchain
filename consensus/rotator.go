@@ -4,7 +4,6 @@
 package consensus
 
 import (
-	"sync/atomic"
 	"time"
 
 	"github.com/wooyang2018/posv-blockchain/core"
@@ -14,16 +13,12 @@ import (
 type rotator struct {
 	resources *Resources
 	config    Config
-
-	state  *state
-	driver *driver
+	state     *state
+	driver    *driver
 
 	leaderTimer        *time.Timer
 	viewTimer          *time.Timer
 	leaderTimeoutCount int
-
-	viewStart  int64 // start timestamp of current view
-	viewChange int32 // -1:failed ; 0:success ; 1:ongoing
 
 	stopCh chan struct{}
 }
@@ -33,7 +28,7 @@ func (rot *rotator) start() {
 		return
 	}
 	rot.stopCh = make(chan struct{})
-	rot.setViewStart()
+	rot.driver.setViewStart()
 	go rot.run()
 	logger.I().Info("started rotator")
 }
@@ -87,7 +82,7 @@ func (rot *rotator) onLeaderTimeout() {
 	faultyCount := rot.resources.RoleStore.ValidatorCount() - rot.resources.RoleStore.MajorityValidatorCount()
 	if rot.leaderTimeoutCount > faultyCount {
 		rot.leaderTimer.Stop()
-		rot.setViewChange(-1) //failed to change view when leader timeout
+		rot.driver.setViewChange(-1) //failed to change view when leader timeout
 	} else {
 		rot.leaderTimer.Reset(rot.config.LeaderTimeout)
 	}
@@ -100,7 +95,7 @@ func (rot *rotator) onViewTimeout() {
 }
 
 func (rot *rotator) changeView() {
-	rot.setViewChange(1)
+	rot.driver.setViewChange(1)
 	t := time.NewTimer(rot.config.Delta)
 	select {
 	case <-rot.stopCh:
@@ -108,7 +103,7 @@ func (rot *rotator) changeView() {
 	case <-t.C:
 	}
 
-	rot.setViewStart()
+	rot.driver.setViewStart()
 	leaderIdx := rot.driver.nextLeader()
 	rot.driver.setLeaderIndex(uint32(leaderIdx))
 	rot.driver.setView(rot.driver.getView() + 1)
@@ -174,7 +169,7 @@ func (rot *rotator) isNewViewApproval(view uint32, proposer uint32) bool {
 		return true
 	} else if view == rot.driver.getView() {
 		leaderIdx := rot.driver.getLeaderIndex()
-		pending := rot.getViewChange()
+		pending := rot.driver.getViewChange()
 		return pending == 0 && proposer != leaderIdx || pending == 1 && proposer == leaderIdx
 	}
 	return false
@@ -182,15 +177,15 @@ func (rot *rotator) isNewViewApproval(view uint32, proposer uint32) bool {
 
 func (rot *rotator) isNormalApproval(view uint32, proposer uint32) bool {
 	leaderIdx := rot.driver.getLeaderIndex()
-	pending := rot.getViewChange()
+	pending := rot.driver.getViewChange()
 	return pending == 0 && view == rot.driver.getView() && proposer == leaderIdx
 }
 
 func (rot *rotator) approveViewLeader(view uint32, proposer uint32) {
-	rot.setViewChange(0)
+	rot.driver.setViewChange(0)
 	rot.driver.setView(view)
 	rot.driver.setLeaderIndex(proposer)
-	rot.setViewStart()
+	rot.driver.setViewStart()
 	logger.I().Infow("approved leader", "view", view, "leader", rot.driver.getLeaderIndex())
 	rot.leaderTimeoutCount = 0
 }
@@ -204,20 +199,4 @@ func (rot *rotator) drainStopTimer(timer *time.Timer) {
 		case <-t.C: // to make sure it's not stuck more than 5ms
 		}
 	}
-}
-
-func (rot *rotator) setViewStart() {
-	atomic.StoreInt64(&rot.viewStart, time.Now().Unix())
-}
-
-func (rot *rotator) getViewStart() int64 {
-	return atomic.LoadInt64(&rot.viewStart)
-}
-
-func (rot *rotator) setViewChange(val int32) {
-	atomic.StoreInt32(&rot.viewChange, val)
-}
-
-func (rot *rotator) getViewChange() int32 {
-	return atomic.LoadInt32(&rot.viewChange)
 }

@@ -125,7 +125,7 @@ func (node *LocalNode) Start() error {
 	}
 	node.logFile = f
 	node.cmd = exec.Command(node.binPath)
-	AddPoSVFlags(node.cmd, &node.config)
+	AddCmdFlags(node.cmd, &node.config)
 	node.cmd.Stderr = node.logFile
 	node.cmd.Stdout = node.logFile
 	node.setRunning(true)
@@ -174,6 +174,6 @@ func (node *LocalNode) GetEndpoint() string {
 
 func (node *LocalNode) PrintCmd() string {
 	cmd := exec.Command(node.binPath)
-	AddPoSVFlags(cmd, &node.config)
+	AddCmdFlags(cmd, &node.config)
 	return cmd.String()
 }

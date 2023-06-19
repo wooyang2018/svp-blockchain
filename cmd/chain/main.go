@@ -60,11 +60,15 @@ func init() {
 
 	rootCmd.Flags().Int64Var(&nodeConfig.ConsensusConfig.ChainID,
 		consensus.FlagChainID, nodeConfig.ConsensusConfig.ChainID,
-		"chainid is used to create genesis block")
+		"chain id is used to create genesis block")
 
 	rootCmd.Flags().IntVar(&nodeConfig.ConsensusConfig.BlockTxLimit,
 		consensus.FlagBlockTxLimit, nodeConfig.ConsensusConfig.BlockTxLimit,
 		"maximum tx count in a block")
+
+	rootCmd.Flags().DurationVar(&nodeConfig.ConsensusConfig.TxWaitTime,
+		consensus.FlagTxWaitTime, nodeConfig.ConsensusConfig.TxWaitTime,
+		"proposal creation delay if no transactions in the pool")
 
 	rootCmd.Flags().DurationVar(&nodeConfig.ConsensusConfig.ViewWidth,
 		consensus.FlagViewWidth, nodeConfig.ConsensusConfig.ViewWidth,
