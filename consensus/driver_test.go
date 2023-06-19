@@ -28,7 +28,7 @@ func setupTestDriver() *driver {
 
 func TestDriver_CreateProposal(t *testing.T) {
 	d := setupTestDriver()
-	parent := core.NewBlock().SetHeight(4).Sign(d.resources.Signer)
+	parent := newTestBlock(d.resources.Signer, 4, 3, nil, nil)
 	d.state.setBlock(parent)
 	d.setBLeaf(parent)
 	qc := core.NewQuorumCert()
@@ -69,7 +69,7 @@ func TestDriver_CreateProposal(t *testing.T) {
 
 func TestDriver_VoteBlock(t *testing.T) {
 	d := setupTestDriver()
-	blk2 := newTestBlock(3, 2, nil, nil, d.resources.Signer)
+	blk2 := newTestBlock(d.resources.Signer, 3, 2, nil, nil)
 	pro2 := core.NewProposal().SetBlock(blk2).Sign(d.resources.Signer)
 	d.state.setBlock(pro2.Block())
 	votes := []*core.Vote{
@@ -80,7 +80,7 @@ func TestDriver_VoteBlock(t *testing.T) {
 	d.setQCHigh(qc2)
 
 	proposer := core.GenerateKey(nil)
-	blk3 := newTestBlock(4, 3, nil, nil, d.resources.Signer)
+	blk3 := newTestBlock(d.resources.Signer, 4, 3, nil, nil)
 	pro := core.NewProposal().
 		SetBlock(blk3).
 		SetQuorumCert(qc2).
@@ -160,7 +160,7 @@ func TestDriver_Commit(t *testing.T) {
 	d.resources.Execution = execution
 
 	storage := new(MockStorage)
-	storage.On("Commit", cdata).Return(nil)
+	storage.On("commit", cdata).Return(nil)
 	storage.On("GetQC", bexec.Hash()).Return(nil, nil)
 	d.resources.Storage = storage
 
@@ -192,9 +192,9 @@ func TestDriver_CreateQC(t *testing.T) {
 
 func TestDriver_BroadcastProposal(t *testing.T) {
 	d := setupTestDriver()
-	blk := core.NewBlock().SetHeight(10).Sign(d.resources.Signer)
+	blk := newTestBlock(d.resources.Signer, 10, 9, nil, nil)
+	d.state.setBlock(blk)
 	pro := core.NewProposal().SetBlock(blk).Sign(d.resources.Signer)
-	d.state.setBlock(pro.Block())
 
 	msgSvc := new(MockMsgService)
 	msgSvc.On("BroadcastProposal", pro).Return(nil)

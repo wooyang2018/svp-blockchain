@@ -69,6 +69,8 @@ func (cons *Consensus) start() {
 	cons.validator.start()
 	cons.pacemaker.start()
 	cons.rotator.start()
+
+	cons.rotator.changeView() //unify view at cluster startup
 }
 
 func (cons *Consensus) stop() {

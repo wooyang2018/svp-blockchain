@@ -36,20 +36,20 @@ type driver struct {
 
 	mtxUpdate sync.Mutex // lock for update call
 
-	tester       *tester
-	checkTxDelay time.Duration // latency to check tx num in pool
-	qcEmitter    *emitter.Emitter
-	proEmitter   *emitter.Emitter
+	tester     *tester
+	checkDelay time.Duration // latency to check tx num and view change
+	qcEmitter  *emitter.Emitter
+	proEmitter *emitter.Emitter
 }
 
 func newDriver(resources *Resources, config Config, state *state) *driver {
 	return &driver{
-		resources:    resources,
-		config:       config,
-		state:        state,
-		checkTxDelay: 100 * time.Millisecond,
-		qcEmitter:    emitter.New(),
-		proEmitter:   emitter.New(),
+		resources:  resources,
+		config:     config,
+		state:      state,
+		checkDelay: 100 * time.Millisecond,
+		qcEmitter:  emitter.New(),
+		proEmitter: emitter.New(),
 	}
 }
 
@@ -57,9 +57,9 @@ func (d *driver) setupInnerState(b0 *core.Block, q0 *core.QuorumCert) {
 	d.setBLeaf(b0)
 	d.setBExec(b0)
 	d.setQCHigh(q0)
-	// proposer of b0 may not be leader, but it doesn't matter
+	// proposer of q0 may not be leader, but it doesn't matter
 	d.setView(q0.View())
-	d.setLeaderIndex(uint32(d.resources.RoleStore.GetValidatorIndex(b0.Proposer())))
+	d.setLeaderIndex(uint32(d.resources.RoleStore.GetValidatorIndex(q0.Proposer())))
 }
 
 func (d *driver) setBExec(blk *core.Block)      { d.bExec.Store(blk) }
@@ -244,6 +244,30 @@ func (d *driver) cmpQCPriority(qc1, qc2 *core.QuorumCert) int {
 	return 0
 }
 
+func (d *driver) delayProposeWhenViewChange() bool {
+	t := time.NewTimer(5 * d.config.Delta)
+	for d.getViewChange() != 0 {
+		select {
+		case <-t.C:
+			return false
+		case <-time.After(d.checkDelay):
+		}
+	}
+	return true
+}
+
+func (d *driver) delayProposeWhenNoTxs() {
+	timer := time.NewTimer(d.config.TxWaitTime)
+	defer timer.Stop()
+	for d.resources.TxPool.GetStatus().Total == 0 {
+		select {
+		case <-timer.C:
+			return
+		case <-time.After(d.checkDelay):
+		}
+	}
+}
+
 func (d *driver) SubscribeQC() *emitter.Subscription {
 	return d.qcEmitter.Subscribe(1)
 }
@@ -276,7 +300,6 @@ func (d *driver) VoteProposal(pro *core.Proposal, blk *core.Block) {
 
 // OnPropose is called to propose a new proposal
 func (d *driver) OnPropose() *core.Proposal {
-	d.delayProposeWhenNoTxs()
 	pro := d.CreateProposal()
 	d.setBLeaf(pro.Block())
 	d.startProposal(pro)
@@ -286,18 +309,6 @@ func (d *driver) OnPropose() *core.Proposal {
 		logger.I().Errorw("broadcast proposal failed", "error", err)
 	}
 	return pro
-}
-
-func (d *driver) delayProposeWhenNoTxs() {
-	timer := time.NewTimer(d.config.TxWaitTime)
-	defer timer.Stop()
-	for d.resources.TxPool.GetStatus().Total == 0 {
-		select {
-		case <-timer.C:
-			return
-		case <-time.After(d.checkTxDelay):
-		}
-	}
 }
 
 func (d *driver) CreateProposal() *core.Proposal {
@@ -374,19 +385,19 @@ func (d *driver) UpdateQCHigh(qc *core.QuorumCert) {
 
 func (d *driver) CommitRecursive(blk *core.Block) { // prepare phase for b2
 	t1 := time.Now().UnixNano()
-	d.OnCommit(blk)
+	d.onCommit(blk)
 	d.setBExec(blk)
 	t2 := time.Now().UnixNano()
 	d.tester.saveItem(blk.Height(), blk.Timestamp(), t1, t2, len(blk.Transactions()))
 }
 
-func (d *driver) OnCommit(blk *core.Block) {
+func (d *driver) onCommit(blk *core.Block) {
 	if d.cmpBlockHeight(blk, d.getBExec()) == 1 {
 		// commit parent blocks recursively
-		d.OnCommit(d.getBlockByHash(blk.ParentHash()))
+		d.onCommit(d.getBlockByHash(blk.ParentHash()))
 		d.Commit(blk)
 	} else if !bytes.Equal(d.getBExec().Hash(), blk.Hash()) {
-		logger.I().Fatalw("safety breached", "hash", blk.Hash(), "height", blk.Height())
+		logger.I().Fatalw("safety breached", "hash", base64String(blk.Hash()), "height", blk.Height())
 	}
 }
 

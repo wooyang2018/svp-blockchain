@@ -129,12 +129,12 @@ func (rot *rotator) changeView() {
 }
 
 func (rot *rotator) newViewProposal() {
-	rot.driver.mtxUpdate.Lock()
-	defer rot.driver.mtxUpdate.Unlock()
-
 	if !rot.driver.isLeader(rot.resources.Signer.PublicKey()) {
 		return
 	}
+
+	rot.driver.mtxUpdate.Lock()
+	defer rot.driver.mtxUpdate.Unlock()
 
 	pro := rot.driver.OnNewViewPropose()
 	logger.I().Debugw("proposed new view proposal", "view", pro.View(), "qc", rot.driver.qcRefHeight(pro.QuorumCert()))
@@ -165,9 +165,10 @@ func (rot *rotator) onNewProposal(pro *core.Proposal) {
 }
 
 func (rot *rotator) isNewViewApproval(view uint32, proposer uint32) bool {
-	if view > rot.driver.getView() {
+	curView := rot.driver.getView()
+	if view > curView {
 		return true
-	} else if view == rot.driver.getView() {
+	} else if view == curView {
 		leaderIdx := rot.driver.getLeaderIndex()
 		pending := rot.driver.getViewChange()
 		return pending == 0 && proposer != leaderIdx || pending == 1 && proposer == leaderIdx
@@ -176,9 +177,10 @@ func (rot *rotator) isNewViewApproval(view uint32, proposer uint32) bool {
 }
 
 func (rot *rotator) isNormalApproval(view uint32, proposer uint32) bool {
+	curView := rot.driver.getView()
 	leaderIdx := rot.driver.getLeaderIndex()
 	pending := rot.driver.getViewChange()
-	return pending == 0 && view == rot.driver.getView() && proposer == leaderIdx
+	return pending == 0 && view == curView && proposer == leaderIdx
 }
 
 func (rot *rotator) approveViewLeader(view uint32, proposer uint32) {
