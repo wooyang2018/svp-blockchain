@@ -38,7 +38,8 @@ func setupTestDriver() *driver {
 	return d
 }
 
-func newTestBlock(priv core.Signer, height, execHeight uint64, parentHash []byte, mRoot []byte, txs [][]byte) *core.Block {
+func newTestBlock(priv core.Signer, height, execHeight uint64,
+	parentHash []byte, mRoot []byte, txs [][]byte) *core.Block {
 	return core.NewBlock().
 		SetHeight(height).
 		SetExecHeight(execHeight).

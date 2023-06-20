@@ -112,7 +112,12 @@ func (vld *validator) onReceiveProposal(pro *core.Proposal) error {
 
 	vld.state.setQC(pro.QuorumCert())
 	pidx := vld.resources.RoleStore.GetValidatorIndex(pro.Proposer())
-	logger.I().Debugw("received proposal", "view", pro.View(), "proposer", pidx, "height", blk.Height(), "exec", blk.ExecHeight(), "txs", len(blk.Transactions()))
+	logger.I().Debugw("received proposal",
+		"view", pro.View(),
+		"proposer", pidx,
+		"height", blk.Height(),
+		"exec", blk.ExecHeight(),
+		"txs", len(blk.Transactions()))
 
 	return vld.updateQCHighAndVote(pro, blk)
 }
@@ -185,8 +190,7 @@ func (vld *validator) syncForwardCommittedBlocks(peer *core.PublicKey, start, en
 		if parent == nil {
 			return fmt.Errorf("cannot connect chain, parent not found")
 		}
-		err = vld.verifyParentAndCommitRecursive(peer, blk, parent)
-		if err != nil {
+		if err = vld.verifyParentAndCommitRecursive(peer, blk, parent); err != nil {
 			return err
 		}
 	}
@@ -206,8 +210,7 @@ func (vld *validator) requestBlockByHeight(peer *core.PublicKey, height uint64) 
 
 func (vld *validator) verifyParentAndCommitRecursive(peer *core.PublicKey, blk, parent *core.Block) error {
 	if blk.Height() != parent.Height()+1 {
-		return fmt.Errorf("invalid block height %d, parent %d",
-			blk.Height(), parent.Height())
+		return fmt.Errorf("invalid block height %d, parent %d", blk.Height(), parent.Height())
 	}
 	if ExecuteTxFlag { // must sync transactions before updating block
 		if err := vld.resources.TxPool.SyncTxs(peer, blk.Transactions()); err != nil {

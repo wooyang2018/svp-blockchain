@@ -57,15 +57,21 @@ func TestValidator_verifyProposalToVote(t *testing.T) {
 		block *core.Block
 	}
 	tests := []testCase{
-		{"valid", true, newTestBlock(priv1, 11, 10, nil, mRoot, [][]byte{tx1.Hash(), tx4.Hash()})},
-		{"different exec height", false, newTestBlock(priv1, 11, 9, nil, mRoot, [][]byte{tx1.Hash(), tx4.Hash()})},
+		{"valid", true, newTestBlock(priv1, 11, 10,
+			nil, mRoot, [][]byte{tx1.Hash(), tx4.Hash()})},
+		{"different exec height", false, newTestBlock(priv1, 11, 9,
+			nil, mRoot, [][]byte{tx1.Hash(), tx4.Hash()})},
 	}
 	if ExecuteTxFlag {
 		tests = append(tests, []testCase{
-			{"different merkle root", false, newTestBlock(priv1, 11, 10, nil, []byte("different"), [][]byte{tx1.Hash(), tx4.Hash()})},
-			{"committed tx", false, newTestBlock(priv1, 11, 10, nil, mRoot, [][]byte{tx1.Hash(), tx2.Hash(), tx4.Hash()})},
-			{"expired tx", false, newTestBlock(priv1, 11, 10, nil, mRoot, [][]byte{tx1.Hash(), tx3.Hash(), tx4.Hash()})},
-			{"not found tx", false, newTestBlock(priv1, 11, 10, nil, mRoot, [][]byte{tx1.Hash(), tx5.Hash(), tx4.Hash()})},
+			{"different merkle root", false, newTestBlock(priv1, 11, 10,
+				nil, []byte("different"), [][]byte{tx1.Hash(), tx4.Hash()})},
+			{"committed tx", false, newTestBlock(priv1, 11, 10,
+				nil, mRoot, [][]byte{tx1.Hash(), tx2.Hash(), tx4.Hash()})},
+			{"expired tx", false, newTestBlock(priv1, 11, 10,
+				nil, mRoot, [][]byte{tx1.Hash(), tx3.Hash(), tx4.Hash()})},
+			{"not found tx", false, newTestBlock(priv1, 11, 10,
+				nil, mRoot, [][]byte{tx1.Hash(), tx5.Hash(), tx4.Hash()})},
 		}...)
 	}
 	for _, tt := range tests {

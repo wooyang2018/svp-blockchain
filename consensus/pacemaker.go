@@ -38,7 +38,7 @@ func (pm *pacemaker) stop() {
 }
 
 func (pm *pacemaker) run() {
-	qc := pm.driver.SubscribeQC()
+	qc := pm.driver.qcEmitter.Subscribe(1)
 	defer qc.Unsubscribe()
 
 	for {
@@ -65,8 +65,12 @@ func (pm *pacemaker) newProposal() {
 		return
 	}
 	pro := pm.driver.OnPropose()
-	logger.I().Debugw("proposed proposal", "view", pro.View(),
-		"height", pro.Block().Height(), "exec", pro.Block().ExecHeight(), "qc", pm.driver.qcRefHeight(pro.QuorumCert()), "txs", len(pro.Block().Transactions()))
+	logger.I().Debugw("proposed proposal",
+		"view", pro.View(),
+		"height", pro.Block().Height(),
+		"exec", pro.Block().ExecHeight(),
+		"qc", pm.driver.qcRefHeight(pro.QuorumCert()),
+		"txs", len(pro.Block().Transactions()))
 	vote := pro.Vote(pm.resources.Signer)
 	pm.driver.OnReceiveVote(vote)
 	pm.driver.UpdateQCHigh(pro.QuorumCert())

@@ -64,7 +64,11 @@ func (cons *Consensus) start() {
 	cons.setupRotator()
 
 	status := cons.GetStatus()
-	logger.I().Infow("starting consensus", "view", status.View, "leader", status.LeaderIndex, "bLeaf", status.BLeaf, "qc", status.QCHigh)
+	logger.I().Infow("starting consensus",
+		"view", status.View,
+		"leader", status.LeaderIndex,
+		"bLeaf", status.BLeaf,
+		"qc", status.QCHigh)
 
 	cons.validator.start()
 	cons.pacemaker.start()

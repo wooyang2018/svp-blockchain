@@ -248,10 +248,6 @@ func (d *driver) delayProposeWhenNoTxs() {
 	}
 }
 
-func (d *driver) SubscribeQC() *emitter.Subscription {
-	return d.qcEmitter.Subscribe(1)
-}
-
 func (d *driver) VoteProposal(pro *core.Proposal, blk *core.Block) {
 	if d.cmpQCPriority(pro.QuorumCert(), d.getQCHigh()) < 0 {
 		logger.I().Warnw("can not vote for proposal,", "height", blk.Height())

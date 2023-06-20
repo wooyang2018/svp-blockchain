@@ -106,13 +106,17 @@ func (rot *rotator) changeView() {
 		logger.I().Errorw("send high qc to new leader failed", "error", err)
 	}
 	rot.sleepTime(rot.config.DeltaTime * 2)
-	rot.driver.setViewStart()
-	rot.driver.setView(rot.driver.getView() + 1)
-	leaderIdx := rot.driver.getView() % uint32(rot.resources.RoleStore.ValidatorCount())
-	rot.driver.setLeaderIndex(leaderIdx)
-	logger.I().Infow("view changed", "view", rot.driver.getView(),
-		"leader", rot.driver.getLeaderIndex(), "qc", rot.driver.qcRefHeight(rot.driver.getQCHigh()))
-	rot.newViewProposal()
+	if rot.driver.getViewChange() == 1 {
+		rot.driver.setViewStart()
+		rot.driver.setView(rot.driver.getView() + 1)
+		leaderIdx := rot.driver.getView() % uint32(rot.resources.RoleStore.ValidatorCount())
+		rot.driver.setLeaderIndex(leaderIdx)
+		logger.I().Infow("view changed",
+			"view", rot.driver.getView(),
+			"leader", rot.driver.getLeaderIndex(),
+			"qc", rot.driver.qcRefHeight(rot.driver.getQCHigh()))
+		rot.newViewProposal()
+	}
 }
 
 func (rot *rotator) newViewProposal() {
@@ -123,7 +127,9 @@ func (rot *rotator) newViewProposal() {
 		return
 	}
 	pro := rot.driver.OnNewViewPropose()
-	logger.I().Debugw("proposed new view proposal", "view", pro.View(), "qc", rot.driver.qcRefHeight(pro.QuorumCert()))
+	logger.I().Debugw("proposed new view proposal",
+		"view", pro.View(),
+		"qc", rot.driver.qcRefHeight(pro.QuorumCert()))
 	vote := pro.Vote(rot.resources.Signer)
 	rot.driver.OnReceiveVote(vote)
 	rot.driver.UpdateQCHigh(pro.QuorumCert())

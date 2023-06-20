@@ -53,7 +53,7 @@ func newTestProposal(priv core.Signer) (*core.Vote, *core.QuorumCert, *core.Prop
 		SetBlock(core.NewBlock().SetHeight(9).Sign(priv)).
 		Sign(priv).
 		Vote(priv)
-	qc := core.NewQuorumCert().Build([]*core.Vote{vote})
+	qc := core.NewQuorumCert().Build(priv, []*core.Vote{vote})
 	pro := core.NewProposal().
 		SetBlock(core.NewBlock().SetHeight(10).Sign(priv)).
 		SetQuorumCert(qc).
