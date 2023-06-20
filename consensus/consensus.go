@@ -133,7 +133,6 @@ func (cons *Consensus) setupRotator() {
 	cons.rotator = &rotator{
 		resources: cons.resources,
 		config:    cons.config,
-		state:     cons.state,
 		driver:    cons.driver,
 	}
 }

@@ -264,7 +264,7 @@ func (vld *validator) updateQCHighAndVote(pro *core.Proposal, blk *core.Block) e
 	vld.driver.mtxUpdate.Lock()
 	defer vld.driver.mtxUpdate.Unlock()
 
-	vld.driver.proEmitter.Emit(pro)
+	vld.driver.proposalCh <- pro
 	vld.driver.UpdateQCHigh(pro.QuorumCert())
 	if !vld.driver.isLeader(pro.Proposer()) {
 		pidx := vld.resources.RoleStore.GetValidatorIndex(pro.Proposer())
@@ -359,7 +359,7 @@ func (vld *validator) onReceiveQC(qc *core.QuorumCert) error {
 		leaderIdx := vld.driver.getView() % uint32(vld.resources.RoleStore.ValidatorCount())
 		vld.driver.setLeaderIndex(leaderIdx)
 		logger.I().Infow("view changed by higher qc", "view", vld.driver.getView(),
-			"leader", vld.driver.getLeaderIndex(), "qc", vld.driver.qcRefHeight(vld.driver.getQCHigh()))
+			"leader", vld.driver.getLeaderIndex(), "qc", vld.driver.qcRefHeight(qc))
 	}
 
 	vld.driver.mtxUpdate.Lock()

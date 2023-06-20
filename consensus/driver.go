@@ -39,7 +39,7 @@ type driver struct {
 	tester     *tester
 	checkDelay time.Duration // latency to check tx num in pool
 	qcEmitter  *emitter.Emitter
-	proEmitter *emitter.Emitter
+	proposalCh chan *core.Proposal
 }
 
 func newDriver(resources *Resources, config Config, state *state) *driver {
@@ -49,7 +49,7 @@ func newDriver(resources *Resources, config Config, state *state) *driver {
 		state:      state,
 		checkDelay: 100 * time.Millisecond,
 		qcEmitter:  emitter.New(),
-		proEmitter: emitter.New(),
+		proposalCh: make(chan *core.Proposal),
 	}
 }
 
@@ -252,10 +252,6 @@ func (d *driver) SubscribeQC() *emitter.Subscription {
 	return d.qcEmitter.Subscribe(1)
 }
 
-func (d *driver) SubscribeProposal() *emitter.Subscription {
-	return d.proEmitter.Subscribe(1)
-}
-
 func (d *driver) VoteProposal(pro *core.Proposal, blk *core.Block) {
 	if d.cmpQCPriority(pro.QuorumCert(), d.getQCHigh()) < 0 {
 		logger.I().Warnw("can not vote for proposal,", "height", blk.Height())
@@ -283,7 +279,7 @@ func (d *driver) OnPropose() *core.Proposal {
 	pro := d.CreateProposal()
 	d.setBLeaf(pro.Block())
 	d.startProposal(pro)
-	d.proEmitter.Emit(pro)
+	d.proposalCh <- pro
 	err := d.resources.MsgSvc.BroadcastProposal(pro)
 	if err != nil {
 		logger.I().Errorw("broadcast proposal failed", "error", err)
@@ -325,7 +321,7 @@ func (d *driver) OnNewViewPropose() *core.Proposal {
 	blk := d.getBlockByHash(qcHigh.BlockHash())
 	d.setBLeaf(blk)
 	d.startProposal(pro)
-	d.proEmitter.Emit(pro)
+	d.proposalCh <- pro
 	err := d.resources.MsgSvc.BroadcastProposal(pro)
 	if err != nil {
 		logger.I().Errorw("broadcast proposal failed", "error", err)

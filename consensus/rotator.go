@@ -13,7 +13,6 @@ import (
 type rotator struct {
 	resources *Resources
 	config    Config
-	state     *state
 	driver    *driver
 
 	leaderTimer        *time.Timer
@@ -29,7 +28,8 @@ func (rot *rotator) start() {
 	}
 	rot.stopCh = make(chan struct{})
 	rot.driver.setViewStart()
-	go rot.run()
+	go rot.newViewLoop()
+	go rot.proposalLoop()
 	logger.I().Info("started rotator")
 }
 
@@ -47,10 +47,7 @@ func (rot *rotator) stop() {
 	rot.stopCh = nil
 }
 
-func (rot *rotator) run() {
-	pro := rot.driver.SubscribeProposal()
-	defer pro.Unsubscribe()
-
+func (rot *rotator) newViewLoop() {
 	rot.viewTimer = time.NewTimer(rot.config.ViewWidth)
 	defer rot.viewTimer.Stop()
 
@@ -67,9 +64,17 @@ func (rot *rotator) run() {
 
 		case <-rot.leaderTimer.C:
 			rot.onLeaderTimeout()
+		}
+	}
+}
 
-		case e := <-pro.Events():
-			rot.onNewProposal(e.(*core.Proposal))
+func (rot *rotator) proposalLoop() {
+	for {
+		select {
+		case <-rot.stopCh:
+			return
+		case e := <-rot.driver.proposalCh:
+			rot.onNewProposal(e)
 		}
 	}
 }
@@ -146,6 +151,13 @@ func (rot *rotator) onNewProposal(pro *core.Proposal) {
 	}
 }
 
+func (rot *rotator) isNormalApproval(view uint32, proposer uint32) bool {
+	curView := rot.driver.getView()
+	leaderIdx := rot.driver.getLeaderIndex()
+	pending := rot.driver.getViewChange()
+	return pending == 0 && view == curView && proposer == leaderIdx
+}
+
 func (rot *rotator) isNewViewApproval(view uint32, proposer uint32) bool {
 	curView := rot.driver.getView()
 	if view > curView {
@@ -158,22 +170,12 @@ func (rot *rotator) isNewViewApproval(view uint32, proposer uint32) bool {
 	return false
 }
 
-func (rot *rotator) isNormalApproval(view uint32, proposer uint32) bool {
-	curView := rot.driver.getView()
-	leaderIdx := rot.driver.getLeaderIndex()
-	pending := rot.driver.getViewChange()
-	return pending == 0 && view == curView && proposer == leaderIdx
-}
-
 func (rot *rotator) approveViewLeader(view uint32, proposer uint32) {
 	rot.driver.setViewChange(0)
 	rot.driver.setView(view)
 	rot.driver.setLeaderIndex(proposer)
 	rot.driver.setViewStart()
 	rot.leaderTimeoutCount = 0
-	if rot.driver.isLeader(rot.resources.Signer.PublicKey()) {
-		rot.driver.qcEmitter.Emit(struct{}{})
-	}
 	logger.I().Infow("approved leader", "view", view, "leader", proposer)
 }
 
