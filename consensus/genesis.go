@@ -203,10 +203,10 @@ func (gns *genesis) fetchGenesisBlockAndQC(peer *core.PublicKey) error {
 func (gns *genesis) requestBlockByHeight(peer *core.PublicKey, height uint64) (*core.Block, error) {
 	blk, err := gns.resources.MsgSvc.RequestBlockByHeight(peer, height)
 	if err != nil {
-		return nil, fmt.Errorf("cannot get proposal by height %d, %w", height, err)
+		return nil, fmt.Errorf("cannot get block by height %d, %w", height, err)
 	}
 	if err := blk.Validate(gns.resources.RoleStore); err != nil {
-		return nil, fmt.Errorf("validate proposal %d, %w", height, err)
+		return nil, fmt.Errorf("validate block %d, %w", height, err)
 	}
 	return blk, nil
 }
@@ -258,7 +258,7 @@ func (gns *genesis) broadcastQC() {
 		default:
 		}
 		if err := gns.resources.MsgSvc.BroadcastQC(gns.getQ0()); err != nil {
-			logger.I().Errorw("broadcast proposal failed", "error", err)
+			logger.I().Errorw("broadcast qc failed", "error", err)
 		}
 		time.Sleep(time.Second)
 	}

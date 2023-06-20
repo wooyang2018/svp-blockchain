@@ -5,74 +5,65 @@ package consensus
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/wooyang2018/posv-blockchain/core"
-	"github.com/wooyang2018/posv-blockchain/emitter"
 )
 
-func setupRotator() (*rotator, *core.Proposal) {
-	key1 := core.GenerateKey(nil)
-	key2 := core.GenerateKey(nil)
-	validators := []string{
-		key1.PublicKey().String(),
-		key2.PublicKey().String(),
-	}
-	resources := &Resources{
-		Signer:    key1,
-		RoleStore: core.NewRoleStore(validators),
-	}
+func setupTestRotator() (*rotator, *core.Proposal) {
+	key0, _, resources := setupTestResources()
+	b0 := core.NewBlock().Sign(key0)
+	pro := core.NewProposal().SetBlock(b0).SetView(0).Sign(key0)
+	q0 := core.NewQuorumCert().Build(key0, []*core.Vote{pro.Vote(key0)})
+	pro.SetQuorumCert(q0)
 
-	blk := core.NewBlock().Sign(key1)
-	b0 := core.NewProposal().SetBlock(blk).SetView(1).Sign(key1)
-	q0 := core.NewQuorumCert().Build(key1, []*core.Vote{b0.Vote(key1)})
-	b0.SetQuorumCert(q0)
-
-	state := newState()
-	state.setBlock(b0.Block())
 	driver := &driver{
 		resources:  resources,
-		state:      state,
-		proEmitter: emitter.New(),
+		state:      newState(),
+		proposalCh: make(chan *core.Proposal),
 	}
+	driver.setupInnerState(b0, q0)
+	driver.state.setBlock(b0)
+	driver.state.setQC(q0)
 
-	driver.setupInnerState(b0.Block(), q0)
-	driver.tester = newTester(nil)
-
-	return &rotator{
+	rot := &rotator{
 		resources: resources,
 		config:    DefaultConfig,
-		state:     state,
 		driver:    driver,
-	}, b0
+	}
+	rot.config.DeltaTime = 500 * time.Millisecond
+	return rot, pro
 }
 
 func TestRotator_changeView(t *testing.T) {
 	asrt := assert.New(t)
 
-	rot, _ := setupRotator()
-	rot.driver.setLeaderIndex(1)
+	rot, _ := setupTestRotator()
+	rot.start()
+	defer rot.stop()
 
 	msgSvc := new(MockMsgService)
 	msgSvc.On("BroadcastProposal", mock.Anything).Return(nil)
+	msgSvc.On("BroadcastQC", mock.Anything).Return(nil)
 	rot.resources.MsgSvc = msgSvc
 
 	rot.changeView()
 
 	msgSvc.AssertExpectations(t)
-	asrt.EqualValues(rot.driver.getViewChange(), 1)
-	asrt.EqualValues(rot.driver.getLeaderIndex(), 0)
+	asrt.EqualValues(rot.driver.getViewChange(), 0)
+	asrt.EqualValues(rot.driver.getLeaderIndex(), 1)
 }
 
 func Test_rotator_isNewViewApproval(t *testing.T) {
 	asrt := assert.New(t)
 
-	rot1, _ := setupRotator()
-	rot2, _ := setupRotator()
+	rot0, _ := setupTestRotator()
+	rot1, _ := setupTestRotator()
 
-	rot1.driver.setViewChange(1)
-	rot2.driver.setViewChange(0)
+	rot0.driver.setViewChange(1)
+	rot1.driver.setViewChange(0)
 
 	tests := []struct {
 		name        string
@@ -80,14 +71,14 @@ func Test_rotator_isNewViewApproval(t *testing.T) {
 		proposerIdx uint32
 		want        bool
 	}{
-		{"pending and same leader", rot1, 0, true},
-		{"not pending and different leader", rot2, 1, true},
-		{"pending and different leader", rot1, 1, false},
-		{"not pending and same leader", rot2, 0, false},
+		{"pending and same leader", rot0, 0, true},
+		{"not pending and different leader", rot1, 1, true},
+		{"pending and different leader", rot0, 1, false},
+		{"not pending and same leader", rot1, 0, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			asrt.EqualValues(tt.want, tt.rot.isNewViewApproval(1, tt.proposerIdx))
+			asrt.EqualValues(tt.want, tt.rot.isNewViewApproval(0, tt.proposerIdx))
 		})
 	}
 }
@@ -95,11 +86,11 @@ func Test_rotator_isNewViewApproval(t *testing.T) {
 func TestRotator_resetViewTimer(t *testing.T) {
 	asrt := assert.New(t)
 
-	rot, _ := setupRotator()
+	rot, _ := setupTestRotator()
 	rot.driver.setViewChange(1)
-
 	rot.approveViewLeader(1, 1)
 
 	asrt.EqualValues(rot.driver.getViewChange(), 0)
+	asrt.EqualValues(rot.driver.getView(), 1)
 	asrt.EqualValues(rot.driver.getLeaderIndex(), 1)
 }

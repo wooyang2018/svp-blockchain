@@ -12,6 +12,20 @@ import (
 	"github.com/wooyang2018/posv-blockchain/storage"
 )
 
+func setupTestResources() (*core.PrivateKey, *core.PrivateKey, *Resources) {
+	key0 := core.GenerateKey(nil)
+	key1 := core.GenerateKey(nil)
+	validators := []string{
+		key0.PublicKey().String(),
+		key1.PublicKey().String(),
+	}
+	resources := &Resources{
+		Signer:    key1,
+		RoleStore: core.NewRoleStore(validators),
+	}
+	return key0, key1, resources
+}
+
 func setupTestDriver() *driver {
 	resources := &Resources{
 		Signer: core.GenerateKey(nil),
@@ -24,9 +38,19 @@ func setupTestDriver() *driver {
 	return d
 }
 
+func newTestBlock(priv core.Signer, height, execHeight uint64, parentHash []byte, mRoot []byte, txs [][]byte) *core.Block {
+	return core.NewBlock().
+		SetHeight(height).
+		SetExecHeight(execHeight).
+		SetParentHash(parentHash).
+		SetMerkleRoot(mRoot).
+		SetTransactions(txs).
+		Sign(priv)
+}
+
 func TestDriver_CreateProposal(t *testing.T) {
 	d := setupTestDriver()
-	parent := newTestBlock(d.resources.Signer, 4, 3, nil, nil)
+	parent := newTestBlock(d.resources.Signer, 4, 3, nil, nil, nil)
 	d.state.setBlock(parent)
 	d.setBLeaf(parent)
 	qc := core.NewQuorumCert()
@@ -42,7 +66,7 @@ func TestDriver_CreateProposal(t *testing.T) {
 	d.resources.TxPool = txPool
 
 	strg := new(MockStorage)
-	strg.On("GetBlockHeight").Return(2) // driver should get bexec height from storage
+	strg.On("GetBlockHeight").Return(4) // driver should get bexec height from storage
 	strg.On("GetMerkleRoot").Return([]byte("merkle-root"))
 	d.resources.Storage = strg
 
@@ -59,56 +83,42 @@ func TestDriver_CreateProposal(t *testing.T) {
 
 	blk := pro.Block()
 	asrt.Equal(txsInQ, blk.Transactions())
-	asrt.EqualValues(2, blk.ExecHeight())
+	asrt.EqualValues(4, blk.ExecHeight())
 	asrt.Equal([]byte("merkle-root"), blk.MerkleRoot())
 	asrt.NotEmpty(blk.Timestamp(), "should add timestamp")
-	asrt.NotNil(d.state.getBlock(blk.Hash()), "should store leaf block in innerState")
+	asrt.NotNil(d.state.getBlock(blk.Hash()), "should store leaf block in state")
 }
 
 func TestDriver_VoteBlock(t *testing.T) {
 	d := setupTestDriver()
-	blk2 := newTestBlock(d.resources.Signer, 3, 2, nil, nil)
-	pro2 := core.NewProposal().SetBlock(blk2).Sign(d.resources.Signer)
-	d.state.setBlock(pro2.Block())
+	blk1 := newTestBlock(d.resources.Signer, 3, 2, nil, nil, nil)
+	pro1 := core.NewProposal().SetBlock(blk1).Sign(d.resources.Signer)
+	d.state.setBlock(blk1)
 	votes := []*core.Vote{
-		pro2.Vote(d.resources.Signer),
-		pro2.Vote(core.GenerateKey(nil)),
+		pro1.Vote(d.resources.Signer),
+		pro1.Vote(core.GenerateKey(nil)),
 	}
-	qc2 := core.NewQuorumCert().Build(d.resources.Signer, votes)
-	d.setQCHigh(qc2)
+	qc1 := core.NewQuorumCert().Build(d.resources.Signer, votes)
+	d.setQCHigh(qc1)
 
 	proposer := core.GenerateKey(nil)
-	blk3 := newTestBlock(d.resources.Signer, 4, 3, nil, nil)
-	pro := core.NewProposal().
-		SetBlock(blk3).
-		SetQuorumCert(qc2).
-		Sign(proposer)
-	validators := []string{pro.Proposer().String()}
+	blk2 := newTestBlock(d.resources.Signer, 4, 3, nil, nil, nil)
+	pro2 := core.NewProposal().SetBlock(blk2).SetQuorumCert(qc1).Sign(proposer)
+	validators := []string{pro2.Proposer().String()}
 	d.resources.RoleStore = core.NewRoleStore(validators)
 
 	txPool := new(MockTxPool)
 	if !PreserveTxFlag {
-		txPool.On("SetTxsPending", pro.Block().Transactions())
+		txPool.On("SetTxsPending", pro2.Block().Transactions())
 	}
 	d.resources.TxPool = txPool
 
-	// should sign block and send vote
 	msgSvc := new(MockMsgService)
-	msgSvc.On("SendVote", proposer.PublicKey(), pro.Vote(d.resources.Signer)).Return(nil)
+	msgSvc.On("SendVote", proposer.PublicKey(), pro2.Vote(d.resources.Signer)).Return(nil)
 	d.resources.MsgSvc = msgSvc
 
-	d.VoteProposal(pro, pro.Block())
-
-	txPool.AssertExpectations(t)
-	msgSvc.AssertExpectations(t)
-
-	txPool = new(MockTxPool)
-	if !PreserveTxFlag {
-		txPool.On("SetTxsPending", pro.Block().Transactions())
-	}
-	d.resources.TxPool = txPool
-
-	d.VoteProposal(pro, pro.Block())
+	// should sign block and send vote
+	d.VoteProposal(pro2, pro2.Block())
 
 	txPool.AssertExpectations(t)
 	msgSvc.AssertExpectations(t)
@@ -117,12 +127,12 @@ func TestDriver_VoteBlock(t *testing.T) {
 func TestDriver_Commit(t *testing.T) {
 	d := setupTestDriver()
 	parent := newTestBlock(d.resources.Signer, 10, 9, nil, nil, nil)
-	bfolk := newTestBlock(d.resources.Signer, 10, 9, nil, nil, [][]byte{[]byte("tx from folk")})
+	bfork := newTestBlock(d.resources.Signer, 10, 9, nil, nil, [][]byte{[]byte("tx from fork")})
 	tx := core.NewTransaction().Sign(d.resources.Signer)
 	bexec := newTestBlock(d.resources.Signer, 11, 10, parent.Hash(), nil, [][]byte{tx.Hash()})
 	d.state.setBlock(parent)
 	d.state.setCommittedBlock(parent)
-	d.state.setBlock(bfolk)
+	d.state.setBlock(bfork)
 	d.state.setBlock(bexec)
 
 	txs := []*core.Transaction{tx}
@@ -133,13 +143,14 @@ func TestDriver_Commit(t *testing.T) {
 	if !PreserveTxFlag {
 		txPool.On("RemoveTxs", bexec.Transactions()).Once() // should remove txs from pool after commit
 	}
-	txPool.On("PutTxsToQueue", bfolk.Transactions()).Once() // should put txs of folked block back to queue from pending
+	txPool.On("PutTxsToQueue", bfork.Transactions()).Once() // should put txs of forked block back to queue from pending
 	d.resources.TxPool = txPool
 
 	bcm := core.NewBlockCommit().SetHash(bexec.Hash())
 	txcs := []*core.TxCommit{core.NewTxCommit().SetHash(tx.Hash())}
 	cdata := &storage.CommitData{
 		Block:        bexec,
+		QC:           nil,
 		Transactions: txs,
 		BlockCommit:  bcm,
 		TxCommits:    txcs,
@@ -155,7 +166,7 @@ func TestDriver_Commit(t *testing.T) {
 	d.resources.Execution = execution
 
 	storage := new(MockStorage)
-	storage.On("commit", cdata).Return(nil)
+	storage.On("Commit", cdata).Return(nil)
 	storage.On("GetQC", bexec.Hash()).Return(nil, nil)
 	d.resources.Storage = storage
 
@@ -166,15 +177,13 @@ func TestDriver_Commit(t *testing.T) {
 	storage.AssertExpectations(t)
 
 	asrt := assert.New(t)
-	asrt.NotNil(d.state.getBlock(bexec.Hash()),
-		"should not delete bexec from innerState")
-	asrt.Nil(d.state.getBlock(bfolk.Hash()),
-		"should delete folked block from innerState")
+	asrt.NotNil(d.state.getBlock(bexec.Hash()), "should not delete bexec from state")
+	asrt.Nil(d.state.getBlock(bfork.Hash()), "should delete forked block from stata")
 }
 
 func TestDriver_CreateQC(t *testing.T) {
 	d := setupTestDriver()
-	blk := newTestBlock(d.resources.Signer, 10, 9, nil, nil)
+	blk := newTestBlock(d.resources.Signer, 10, 9, nil, nil, nil)
 	pro := core.NewProposal().SetBlock(blk).Sign(d.resources.Signer)
 	d.state.setBlock(blk)
 	votes := []*core.Vote{

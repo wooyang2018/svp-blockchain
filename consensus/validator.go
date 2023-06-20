@@ -156,10 +156,8 @@ func (vld *validator) syncMissingCommittedBlocks(blk *core.Block) error {
 	if blk.ExecHeight() <= commitHeight {
 		return nil // already sync committed blocks
 	}
-	// seems like I left behind. Lets check with qcRef to confirm
-	// only qc is trusted and proposal is not
 	if blk.Height() == 0 {
-		return fmt.Errorf("genesis block proposal")
+		return fmt.Errorf("genesis block")
 	}
 	qcRef := vld.driver.getBlockByHash(blk.ParentHash())
 	if qcRef == nil {
