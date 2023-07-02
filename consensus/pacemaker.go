@@ -10,6 +10,7 @@ import (
 type pacemaker struct {
 	resources *Resources
 	state     *state
+	status    *status
 	driver    *driver
 	stopCh    chan struct{}
 }
@@ -57,7 +58,7 @@ func (pm *pacemaker) newProposal() {
 	pm.driver.mtxUpdate.Lock()
 	defer pm.driver.mtxUpdate.Unlock()
 
-	if pm.driver.getViewChange() != 0 {
+	if pm.status.getViewChange() != 0 {
 		logger.I().Warnw("can not create proposal when view change")
 		return
 	}

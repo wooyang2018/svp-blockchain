@@ -12,20 +12,6 @@ import (
 	"github.com/wooyang2018/posv-blockchain/storage"
 )
 
-func setupTestResources() (*core.PrivateKey, *core.PrivateKey, *Resources) {
-	key0 := core.GenerateKey(nil)
-	key1 := core.GenerateKey(nil)
-	validators := []string{
-		key0.PublicKey().String(),
-		key1.PublicKey().String(),
-	}
-	resources := &Resources{
-		Signer:    key1,
-		RoleStore: core.NewRoleStore(validators),
-	}
-	return key0, key1, resources
-}
-
 func setupTestDriver() *driver {
 	resources := &Resources{
 		Signer: core.GenerateKey(nil),
@@ -33,6 +19,7 @@ func setupTestDriver() *driver {
 	d := &driver{
 		resources: resources,
 		config:    DefaultConfig,
+		status:    new(status),
 		state:     newState(),
 	}
 	return d
@@ -53,9 +40,9 @@ func TestDriver_CreateProposal(t *testing.T) {
 	d := setupTestDriver()
 	parent := newTestBlock(d.resources.Signer, 4, 3, nil, nil, nil)
 	d.state.setBlock(parent)
-	d.setBLeaf(parent)
+	d.status.setBLeaf(parent)
 	qc := core.NewQuorumCert()
-	d.setQCHigh(qc)
+	d.status.setQCHigh(qc)
 
 	txsInQ := [][]byte{[]byte("tx1"), []byte("tx2")}
 	txPool := new(MockTxPool)
@@ -100,7 +87,7 @@ func TestDriver_VoteBlock(t *testing.T) {
 		pro1.Vote(core.GenerateKey(nil)),
 	}
 	qc1 := core.NewQuorumCert().Build(d.resources.Signer, votes)
-	d.setQCHigh(qc1)
+	d.status.setQCHigh(qc1)
 
 	proposer := core.GenerateKey(nil)
 	blk2 := newTestBlock(d.resources.Signer, 4, 3, nil, nil, nil)
@@ -166,16 +153,16 @@ func TestDriver_Commit(t *testing.T) {
 	}
 	d.resources.Execution = execution
 
-	storage := new(MockStorage)
-	storage.On("Commit", cdata).Return(nil)
-	storage.On("GetQC", bexec.Hash()).Return(nil, nil)
-	d.resources.Storage = storage
+	strg := new(MockStorage)
+	strg.On("Commit", cdata).Return(nil)
+	strg.On("GetQC", bexec.Hash()).Return(nil, nil)
+	d.resources.Storage = strg
 
 	d.Commit(bexec)
 
 	txPool.AssertExpectations(t)
 	execution.AssertExpectations(t)
-	storage.AssertExpectations(t)
+	strg.AssertExpectations(t)
 
 	asrt := assert.New(t)
 	asrt.NotNil(d.state.getBlock(bexec.Hash()), "should not delete bexec from state")

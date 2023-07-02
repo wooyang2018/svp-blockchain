@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/wooyang2018/posv-blockchain/core"
+	"github.com/wooyang2018/posv-blockchain/emitter"
 	"github.com/wooyang2018/posv-blockchain/logger"
 )
 
@@ -15,11 +16,11 @@ type Consensus struct {
 	resources *Resources
 	config    Config
 	state     *state
-	driver    *driver
+	status    *status
 
+	driver    *driver
 	validator *validator
 	pacemaker *pacemaker
-	rotator   *rotator
 
 	startTime int64
 	logfile   *os.File
@@ -58,10 +59,10 @@ func (cons *Consensus) start() {
 	cons.state = newState()
 	cons.state.setBlock(b0)
 	cons.state.setQC(q0)
-	cons.setupDriver(b0, q0)
+	cons.setupStatus(b0, q0)
+	cons.setupDriver()
 	cons.setupValidator()
 	cons.setupPacemaker()
-	cons.setupRotator()
 
 	status := cons.GetStatus()
 	logger.I().Infow("starting consensus",
@@ -70,17 +71,17 @@ func (cons *Consensus) start() {
 		"bLeaf", status.BLeaf,
 		"qc", status.QCHigh)
 
+	cons.driver.start()
 	cons.validator.start()
 	cons.pacemaker.start()
-	cons.rotator.start()
 }
 
 func (cons *Consensus) stop() {
 	if cons.pacemaker == nil {
 		return
 	}
+	cons.driver.stop()
 	cons.pacemaker.stop()
-	cons.rotator.stop()
 	cons.validator.stop()
 	if cons.logfile != nil {
 		cons.logfile.Close()
@@ -104,9 +105,25 @@ func (cons *Consensus) getInitialBlockAndQC() (*core.Block, *core.QuorumCert) {
 	return genesis.run()
 }
 
-func (cons *Consensus) setupDriver(b0 *core.Block, q0 *core.QuorumCert) {
-	cons.driver = newDriver(cons.resources, cons.config, cons.state)
-	cons.driver.setupInnerState(b0, q0)
+func (cons *Consensus) setupStatus(b0 *core.Block, q0 *core.QuorumCert) {
+	cons.status = new(status)
+	cons.status.setBLeaf(b0)
+	cons.status.setBExec(b0)
+	cons.status.setQCHigh(q0)
+	// proposer of q0 may not be leader, but it doesn't matter
+	cons.status.setView(q0.View())
+	cons.status.setLeaderIndex(uint32(cons.resources.RoleStore.GetValidatorIndex(q0.Proposer())))
+}
+
+func (cons *Consensus) setupDriver() {
+	cons.driver = &driver{
+		resources:  cons.resources,
+		config:     cons.config,
+		state:      cons.state,
+		status:     cons.status,
+		checkDelay: 100 * time.Millisecond,
+		qcEmitter:  emitter.New(),
+	}
 	if cons.config.BenchmarkPath != "" {
 		var err error
 		cons.logfile, err = os.Create(cons.config.BenchmarkPath)
@@ -121,6 +138,7 @@ func (cons *Consensus) setupValidator() {
 	cons.validator = &validator{
 		resources: cons.resources,
 		state:     cons.state,
+		status:    cons.status,
 		driver:    cons.driver,
 	}
 }
@@ -129,32 +147,25 @@ func (cons *Consensus) setupPacemaker() {
 	cons.pacemaker = &pacemaker{
 		resources: cons.resources,
 		state:     cons.state,
-		driver:    cons.driver,
-	}
-}
-
-func (cons *Consensus) setupRotator() {
-	cons.rotator = &rotator{
-		resources: cons.resources,
-		config:    cons.config,
+		status:    cons.status,
 		driver:    cons.driver,
 	}
 }
 
 func (cons *Consensus) getStatus() (status Status) {
-	if cons.pacemaker == nil {
-		return status
-	}
 	status.StartTime = cons.startTime
+
 	status.CommittedTxCount = cons.state.getCommittedTxCount()
 	status.BlockPoolSize = cons.state.getBlockPoolSize()
 	status.QCPoolSize = cons.state.getQCPoolSize()
-	status.BLeaf = cons.driver.getBLeaf().Height()
-	status.BExec = cons.driver.getBExec().Height()
-	status.View = cons.driver.getView()
-	status.LeaderIndex = cons.driver.getLeaderIndex()
-	status.ViewStart = cons.driver.getViewStart()
-	status.ViewChange = cons.driver.getViewChange()
-	status.QCHigh = cons.driver.qcRefHeight(cons.driver.getQCHigh())
+
+	status.BLeaf = cons.status.getBLeaf().Height()
+	status.BExec = cons.status.getBExec().Height()
+	status.View = cons.status.getView()
+	status.LeaderIndex = cons.status.getLeaderIndex()
+	status.ViewStart = cons.status.getViewStart()
+	status.ViewChange = cons.status.getViewChange()
+	status.QCHigh = cons.driver.qcRefHeight(cons.status.getQCHigh())
+
 	return status
 }

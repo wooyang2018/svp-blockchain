@@ -15,6 +15,7 @@ import (
 type validator struct {
 	resources *Resources
 	state     *state
+	status    *status
 	driver    *driver
 	stopCh    chan struct{}
 }
@@ -265,15 +266,16 @@ func (vld *validator) updateQCHighAndVote(pro *core.Proposal, blk *core.Block) e
 	vld.driver.mtxUpdate.Lock()
 	defer vld.driver.mtxUpdate.Unlock()
 
-	vld.driver.proposalCh <- pro
+	vld.driver.onNewProposal(pro)
 	vld.driver.UpdateQCHigh(pro.QuorumCert())
+	if vld.status.getView() != pro.View() {
+		return fmt.Errorf("not same view")
+	}
 	if !vld.driver.isLeader(pro.Proposer()) {
 		pidx := vld.resources.RoleStore.GetValidatorIndex(pro.Proposer())
 		return fmt.Errorf("proposer %d is not leader", pidx)
 	}
-	if vld.driver.getView() != pro.View() {
-		return fmt.Errorf("not same view")
-	}
+
 	if pro.Block() != nil { //new view proposal
 		if err := vld.verifyBlockToVote(blk); err != nil {
 			return err
@@ -287,32 +289,26 @@ func (vld *validator) updateQCHighAndVote(pro *core.Proposal, blk *core.Block) e
 func (vld *validator) verifyBlockToVote(blk *core.Block) error {
 	// on node restart, not committed any blocks yet, don't check merkle root
 	if vld.state.getCommittedHeight() != 0 {
-		if err := vld.verifyExecHeight(blk); err != nil {
-			return err
-		}
-		if err := vld.verifyMerkleRoot(blk); err != nil {
-			return err
-		}
+		vld.verifyExecHeight(blk)
+		vld.verifyMerkleRoot(blk)
 	}
 	return vld.verifyBlockTxs(blk)
 }
 
-func (vld *validator) verifyMerkleRoot(blk *core.Block) error {
+func (vld *validator) verifyMerkleRoot(blk *core.Block) {
 	if ExecuteTxFlag {
 		mr := vld.resources.Storage.GetMerkleRoot()
 		if !bytes.Equal(mr, blk.MerkleRoot()) {
-			return fmt.Errorf("invalid merkle root")
+			logger.I().Warnw("invalid merkle root", "height", blk.Height())
 		}
 	}
-	return nil
 }
 
-func (vld *validator) verifyExecHeight(blk *core.Block) error {
+func (vld *validator) verifyExecHeight(blk *core.Block) {
 	bh := vld.resources.Storage.GetBlockHeight()
 	if bh != blk.ExecHeight() {
-		return fmt.Errorf("invalid exec height, expected %d, got %d", bh, blk.ExecHeight())
+		logger.I().Warnf("invalid exec height, expected %d, got %d", bh, blk.ExecHeight())
 	}
-	return nil
 }
 
 func (vld *validator) verifyBlockTxs(blk *core.Block) error {
@@ -354,13 +350,13 @@ func (vld *validator) onReceiveQC(qc *core.QuorumCert) error {
 	}
 	vld.state.setQC(qc)
 
-	if qc.View() > vld.driver.getView() {
-		vld.driver.setViewStart()
-		vld.driver.setView(qc.View())
-		leaderIdx := vld.driver.getView() % uint32(vld.resources.RoleStore.ValidatorCount())
-		vld.driver.setLeaderIndex(leaderIdx)
-		logger.I().Infow("view changed by higher qc", "view", vld.driver.getView(),
-			"leader", vld.driver.getLeaderIndex(), "qc", vld.driver.qcRefHeight(qc))
+	if qc.View() > vld.status.getView() {
+		vld.status.setViewStart()
+		vld.status.setView(qc.View())
+		leaderIdx := vld.status.getView() % uint32(vld.resources.RoleStore.ValidatorCount())
+		vld.status.setLeaderIndex(leaderIdx)
+		logger.I().Infow("view changed by higher qc", "view", vld.status.getView(),
+			"leader", vld.driver.status.getLeaderIndex(), "qc", vld.driver.qcRefHeight(qc))
 	}
 
 	vld.driver.mtxUpdate.Lock()
