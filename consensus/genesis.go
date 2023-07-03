@@ -60,7 +60,7 @@ func (gns *genesis) commit() {
 	if err != nil {
 		logger.I().Fatalf("commit storage error, %+v", err)
 	}
-	logger.I().Debugw("committed genesis bock")
+	logger.I().Infow("committed genesis bock")
 }
 
 func (gns *genesis) propose() {
@@ -97,7 +97,7 @@ func (gns *genesis) broadcastProposalLoop() {
 		if gns.getQ0() == nil {
 			pro := core.NewProposal().SetBlock(gns.getB0()).Sign(gns.resources.Signer)
 			if err := gns.resources.MsgSvc.BroadcastProposal(pro); err != nil {
-				logger.I().Warnf("broadcast proposal failed, %+v", err)
+				logger.I().Errorf("broadcast proposal failed, %+v", err)
 			}
 		}
 		time.Sleep(2 * time.Second)
@@ -115,7 +115,7 @@ func (gns *genesis) proposalLoop() {
 
 		case e := <-sub.Events():
 			if err := gns.onReceiveProposal(e.(*core.Proposal)); err != nil {
-				logger.I().Warnf("receive proposal failed, %+v", err)
+				logger.I().Errorf("receive proposal failed, %+v", err)
 			}
 		}
 	}
@@ -132,7 +132,7 @@ func (gns *genesis) voteLoop() {
 
 		case e := <-sub.Events():
 			if err := gns.onReceiveVote(e.(*core.Vote)); err != nil {
-				logger.I().Warnf("receive vote failed, %+v", err)
+				logger.I().Errorf("receive vote failed, %+v", err)
 			}
 		}
 	}
@@ -149,7 +149,7 @@ func (gns *genesis) newViewLoop() {
 
 		case e := <-sub.Events():
 			if err := gns.onReceiveQC(e.(*core.QuorumCert)); err != nil {
-				logger.I().Warnf("receive new view failed, %+v", err)
+				logger.I().Errorf("receive new view failed, %+v", err)
 			}
 		}
 	}
@@ -164,7 +164,7 @@ func (gns *genesis) onReceiveProposal(pro *core.Proposal) error {
 		return gns.fetchGenesisBlockAndQC(pro.Proposer())
 	}
 	if !bytes.Equal(hashChainID(gns.chainID), pro.Block().ParentHash()) {
-		return fmt.Errorf("different chain id genesis")
+		return fmt.Errorf("different chain id")
 	}
 	if !gns.isLeader(pro.Proposer()) {
 		return fmt.Errorf("proposer is not leader")
@@ -203,10 +203,10 @@ func (gns *genesis) fetchGenesisBlockAndQC(peer *core.PublicKey) error {
 func (gns *genesis) requestBlockByHeight(peer *core.PublicKey, height uint64) (*core.Block, error) {
 	blk, err := gns.resources.MsgSvc.RequestBlockByHeight(peer, height)
 	if err != nil {
-		return nil, fmt.Errorf("cannot get block by height %d, %w", height, err)
+		return nil, fmt.Errorf("cannot get block, height %d, %w", height, err)
 	}
 	if err := blk.Validate(gns.resources.RoleStore); err != nil {
-		return nil, fmt.Errorf("validate block %d, %w", height, err)
+		return nil, fmt.Errorf("validate block failed, height %d, %w", height, err)
 	}
 	return blk, nil
 }
@@ -273,7 +273,7 @@ func (gns *genesis) onReceiveQC(qc *core.QuorumCert) error {
 		return fmt.Errorf("no received genesis block yet")
 	}
 	if !bytes.Equal(b0.Hash(), qc.BlockHash()) {
-		return fmt.Errorf("invalid qc reference")
+		return fmt.Errorf("invalid qc ref")
 	}
 	gns.acceptQC(qc)
 	return nil

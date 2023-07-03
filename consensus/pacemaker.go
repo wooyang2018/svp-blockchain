@@ -4,15 +4,20 @@
 package consensus
 
 import (
+	"time"
+
+	"github.com/wooyang2018/posv-blockchain/core"
 	"github.com/wooyang2018/posv-blockchain/logger"
 )
 
 type pacemaker struct {
-	resources *Resources
-	state     *state
-	status    *status
-	driver    *driver
-	stopCh    chan struct{}
+	resources  *Resources
+	config     Config
+	state      *state
+	status     *status
+	driver     *driver
+	checkDelay time.Duration // latency to check tx num in pool
+	stopCh     chan struct{}
 }
 
 func (pm *pacemaker) start() {
@@ -39,21 +44,18 @@ func (pm *pacemaker) stop() {
 }
 
 func (pm *pacemaker) run() {
-	qc := pm.driver.qcEmitter.Subscribe(1)
-	defer qc.Unsubscribe()
-
 	for {
 		select {
 		case <-pm.stopCh:
 			return
-		case <-qc.Events():
+		case <-pm.driver.proposeCh:
 			pm.newProposal()
 		}
 	}
 }
 
 func (pm *pacemaker) newProposal() {
-	pm.driver.delayProposeWhenNoTxs()
+	pm.delayProposeWhenNoTxs()
 
 	pm.driver.mtxUpdate.Lock()
 	defer pm.driver.mtxUpdate.Unlock()
@@ -65,14 +67,59 @@ func (pm *pacemaker) newProposal() {
 	if !pm.driver.isLeader(pm.resources.Signer.PublicKey()) {
 		return
 	}
-	pro := pm.driver.OnPropose()
-	logger.I().Debugw("proposed proposal",
+
+	pro := pm.createProposal()
+	pm.status.setBLeaf(pro.Block())
+	pm.status.startProposal(pro, pro.Block())
+	pm.driver.onNewProposal(pro)
+	if err := pm.resources.MsgSvc.BroadcastProposal(pro); err != nil {
+		logger.I().Errorw("broadcast proposal failed", "error", err)
+	}
+
+	logger.I().Infow("proposed proposal",
 		"view", pro.View(),
 		"height", pro.Block().Height(),
 		"exec", pro.Block().ExecHeight(),
 		"qc", pm.driver.qcRefHeight(pro.QuorumCert()),
 		"txs", len(pro.Block().Transactions()))
 	vote := pro.Vote(pm.resources.Signer)
-	pm.driver.OnReceiveVote(vote)
-	pm.driver.UpdateQCHigh(pro.QuorumCert())
+	pm.driver.onReceiveVote(vote)
+	pm.driver.updateQCHigh(pro.QuorumCert())
+}
+
+func (pm *pacemaker) delayProposeWhenNoTxs() {
+	timer := time.NewTimer(pm.config.TxWaitTime)
+	defer timer.Stop()
+	for pm.resources.TxPool.GetStatus().Total == 0 {
+		select {
+		case <-timer.C:
+			return
+		case <-time.After(pm.checkDelay):
+		}
+	}
+}
+
+func (pm *pacemaker) createProposal() *core.Proposal {
+	var txs [][]byte
+	if PreserveTxFlag {
+		txs = pm.resources.TxPool.GetTxsFromQueue(pm.config.BlockTxLimit)
+	} else {
+		txs = pm.resources.TxPool.PopTxsFromQueue(pm.config.BlockTxLimit)
+	}
+	parent := pm.status.getBLeaf()
+	blk := core.NewBlock().
+		SetParentHash(parent.Hash()).
+		SetHeight(parent.Height() + 1).
+		SetTransactions(txs).
+		SetExecHeight(pm.resources.Storage.GetBlockHeight()).
+		SetMerkleRoot(pm.resources.Storage.GetMerkleRoot()).
+		SetTimestamp(time.Now().UnixNano()).
+		Sign(pm.resources.Signer)
+	pm.state.setBlock(blk)
+	pro := core.NewProposal().
+		SetBlock(blk).
+		SetQuorumCert(pm.status.getQCHigh()).
+		SetView(pm.status.getView()).
+		Sign(pm.resources.Signer)
+	return pro
 }

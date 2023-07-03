@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/wooyang2018/posv-blockchain/core"
-	"github.com/wooyang2018/posv-blockchain/emitter"
 	"github.com/wooyang2018/posv-blockchain/logger"
 )
 
@@ -77,9 +76,6 @@ func (cons *Consensus) start() {
 }
 
 func (cons *Consensus) stop() {
-	if cons.pacemaker == nil {
-		return
-	}
 	cons.driver.stop()
 	cons.pacemaker.stop()
 	cons.validator.stop()
@@ -97,7 +93,7 @@ func (cons *Consensus) getInitialBlockAndQC() (*core.Block, *core.QuorumCert) {
 		}
 		return b0, q0
 	}
-	// chain not started, create genesis block
+	// not started blockchain yet, create genesis block
 	genesis := &genesis{
 		resources: cons.resources,
 		chainID:   cons.config.ChainID,
@@ -117,18 +113,16 @@ func (cons *Consensus) setupStatus(b0 *core.Block, q0 *core.QuorumCert) {
 
 func (cons *Consensus) setupDriver() {
 	cons.driver = &driver{
-		resources:  cons.resources,
-		config:     cons.config,
-		state:      cons.state,
-		status:     cons.status,
-		checkDelay: 100 * time.Millisecond,
-		qcEmitter:  emitter.New(),
+		resources: cons.resources,
+		config:    cons.config,
+		state:     cons.state,
+		status:    cons.status,
 	}
 	if cons.config.BenchmarkPath != "" {
 		var err error
 		cons.logfile, err = os.Create(cons.config.BenchmarkPath)
 		if err != nil {
-			logger.I().Errorw("create benchmark log file failed", "error", err)
+			logger.I().Fatalw("create benchmark log file failed", "error", err)
 		}
 	}
 	cons.driver.tester = newTester(cons.logfile)
@@ -137,6 +131,7 @@ func (cons *Consensus) setupDriver() {
 func (cons *Consensus) setupValidator() {
 	cons.validator = &validator{
 		resources: cons.resources,
+		config:    cons.config,
 		state:     cons.state,
 		status:    cons.status,
 		driver:    cons.driver,
@@ -146,10 +141,12 @@ func (cons *Consensus) setupValidator() {
 func (cons *Consensus) setupPacemaker() {
 	cons.pacemaker = &pacemaker{
 		resources: cons.resources,
+		config:    cons.config,
 		state:     cons.state,
 		status:    cons.status,
 		driver:    cons.driver,
 	}
+	cons.pacemaker.checkDelay = 100 * time.Millisecond
 }
 
 func (cons *Consensus) getStatus() (status Status) {

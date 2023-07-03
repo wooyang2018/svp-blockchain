@@ -17,14 +17,14 @@ const (
 
 	FlagBroadcastTx = "broadcastTx"
 
-	// storage
+	// storage section
 	FlagMerkleBranchFactor = "storage-merkleBranchFactor"
 
-	// execution
+	// execution section
 	FlagTxExecTimeout       = "execution-txExecTimeout"
 	FlagExecConcurrentLimit = "execution-concurrentLimit"
 
-	// consensus
+	// consensus section
 	FlagChainID       = "consensus-chainID"
 	FlagBlockTxLimit  = "consensus-blockTxLimit"
 	FlagTxWaitTime    = "consensus-txWaitTime"

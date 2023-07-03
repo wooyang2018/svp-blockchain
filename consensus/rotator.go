@@ -10,11 +10,20 @@ import (
 	"github.com/wooyang2018/posv-blockchain/logger"
 )
 
+type rotator struct {
+	leaderTimer        *time.Timer
+	viewTimer          *time.Timer
+	leaderTimeoutCount int
+	proposeCh          chan struct{}
+	stopCh             chan struct{}
+}
+
 func (d *driver) start() {
 	if d.stopCh != nil {
 		return
 	}
 	d.stopCh = make(chan struct{})
+	d.proposeCh = make(chan struct{})
 	d.status.setViewStart()
 	go d.newViewLoop()
 	logger.I().Info("started rotator")
@@ -102,13 +111,26 @@ func (d *driver) newViewProposal() {
 	if !d.isLeader(d.resources.Signer.PublicKey()) {
 		return
 	}
-	pro := d.OnNewViewPropose()
-	logger.I().Debugw("proposed new view proposal",
+
+	qcHigh := d.status.getQCHigh()
+	pro := core.NewProposal().
+		SetQuorumCert(qcHigh).
+		SetView(d.status.getView()).
+		Sign(d.resources.Signer)
+	blk := d.getBlockByHash(qcHigh.BlockHash())
+	d.status.setBLeaf(blk)
+	d.status.startProposal(pro, blk)
+	d.onNewProposal(pro)
+	if err := d.resources.MsgSvc.BroadcastProposal(pro); err != nil {
+		logger.I().Errorw("broadcast proposal failed", "error", err)
+	}
+
+	logger.I().Infow("proposed new view proposal",
 		"view", pro.View(),
 		"qc", d.qcRefHeight(pro.QuorumCert()))
 	vote := pro.Vote(d.resources.Signer)
-	d.OnReceiveVote(vote)
-	d.UpdateQCHigh(pro.QuorumCert())
+	d.onReceiveVote(vote)
+	d.updateQCHigh(pro.QuorumCert())
 }
 
 func (d *driver) onNewProposal(pro *core.Proposal) {
