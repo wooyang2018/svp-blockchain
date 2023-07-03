@@ -57,7 +57,7 @@ func (vld *validator) proposalLoop() {
 
 		case e := <-sub.Events():
 			if err := vld.onReceiveProposal(e.(*core.Proposal)); err != nil {
-				logger.I().Errorf("on received proposal failed, %+v", err)
+				logger.I().Errorf("receive proposal failed, %+v", err)
 			}
 		}
 	}
@@ -74,7 +74,7 @@ func (vld *validator) voteLoop() {
 
 		case e := <-sub.Events():
 			if err := vld.onReceiveVote(e.(*core.Vote)); err != nil {
-				logger.I().Errorf("received vote failed, %+v", err)
+				logger.I().Errorf("receive vote failed, %+v", err)
 			}
 		}
 	}
@@ -91,7 +91,7 @@ func (vld *validator) newViewLoop() {
 
 		case e := <-sub.Events():
 			if err := vld.onReceiveQC(e.(*core.QuorumCert)); err != nil {
-				logger.I().Errorf("received qc failed, %+v", err)
+				logger.I().Errorf("receive qc failed, %+v", err)
 			}
 		}
 	}
@@ -337,7 +337,7 @@ func (d *validator) voteProposal(pro *core.Proposal, blk *core.Block) {
 	}
 	proposer := d.resources.RoleStore.GetValidatorIndex(pro.Proposer())
 	if uint32(proposer) != d.status.getLeaderIndex() {
-		logger.I().Warnf("can not vote, %d is not leader", proposer)
+		logger.I().Warnf("can not vote by different leader, expected %d, got %d", d.status.getLeaderIndex(), proposer)
 		return // view changed happened
 	}
 	vote := pro.Vote(d.resources.Signer)

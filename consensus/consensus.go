@@ -89,7 +89,7 @@ func (cons *Consensus) getInitialBlockAndQC() (*core.Block, *core.QuorumCert) {
 	if err == nil {
 		q0, err := cons.resources.Storage.GetLastQC()
 		if err != nil {
-			logger.I().Fatalf("cannot get last qc %d", b0.Height())
+			logger.I().Fatalw("cannot get last qc", "height", b0.Height())
 		}
 		return b0, q0
 	}
@@ -122,7 +122,7 @@ func (cons *Consensus) setupDriver() {
 		var err error
 		cons.logfile, err = os.Create(cons.config.BenchmarkPath)
 		if err != nil {
-			logger.I().Fatalw("create benchmark log file failed", "error", err)
+			logger.I().Fatalf("cannot create benchmark log file, %+v", err)
 		}
 	}
 	cons.driver.tester = newTester(cons.logfile)

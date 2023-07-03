@@ -121,7 +121,7 @@ func (d *driver) updateQCHigh(qc *core.QuorumCert) {
 	}
 }
 
-func (d *driver) commitRecursive(blk *core.Block) { // prepare phase for b2
+func (d *driver) commitRecursive(blk *core.Block) {
 	t1 := time.Now().UnixNano()
 	d.onCommit(blk)
 	d.status.setBExec(blk)
@@ -173,7 +173,7 @@ func (d *driver) commit(blk *core.Block) {
 	}
 	err := d.resources.Storage.Commit(data)
 	if err != nil {
-		logger.I().Fatalf("commit storage error: %+v", err)
+		logger.I().Fatalf("commit storage error, %+v", err)
 	}
 	d.state.addCommittedTxCount(txCount)
 	d.cleanStateOnCommitted(blk)
@@ -192,7 +192,7 @@ func (d *driver) cleanStateOnCommitted(blk *core.Block) {
 	d.state.setCommittedBlock(blk)
 	blocks := d.state.getUncommittedOlderBlocks(blk)
 	for _, blk := range blocks {
-		// put transactions from forked block back to queue
+		// put txs from forked block back to queue
 		d.resources.TxPool.PutTxsToQueue(blk.Transactions())
 		d.state.deleteBlock(blk.Hash())
 		d.state.deleteQC(blk.Hash())

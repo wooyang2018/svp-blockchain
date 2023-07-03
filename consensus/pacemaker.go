@@ -61,7 +61,7 @@ func (pm *pacemaker) newProposal() {
 	defer pm.driver.mtxUpdate.Unlock()
 
 	if pm.status.getViewChange() != 0 {
-		logger.I().Warnw("can not create proposal when view change")
+		logger.I().Warn("can not create proposal when view change")
 		return
 	}
 	if !pm.driver.isLeader(pm.resources.Signer.PublicKey()) {
@@ -73,7 +73,7 @@ func (pm *pacemaker) newProposal() {
 	pm.status.startProposal(pro, pro.Block())
 	pm.driver.onNewProposal(pro)
 	if err := pm.resources.MsgSvc.BroadcastProposal(pro); err != nil {
-		logger.I().Errorw("broadcast proposal failed", "error", err)
+		logger.I().Errorf("broadcast proposal failed, %+v", err)
 	}
 
 	logger.I().Infow("proposed proposal",

@@ -36,7 +36,6 @@ type genesis struct {
 }
 
 func (gns *genesis) run() (*core.Block, *core.QuorumCert) {
-	logger.I().Infow("creating genesis block...")
 	gns.done = make(chan struct{})
 
 	go gns.proposalLoop()
@@ -60,7 +59,7 @@ func (gns *genesis) commit() {
 	if err != nil {
 		logger.I().Fatalf("commit storage error, %+v", err)
 	}
-	logger.I().Infow("committed genesis bock")
+	logger.I().Info("committed genesis bock")
 }
 
 func (gns *genesis) propose() {
@@ -70,7 +69,7 @@ func (gns *genesis) propose() {
 	gns.votes = make(map[string]*core.Vote, gns.resources.RoleStore.MajorityValidatorCount())
 	pro := gns.createGenesisProposal()
 	gns.setB0(pro.Block())
-	logger.I().Infow("created genesis block, broadcasting...")
+	logger.I().Info("created genesis block, broadcasting...")
 	go gns.broadcastProposalLoop()
 	gns.onReceiveVote(pro.Vote(gns.resources.Signer))
 }
@@ -173,7 +172,7 @@ func (gns *genesis) onReceiveProposal(pro *core.Proposal) error {
 		return fmt.Errorf("genesis block with txs")
 	}
 	gns.setB0(pro.Block())
-	logger.I().Infow("got genesis block, voting...")
+	logger.I().Info("got genesis block, voting...")
 	return gns.resources.MsgSvc.SendVote(pro.Proposer(), pro.Vote(gns.resources.Signer))
 }
 
@@ -246,7 +245,7 @@ func (gns *genesis) acceptVote(vote *core.Vote) {
 		vlist = append(vlist, vote)
 	}
 	gns.setQ0(core.NewQuorumCert().Build(gns.resources.Signer, vlist))
-	logger.I().Infow("created qc, broadcasting...")
+	logger.I().Info("created qc, broadcasting...")
 	gns.broadcastQC()
 }
 
@@ -258,7 +257,7 @@ func (gns *genesis) broadcastQC() {
 		default:
 		}
 		if err := gns.resources.MsgSvc.BroadcastQC(gns.getQ0()); err != nil {
-			logger.I().Errorw("broadcast qc failed", "error", err)
+			logger.I().Errorf("broadcast qc failed ,%+v", err)
 		}
 		time.Sleep(time.Second)
 	}
@@ -281,7 +280,7 @@ func (gns *genesis) onReceiveQC(qc *core.QuorumCert) error {
 
 func (gns *genesis) acceptQC(qc *core.QuorumCert) {
 	select {
-	case <-gns.done: // already done genesis
+	case <-gns.done: // genesis already done
 		return
 	default:
 	}

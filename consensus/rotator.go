@@ -88,7 +88,7 @@ func (d *driver) changeView() {
 	d.status.setViewChange(1)
 	d.sleepTime(d.config.DeltaTime)
 	if err := d.resources.MsgSvc.BroadcastQC(d.status.getQCHigh()); err != nil {
-		logger.I().Errorw("send high qc to new leader failed", "error", err)
+		logger.I().Errorf("send high qc to new leader failed, %+v", err)
 	}
 	d.sleepTime(d.config.DeltaTime * 2)
 	if d.status.getViewChange() == 1 {
@@ -122,7 +122,7 @@ func (d *driver) newViewProposal() {
 	d.status.startProposal(pro, blk)
 	d.onNewProposal(pro)
 	if err := d.resources.MsgSvc.BroadcastProposal(pro); err != nil {
-		logger.I().Errorw("broadcast proposal failed", "error", err)
+		logger.I().Errorf("broadcast proposal failed, %+v", err)
 	}
 
 	logger.I().Infow("proposed new view proposal",
@@ -194,7 +194,7 @@ func (d *driver) sleepTime(delta time.Duration) {
 }
 
 func drainStopTimer(timer *time.Timer) {
-	if !timer.Stop() { // timer triggered before another stop/reset call
+	if !timer.Stop() {
 		t := time.NewTimer(5 * time.Millisecond)
 		defer t.Stop()
 		select {
