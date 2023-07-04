@@ -85,8 +85,7 @@ func (bcm *BlockCommit) Marshal() ([]byte, error) {
 
 func (bcm *BlockCommit) Unmarshal(b []byte) error {
 	data := new(pb.BlockCommit)
-	err := proto.Unmarshal(b, data)
-	if err != nil {
+	if err := proto.Unmarshal(b, data); err != nil {
 		return err
 	}
 	return bcm.setData(data)

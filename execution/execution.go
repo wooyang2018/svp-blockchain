@@ -117,8 +117,7 @@ func (exec *Execution) VerifyTx(tx *core.Transaction) error {
 	}
 	// deployment tx
 	input := new(DeploymentInput)
-	err := json.Unmarshal(tx.Input(), input)
-	if err != nil {
+	if err := json.Unmarshal(tx.Input(), input); err != nil {
 		return err
 	}
 	return exec.codeRegistry.install(input)

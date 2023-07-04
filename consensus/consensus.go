@@ -79,6 +79,7 @@ func (cons *Consensus) stop() {
 	cons.driver.stop()
 	cons.pacemaker.stop()
 	cons.validator.stop()
+	cons.resources.MsgSvc.BroadcastQC(cons.status.getQCHigh())
 	if cons.logfile != nil {
 		cons.logfile.Close()
 	}
@@ -120,8 +121,7 @@ func (cons *Consensus) setupDriver() {
 	}
 	if cons.config.BenchmarkPath != "" {
 		var err error
-		cons.logfile, err = os.Create(cons.config.BenchmarkPath)
-		if err != nil {
+		if cons.logfile, err = os.Create(cons.config.BenchmarkPath); err != nil {
 			logger.I().Fatalf("cannot create benchmark log file, %+v", err)
 		}
 	}

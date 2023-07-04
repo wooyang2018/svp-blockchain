@@ -291,8 +291,7 @@ func (svc *MsgService) requestData(pubKey *core.PublicKey, reqType pb.Request_Ty
 	sub := peer.SubscribeMsg()
 	defer sub.Unsubscribe()
 
-	err := peer.WriteMsg(append([]byte{byte(MsgTypeRequest)}, b...))
-	if err != nil {
+	if err := peer.WriteMsg(append([]byte{byte(MsgTypeRequest)}, b...)); err != nil {
 		return nil, err
 	}
 	return svc.waitResponse(sub, req.Seq)

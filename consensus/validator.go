@@ -98,8 +98,7 @@ func (vld *validator) newViewLoop() {
 }
 
 func (vld *validator) onReceiveProposal(pro *core.Proposal) error {
-	var err error
-	if err = pro.Validate(vld.resources.RoleStore); err != nil {
+	if err := pro.Validate(vld.resources.RoleStore); err != nil {
 		return err
 	}
 
@@ -136,7 +135,7 @@ func (vld *validator) syncBlockByHash(peer *core.PublicKey, hash []byte) (*core.
 		return nil, err
 	}
 	if ExecuteTxFlag { // must sync transactions before updating block
-		if err := vld.resources.TxPool.SyncTxs(peer, blk.Transactions()); err != nil {
+		if err = vld.resources.TxPool.SyncTxs(peer, blk.Transactions()); err != nil {
 			return nil, err
 		}
 	}
@@ -169,8 +168,7 @@ func (vld *validator) syncMissingCommittedBlocks(blk *core.Block) error {
 	qcRef := vld.driver.getBlockByHash(blk.ParentHash())
 	if qcRef == nil {
 		var err error
-		qcRef, err = vld.requestBlock(blk.Proposer(), blk.ParentHash())
-		if err != nil {
+		if qcRef, err = vld.requestBlock(blk.Proposer(), blk.ParentHash()); err != nil {
 			return err
 		}
 	}
@@ -181,10 +179,8 @@ func (vld *validator) syncMissingCommittedBlocks(blk *core.Block) error {
 }
 
 func (vld *validator) syncForwardCommittedBlocks(peer *core.PublicKey, start, end uint64) error {
-	var blk *core.Block
 	for height := start; height < end; height++ { // end is exclusive
-		var err error
-		blk, err = vld.requestBlockByHeight(peer, height)
+		blk, err := vld.requestBlockByHeight(peer, height)
 		if err != nil {
 			return err
 		}
@@ -192,7 +188,7 @@ func (vld *validator) syncForwardCommittedBlocks(peer *core.PublicKey, start, en
 		if parent == nil {
 			return fmt.Errorf("cannot connect chain, parent not found")
 		}
-		if err = vld.verifyParentAndCommitRecursive(peer, blk, parent); err != nil {
+		if err := vld.verifyParentAndCommitRecursive(peer, blk, parent); err != nil {
 			return err
 		}
 	}
@@ -364,11 +360,10 @@ func (vld *validator) onReceiveVote(vote *core.Vote) error {
 }
 
 func (vld *validator) onReceiveQC(qc *core.QuorumCert) error {
-	var err error
-	if err = qc.Validate(vld.resources.RoleStore); err != nil {
+	if err := qc.Validate(vld.resources.RoleStore); err != nil {
 		return err
 	}
-	if _, err = vld.syncBlockByHash(qc.Proposer(), qc.BlockHash()); err != nil {
+	if _, err := vld.syncBlockByHash(qc.Proposer(), qc.BlockHash()); err != nil {
 		return err
 	}
 	vld.state.setQC(qc)

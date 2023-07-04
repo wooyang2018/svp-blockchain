@@ -153,8 +153,7 @@ func (pool *TxPool) addTxList(txList *core.TxList) error {
 		jobCh <- tx
 	}
 	for i := 0; i < len(*txList); i++ {
-		err := <-out
-		if err != nil {
+		if err := <-out; err != nil {
 			return err
 		}
 	}

@@ -95,15 +95,15 @@ func main() {
 			cfactory = makeLocalClusterFactory()
 		}
 		if SetupClusterTemplate {
-			cls, err := cfactory.SetupCluster("cluster_template")
-			if err != nil {
-				return
-			}
-			cls.EmptyChainCode = EmptyChainCode
-			cls.CheckRotation = CheckRotation
-			fmt.Println("\nThe cluster startup command is as follows:")
-			for i := 0; i < cls.NodeCount(); i++ {
-				fmt.Println(cls.GetNode(i).PrintCmd())
+			if cls, err := cfactory.SetupCluster("cluster_template"); err == nil {
+				cls.EmptyChainCode = EmptyChainCode
+				cls.CheckRotation = CheckRotation
+				fmt.Println("\nThe cluster startup command is as follows:")
+				for i := 0; i < cls.NodeCount(); i++ {
+					fmt.Println(cls.GetNode(i).PrintCmd())
+				}
+			} else {
+				fmt.Println(err)
 			}
 			return
 		}

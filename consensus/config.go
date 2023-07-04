@@ -57,10 +57,10 @@ type Config struct {
 }
 
 var DefaultConfig = Config{
-	BlockTxLimit:  500,
+	BlockTxLimit:  800,
 	TxWaitTime:    500 * time.Millisecond,
 	ViewWidth:     60 * time.Second,
-	LeaderTimeout: 20 * time.Second,
+	LeaderTimeout: 15 * time.Second,
 	DeltaTime:     3 * time.Second,
 	BenchmarkPath: "",
 }

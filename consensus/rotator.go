@@ -10,14 +10,6 @@ import (
 	"github.com/wooyang2018/posv-blockchain/logger"
 )
 
-type rotator struct {
-	leaderTimer        *time.Timer
-	viewTimer          *time.Timer
-	leaderTimeoutCount int
-	proposeCh          chan struct{}
-	stopCh             chan struct{}
-}
-
 func (d *driver) start() {
 	if d.stopCh != nil {
 		return
@@ -88,7 +80,7 @@ func (d *driver) changeView() {
 	d.status.setViewChange(1)
 	d.sleepTime(d.config.DeltaTime)
 	if err := d.resources.MsgSvc.BroadcastQC(d.status.getQCHigh()); err != nil {
-		logger.I().Errorf("send high qc to new leader failed, %+v", err)
+		logger.I().Errorf("broadcast qc failed, %+v", err)
 	}
 	d.sleepTime(d.config.DeltaTime * 2)
 	if d.status.getViewChange() == 1 {

@@ -44,8 +44,7 @@ func (r *ExperimentRunner) Run() (pass, fail int) {
 
 	for i, expm := range r.experiments {
 		bold.Printf("\nExperiment %d. %s\n", i, expm.Name())
-		err := r.runSingleExperiment(expm)
-		if err != nil {
+		if err := r.runSingleExperiment(expm); err != nil {
 			fail++
 			fmt.Printf("%s %s\n", boldRed.Sprint("FAIL"), bold.Sprint(expm.Name()))
 			fmt.Printf("error: %+v\n", err)
@@ -70,24 +69,21 @@ func (r *ExperimentRunner) runSingleExperiment(expm Experiment) error {
 	go func() {
 		defer close(done)
 		fmt.Println("Setting up a new cluster")
-		cls, err = r.cfactory.SetupCluster(expm.Name())
-		if err != nil {
+		if cls, err = r.cfactory.SetupCluster(expm.Name()); err != nil {
 			return
 		}
 		cls.EmptyChainCode = EmptyChainCode
 		cls.CheckRotation = CheckRotation
 		fmt.Println("Starting cluster")
 		cls.Stop() // to make sure no existing process keeps running
-		err = cls.Start()
-		if err != nil {
+		if err = cls.Start(); err != nil {
 			return
 		}
 		fmt.Println("Started cluster")
 		testutil.Sleep(20 * time.Second)
 
 		fmt.Println("Setting up load generator")
-		err = r.loadGen.SetupOnCluster(cls)
-		if err != nil {
+		if err = r.loadGen.SetupOnCluster(cls); err != nil {
 			return
 		}
 		go r.loadGen.Run(loadCtx)
@@ -102,8 +98,7 @@ func (r *ExperimentRunner) runSingleExperiment(expm Experiment) error {
 		}
 
 		fmt.Println("==> Running experiment")
-		err = expm.Run(cls)
-		if err != nil {
+		if err = expm.Run(cls); err != nil {
 			fmt.Println("==> Experiment failed")
 			return
 		}

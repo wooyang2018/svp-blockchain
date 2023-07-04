@@ -23,8 +23,7 @@ var rootCmd = &cobra.Command{
 }
 
 func main() {
-	err := rootCmd.Execute()
-	if err != nil {
+	if err := rootCmd.Execute(); err != nil {
 		log.Fatal(err)
 	}
 }

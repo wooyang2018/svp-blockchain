@@ -55,8 +55,7 @@ func (gns *genesis) commit() {
 		QC:    gns.getQ0(),
 	}
 	data.BlockCommit = core.NewBlockCommit().SetHash(data.Block.Hash())
-	err := gns.resources.Storage.Commit(data)
-	if err != nil {
+	if err := gns.resources.Storage.Commit(data); err != nil {
 		logger.I().Fatalf("commit storage error, %+v", err)
 	}
 	logger.I().Info("committed genesis bock")

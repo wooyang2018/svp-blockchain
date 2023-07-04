@@ -42,8 +42,7 @@ func serveNodeAPI(node *Node) {
 	r.Static("/bincc", node.config.ExecutionConfig.BinccDir)
 
 	go func() {
-		err := r.Run(fmt.Sprintf(":%d", node.config.APIPort))
-		if err != nil {
+		if err := r.Run(fmt.Sprintf(":%d", node.config.APIPort)); err != nil {
 			logger.I().Fatalf("failed to start api %+v", err)
 		}
 	}()

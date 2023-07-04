@@ -19,7 +19,13 @@ type driver struct {
 	state     *state
 	status    *status
 	tester    *tester
-	rotator              // embedded structure for rotator
+
+	leaderTimer        *time.Timer
+	viewTimer          *time.Timer
+	leaderTimeoutCount int
+	proposeCh          chan struct{}
+	stopCh             chan struct{}
+
 	mtxUpdate sync.Mutex // lock for update call
 }
 
@@ -131,8 +137,7 @@ func (d *driver) commitRecursive(blk *core.Block) {
 
 func (d *driver) onCommit(blk *core.Block) {
 	if d.cmpBlockHeight(blk, d.status.getBExec()) == 1 {
-		// commit parent blocks recursively
-		d.onCommit(d.getBlockByHash(blk.ParentHash()))
+		d.onCommit(d.getBlockByHash(blk.ParentHash())) // commit parent blocks recursively
 		d.commit(blk)
 	} else if !bytes.Equal(d.status.getBExec().Hash(), blk.Hash()) {
 		logger.I().Fatalw("safety breached", "hash", base64String(blk.Hash()), "height", blk.Height())
@@ -171,8 +176,7 @@ func (d *driver) commit(blk *core.Block) {
 			TxCommits:    txcs,
 		}
 	}
-	err := d.resources.Storage.Commit(data)
-	if err != nil {
+	if err := d.resources.Storage.Commit(data); err != nil {
 		logger.I().Fatalf("commit storage error, %+v", err)
 	}
 	d.state.addCommittedTxCount(txCount)
