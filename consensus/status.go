@@ -37,8 +37,8 @@ type Status struct {
 
 type status struct {
 	bExec       atomic.Value
-	qcHigh      atomic.Value
 	bLeaf       atomic.Value
+	qcHigh      atomic.Value
 	view        uint32
 	leaderIndex uint32
 	viewStart   int64 // start timestamp of current view

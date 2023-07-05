@@ -163,10 +163,10 @@ func printAndCheckVars() {
 		pass = false
 	}
 	if !RunBenchmark && len(LoadSubmitNodes) != 0 {
-		fmt.Println("!RunBenchmark =?=> len(LoadSubmitNodes)=0")
+		fmt.Println("!RunBenchmark ---> len(LoadSubmitNodes)=0")
 	}
 	if RunBenchmark && !LoadBatchSubmit {
-		fmt.Println("RunBenchmark =?=> LoadBatchSubmit")
+		fmt.Println("RunBenchmark ---> LoadBatchSubmit")
 	}
 	if !consensus.ExecuteTxFlag && !EmptyChainCode {
 		fmt.Println("!consensus.ExecuteTxFlag ===> EmptyChainCode")
@@ -181,7 +181,7 @@ func printAndCheckVars() {
 		pass = false
 	}
 	if !consensus.ExecuteTxFlag && BroadcastTx {
-		fmt.Println("!consensus.ExecuteTxFlag =?=> !BroadcastTx")
+		fmt.Println("!consensus.ExecuteTxFlag ---> !BroadcastTx")
 	}
 	if consensus.ExecuteTxFlag && !BroadcastTx {
 		fmt.Println("consensus.ExecuteTxFlag ===> BroadcastTx")
@@ -195,12 +195,12 @@ func printAndCheckVars() {
 		fmt.Println("SetupClusterTemplate ===> !RunBenchmark")
 		pass = false
 	}
-	if !consensus.ExecuteTxFlag && !RunBenchmark {
-		fmt.Println("!consensus.ExecuteTxFlag ===> RunBenchmark OR !RunBenchmark ===> consensus.ExecuteTxFlag")
+	if !RunBenchmark && !consensus.ExecuteTxFlag {
+		fmt.Println("!RunBenchmark ===> consensus.ExecuteTxFlag")
 		pass = false
 	}
-	if consensus.PreserveTxFlag && !RunBenchmark {
-		fmt.Println("consensus.PreserveTxFlag ===> RunBenchmark OR !RunBenchmark ===> !consensus.PreserveTxFlag")
+	if !RunBenchmark && consensus.PreserveTxFlag {
+		fmt.Println("!RunBenchmark ===> !consensus.PreserveTxFlag")
 		pass = false
 	}
 	if consensus.ExecuteTxFlag && consensus.PreserveTxFlag {
@@ -219,8 +219,8 @@ func buildChain() {
 	cmd := exec.Command("go", "build", "../cmd/chain")
 	if RemoteLinuxCluster {
 		cmd.Env = os.Environ()
-		cmd.Env = append(cmd.Env, "GOOS=linux")
-		fmt.Printf(" $ export %s\n", "GOOS=linux")
+		cmd.Env = append(cmd.Env, "GOOS=linux", "GOARCH=amd64")
+		fmt.Printf(" $ export %s\n", "GOOS=linux GOARCH=amd64")
 	}
 	fmt.Printf(" $ %s\n\n", strings.Join(cmd.Args, " "))
 	check(cmd.Run())
@@ -247,8 +247,8 @@ func buildPCoinBinCC() {
 	cmd.Args = append(cmd.Args, "../execution/bincc/pcoin")
 	if RemoteLinuxCluster {
 		cmd.Env = os.Environ()
-		cmd.Env = append(cmd.Env, "GOOS=linux")
-		fmt.Printf(" $ export %s\n", "GOOS=linux")
+		cmd.Env = append(cmd.Env, "GOOS=linux GOARCH=amd64")
+		fmt.Printf(" $ export %s\n", "GOOS=linux GOARCH=amd64")
 	}
 	fmt.Printf(" $ %s\n\n", strings.Join(cmd.Args, " "))
 	check(cmd.Run())

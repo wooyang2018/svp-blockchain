@@ -10,31 +10,6 @@ import (
 	"github.com/wooyang2018/posv-blockchain/logger"
 )
 
-func (d *driver) start() {
-	if d.stopCh != nil {
-		return
-	}
-	d.stopCh = make(chan struct{})
-	d.proposeCh = make(chan struct{})
-	d.status.setViewStart()
-	go d.newViewLoop()
-	logger.I().Info("started rotator")
-}
-
-func (d *driver) stop() {
-	if d.stopCh == nil {
-		return // not started yet
-	}
-	select {
-	case <-d.stopCh: // already stopped
-		return
-	default:
-	}
-	close(d.stopCh)
-	logger.I().Info("stopped rotator")
-	d.stopCh = nil
-}
-
 func (d *driver) newViewLoop() {
 	d.viewTimer = time.NewTimer(d.config.ViewWidth)
 	defer d.viewTimer.Stop()
@@ -71,6 +46,7 @@ func (d *driver) onLeaderTimeout() {
 }
 
 func (d *driver) onViewTimeout() {
+	logger.I().Warnw("view timeout", "leader", d.status.getLeaderIndex())
 	d.changeView()
 	drainStopTimer(d.leaderTimer)
 	d.leaderTimer.Reset(d.config.LeaderTimeout)
