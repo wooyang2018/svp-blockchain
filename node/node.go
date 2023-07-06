@@ -109,7 +109,7 @@ func (node *Node) setupComponents() {
 }
 
 func (node *Node) setupRoleStore() {
-	node.roleStore = core.NewRoleStore(node.genesis.Validators, node.genesis.Quotas)
+	node.roleStore = core.NewRoleStore(node.genesis.Validators, node.genesis.Quotas, node.genesis.WinSize)
 }
 
 func (node *Node) setupStorage() {

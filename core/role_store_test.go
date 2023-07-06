@@ -36,6 +36,11 @@ func (m *MockValidatorStore) IsValidator(pubKey *PublicKey) bool {
 	return args.Bool(0)
 }
 
+func (m *MockValidatorStore) GetWindowSize() int {
+	args := m.Called()
+	return args.Int(0)
+}
+
 func (m *MockValidatorStore) GetValidator(idx int) *PublicKey {
 	args := m.Called(idx)
 	val := args.Get(0)

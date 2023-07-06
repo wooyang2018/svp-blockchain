@@ -48,6 +48,7 @@ type status struct {
 	block      *core.Block
 	votes      map[string]*core.Vote
 	quotaCount float64
+	window     []float64
 	mtx        sync.RWMutex
 }
 
@@ -67,6 +68,20 @@ func (s *status) getLeaderIndex() uint32      { return atomic.LoadUint32(&s.lead
 func (s *status) getViewStart() int64         { return atomic.LoadInt64(&s.viewStart) }
 func (s *status) getViewChange() int32        { return atomic.LoadInt32(&s.viewChange) }
 
+func (s *status) setWindow(quotas []float64) {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
+	s.window = quotas
+}
+
+func (s *status) getWindow() []float64 {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
+	return s.window
+}
+
 func (s *status) startProposal(pro *core.Proposal, blk *core.Block) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
@@ -84,6 +99,8 @@ func (s *status) endProposal() {
 	s.proposal = nil
 	s.block = nil
 	s.votes = nil
+	s.window = s.window[1:]
+	s.window = append(s.window, s.quotaCount)
 	s.quotaCount = 0
 }
 
@@ -119,8 +136,11 @@ func (s *status) getVoteCount() int {
 func (s *status) getQuotaCount() float64 {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
-
-	return s.quotaCount
+	res := s.quotaCount
+	for _, v := range s.window {
+		res += v
+	}
+	return res
 }
 
 func (s *status) getVotes() []*core.Vote {

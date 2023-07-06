@@ -142,6 +142,7 @@ func (d *driver) onReceiveVote(vote *core.Vote) error {
 		d.status.getQuotaCount() > d.resources.RoleStore.MajorityQuotaCount() {
 		votes := d.status.getVotes()
 		d.status.endProposal()
+		logger.I().Debugf("current stake window %+v", d.status.getWindow())
 		qc := core.NewQuorumCert().Build(d.resources.Signer, votes)
 		d.state.setQC(qc)
 		d.updateQCHigh(qc)

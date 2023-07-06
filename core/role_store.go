@@ -15,6 +15,7 @@ type RoleStore interface {
 	MajorityValidatorCount() int
 	MajorityQuotaCount() float64
 	IsValidator(pubKey *PublicKey) bool
+	GetWindowSize() int
 	GetValidator(idx int) *PublicKey
 	GetValidatorIndex(pubKey *PublicKey) int
 	GetValidatorQuota(pubKey *PublicKey) float64
@@ -25,15 +26,17 @@ type roleStore struct {
 	validators   []*PublicKey
 	stakeQuotas  []float64
 	quotaCount   float64
+	windowSize   int
 }
 
 var _ RoleStore = (*roleStore)(nil)
 
-func NewRoleStore(validators []string, quotas []float64) RoleStore {
+func NewRoleStore(validators []string, quotas []float64, winSize int) RoleStore {
 	store := &roleStore{
+		validatorMap: make(map[string]int, len(validators)),
 		validators:   make([]*PublicKey, len(validators)),
 		stakeQuotas:  quotas,
-		validatorMap: make(map[string]int, len(validators)),
+		windowSize:   winSize,
 	}
 	//assert len(validators) == len(quotas)
 	for i, v := range validators {
@@ -62,6 +65,10 @@ func (store *roleStore) IsValidator(pubKey *PublicKey) bool {
 	}
 	_, ok := store.validatorMap[pubKey.String()]
 	return ok
+}
+
+func (store *roleStore) GetWindowSize() int {
+	return store.windowSize
 }
 
 func (store *roleStore) GetValidator(idx int) *PublicKey {

@@ -43,7 +43,8 @@ func init() {
 		consensus.FlagAPIPort, "P", nodeConfig.APIPort, "node api port")
 
 	rootCmd.Flags().BoolVar(&nodeConfig.BroadcastTx,
-		consensus.FlagBroadcastTx, false, "whether to broadcast transaction")
+		consensus.FlagBroadcastTx, false,
+		"whether to broadcast transaction")
 
 	rootCmd.Flags().Uint8Var(&nodeConfig.StorageConfig.MerkleBranchFactor,
 		consensus.FlagMerkleBranchFactor, nodeConfig.StorageConfig.MerkleBranchFactor,

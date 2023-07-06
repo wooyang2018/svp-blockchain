@@ -67,7 +67,7 @@ func MakeRandomQuotas(count int, quota int) []float64 {
 	quotas := make([]float64, count)
 	sum := 0
 	for i := 0; i <= count-2; i++ {
-		temp := r.Intn(quota - sum - (count - 1 - i))
+		temp := r.Intn(quota-sum-count+i) + 1
 		sum += temp
 		quotas[i] = float64(temp)
 	}
@@ -87,21 +87,12 @@ func MakePeers(keys []*core.PrivateKey, addrs []multiaddr.Multiaddr) []node.Peer
 	return vlds
 }
 
-func SetupTemplateDir(dir string, keys []*core.PrivateKey, quotas []float64, vlds []node.Peer) error {
+func SetupTemplateDir(dir string, keys []*core.PrivateKey, genesis *node.Genesis, vlds []node.Peer) error {
 	if err := os.RemoveAll(dir); err != nil {
 		return err
 	}
 	if err := os.Mkdir(dir, 0755); err != nil {
 		return err
-	}
-	//assert len(keys) == len(quotas)
-	genesis := &node.Genesis{
-		Validators: make([]string, len(keys)),
-		Quotas:     make([]float64, len(keys)),
-	}
-	for i, v := range keys {
-		genesis.Validators[i] = v.PublicKey().String()
-		genesis.Quotas[i] = quotas[i]
 	}
 	for i, key := range keys {
 		d := path.Join(dir, strconv.Itoa(i))

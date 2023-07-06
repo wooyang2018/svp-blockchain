@@ -22,8 +22,9 @@ import (
 
 var (
 	WorkDir    = "./workdir"
-	NodeCount  = 4
+	NodeCount  = 7
 	StakeQuota = 100
+	WinSize    = 4
 
 	LoadTxPerSec    = 10  //tps for client to submit tx during functional testing
 	LoadJobPerTick  = 100 //num of tasks to be completed per tick
@@ -261,6 +262,7 @@ func makeLocalClusterFactory() *cluster.LocalFactory {
 		WorkDir:    path.Join(WorkDir, "local-clusters"),
 		NodeCount:  NodeCount,
 		StakeQuota: StakeQuota,
+		WinSize:    WinSize,
 		NodeConfig: getNodeConfig(),
 	})
 	check(err)
@@ -273,6 +275,7 @@ func makeRemoteClusterFactory() *cluster.RemoteFactory {
 		WorkDir:         path.Join(WorkDir, "remote-clusters"),
 		NodeCount:       NodeCount,
 		StakeQuota:      StakeQuota,
+		WinSize:         WinSize,
 		NodeConfig:      getNodeConfig(),
 		KeySSH:          RemoteKeySSH,
 		HostsPath:       RemoteHostsPath,

@@ -83,7 +83,7 @@ func (pm *pacemaker) newProposal() {
 		"qc", pm.driver.qcRefHeight(pro.QuorumCert()),
 		"txs", len(pro.Block().Transactions()))
 	quota := pm.resources.RoleStore.GetValidatorQuota(pm.resources.Signer.PublicKey())
-	vote := pro.Vote(pm.resources.Signer, quota)
+	vote := pro.Vote(pm.resources.Signer, quota/float64(pm.resources.RoleStore.GetWindowSize()))
 	pm.driver.onReceiveVote(vote)
 	pm.driver.updateQCHigh(pro.QuorumCert())
 }

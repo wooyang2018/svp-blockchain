@@ -97,7 +97,7 @@ func (d *driver) newViewProposal() {
 		"view", pro.View(),
 		"qc", d.qcRefHeight(pro.QuorumCert()))
 	quota := d.resources.RoleStore.GetValidatorQuota(d.resources.Signer.PublicKey())
-	vote := pro.Vote(d.resources.Signer, quota)
+	vote := pro.Vote(d.resources.Signer, quota/float64(d.resources.RoleStore.GetWindowSize()))
 	d.onReceiveVote(vote)
 	d.updateQCHigh(pro.QuorumCert())
 }

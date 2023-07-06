@@ -60,6 +60,7 @@ func (cons *Consensus) start() {
 	cons.state.setQC(q0)
 	cons.setupStatus(b0, q0)
 	cons.setupDriver()
+	cons.setupWindow(q0)
 	cons.setupValidator()
 	cons.setupPacemaker()
 
@@ -126,6 +127,21 @@ func (cons *Consensus) setupDriver() {
 		}
 	}
 	cons.driver.tester = newTester(cons.logfile)
+}
+
+func (cons *Consensus) setupWindow(q0 *core.QuorumCert) {
+	quotas := make([]float64, cons.resources.RoleStore.GetWindowSize()-1)
+	for i := len(quotas) - 1; i >= 0; i-- {
+		if q0 != nil {
+			quotas[i] = q0.Quota()
+			block := cons.driver.getBlockByHash(q0.BlockHash())
+			q0 = cons.driver.getQCByBlockHash(block.ParentHash())
+		} else {
+			quotas[i] = cons.resources.RoleStore.MajorityQuotaCount()
+		}
+	}
+	logger.I().Infof("setup stake window %+v", quotas)
+	cons.status.setWindow(quotas)
 }
 
 func (cons *Consensus) setupValidator() {

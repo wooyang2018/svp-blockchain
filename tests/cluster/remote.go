@@ -23,6 +23,7 @@ type RemoteFactoryParams struct {
 	WorkDir    string
 	NodeCount  int
 	StakeQuota int
+	WinSize    int
 
 	NodeConfig node.Config
 
@@ -106,8 +107,17 @@ func (ftry *RemoteFactory) setup() error {
 	}
 	keys := MakeRandomKeys(ftry.params.NodeCount)
 	quotas := MakeRandomQuotas(ftry.params.NodeCount, ftry.params.StakeQuota)
+	genesis := &node.Genesis{
+		Validators: make([]string, len(keys)),
+		Quotas:     make([]float64, len(keys)),
+		WinSize:    ftry.params.WinSize,
+	}
+	for i, v := range keys {
+		genesis.Validators[i] = v.PublicKey().String()
+		genesis.Quotas[i] = quotas[i]
+	}
 	peers := MakePeers(keys, addrs)
-	if err := SetupTemplateDir(ftry.templateDir, keys, quotas, peers); err != nil {
+	if err := SetupTemplateDir(ftry.templateDir, keys, genesis, peers); err != nil {
 		return err
 	}
 	fmt.Println()

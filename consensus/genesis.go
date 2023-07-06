@@ -71,7 +71,8 @@ func (gns *genesis) propose() {
 	logger.I().Info("created genesis block, broadcasting...")
 	go gns.broadcastProposalLoop()
 	quota := gns.resources.RoleStore.GetValidatorQuota(gns.resources.Signer.PublicKey())
-	gns.onReceiveVote(pro.Vote(gns.resources.Signer, quota))
+	gns.onReceiveVote(pro.Vote(gns.resources.Signer,
+		quota/float64(gns.resources.RoleStore.GetWindowSize())))
 }
 
 func (gns *genesis) createGenesisProposal() *core.Proposal {
@@ -174,7 +175,8 @@ func (gns *genesis) onReceiveProposal(pro *core.Proposal) error {
 	gns.setB0(pro.Block())
 	logger.I().Info("got genesis block, voting...")
 	quota := gns.resources.RoleStore.GetValidatorQuota(gns.resources.Signer.PublicKey())
-	return gns.resources.MsgSvc.SendVote(pro.Proposer(), pro.Vote(gns.resources.Signer, quota))
+	return gns.resources.MsgSvc.SendVote(pro.Proposer(), pro.Vote(gns.resources.Signer,
+		quota/float64(gns.resources.RoleStore.GetWindowSize())))
 }
 
 func (gns *genesis) fetchGenesisBlockAndQC(peer *core.PublicKey) error {

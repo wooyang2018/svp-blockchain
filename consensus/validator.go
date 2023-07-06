@@ -281,7 +281,7 @@ func (vld *validator) updateQCHighAndVote(pro *core.Proposal, blk *core.Block) e
 	}
 
 	quota := vld.resources.RoleStore.GetValidatorQuota(vld.resources.Signer.PublicKey())
-	vote := pro.Vote(vld.resources.Signer, quota)
+	vote := pro.Vote(vld.resources.Signer, quota/float64(vld.resources.RoleStore.GetWindowSize()))
 	if !PreserveTxFlag {
 		vld.resources.TxPool.SetTxsPending(blk.Transactions())
 	}
