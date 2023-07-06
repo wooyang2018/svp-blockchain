@@ -13,26 +13,33 @@ import (
 type RoleStore interface {
 	ValidatorCount() int
 	MajorityValidatorCount() int
+	MajorityQuotaCount() float64
 	IsValidator(pubKey *PublicKey) bool
 	GetValidator(idx int) *PublicKey
 	GetValidatorIndex(pubKey *PublicKey) int
+	GetValidatorQuota(pubKey *PublicKey) float64
 }
 
 type roleStore struct {
 	validatorMap map[string]int
-	validators   []*PublicKey //投票节点和记账节点的集合
+	validators   []*PublicKey
+	stakeQuotas  []float64
+	quotaCount   float64
 }
 
 var _ RoleStore = (*roleStore)(nil)
 
-func NewRoleStore(validators []string) RoleStore {
+func NewRoleStore(validators []string, quotas []float64) RoleStore {
 	store := &roleStore{
 		validators:   make([]*PublicKey, len(validators)),
+		stakeQuotas:  quotas,
 		validatorMap: make(map[string]int, len(validators)),
 	}
+	//assert len(validators) == len(quotas)
 	for i, v := range validators {
 		store.validators[i] = StringToPubKey(v)
 		store.validatorMap[v] = i
+		store.quotaCount += quotas[i]
 	}
 	return store
 }
@@ -43,6 +50,10 @@ func (store *roleStore) ValidatorCount() int {
 
 func (store *roleStore) MajorityValidatorCount() int {
 	return MajorityCount(len(store.validators))
+}
+
+func (store *roleStore) MajorityQuotaCount() float64 {
+	return store.quotaCount / 2
 }
 
 func (store *roleStore) IsValidator(pubKey *PublicKey) bool {
@@ -65,6 +76,13 @@ func (store *roleStore) GetValidatorIndex(pubKey *PublicKey) int {
 		return 0
 	}
 	return store.validatorMap[pubKey.String()]
+}
+
+func (store *roleStore) GetValidatorQuota(pubKey *PublicKey) float64 {
+	if pubKey == nil {
+		return 0
+	}
+	return store.stakeQuotas[store.GetValidatorIndex(pubKey)]
 }
 
 func StringToPubKey(v string) *PublicKey {

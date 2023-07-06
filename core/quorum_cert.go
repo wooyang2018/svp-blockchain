@@ -6,6 +6,7 @@ package core
 import (
 	"encoding/binary"
 	"errors"
+	"math"
 
 	"github.com/wooyang2018/posv-blockchain/pb"
 	"google.golang.org/protobuf/proto"
@@ -47,7 +48,7 @@ func (qc *QuorumCert) Validate(rs RoleStore) error {
 	if qc.sigs.hasInvalidValidator(rs) {
 		return ErrInvalidValidator
 	}
-	if qc.sigs.hasInvalidSig(castViewAndHashBytes(qc.data.View, qc.data.BlockHash)) {
+	if qc.sigs.hasInvalidSig(appendUint32(qc.data.BlockHash, qc.data.View)) {
 		return ErrInvalidSig
 	}
 	sig, err := newSignature(qc.data.Signature)
@@ -57,7 +58,7 @@ func (qc *QuorumCert) Validate(rs RoleStore) error {
 	if !rs.IsValidator(sig.PublicKey()) {
 		return ErrInvalidValidator
 	}
-	if !sig.Verify(castViewAndHashBytes(qc.data.View, qc.data.BlockHash)) {
+	if !sig.Verify(appendFloat64(appendUint32(qc.data.BlockHash, qc.data.View), qc.data.Quota)) {
 		return ErrInvalidSig
 	}
 	return nil
@@ -87,20 +88,22 @@ func (qc *QuorumCert) Build(signer Signer, votes []*Vote) *QuorumCert {
 			qc.data.BlockHash = vote.data.BlockHash
 			qc.data.View = vote.data.View
 		}
+		qc.data.Quota += vote.data.Quota
 		qc.data.Signatures[i] = vote.data.Signature
 		qc.sigs[i] = &Signature{
 			data:   vote.data.Signature,
 			pubKey: vote.voter.pubKey,
 		}
 	}
-	qc.signature = signer.Sign(castViewAndHashBytes(qc.data.View, qc.data.BlockHash))
+	qc.signature = signer.Sign(appendFloat64(appendUint32(qc.data.BlockHash, qc.data.View), qc.data.Quota))
 	qc.data.Signature = qc.signature.data
 	return qc
 }
 
+func (qc *QuorumCert) View() uint32             { return qc.data.View }
+func (qc *QuorumCert) Quota() float64           { return qc.data.Quota }
 func (qc *QuorumCert) BlockHash() []byte        { return qc.data.BlockHash }
 func (qc *QuorumCert) Signatures() []*Signature { return qc.sigs }
-func (qc *QuorumCert) View() uint32             { return qc.data.View }
 func (qc *QuorumCert) Proposer() *PublicKey     { return qc.signature.pubKey }
 
 // Marshal encodes quorum cert as bytes
@@ -117,8 +120,16 @@ func (qc *QuorumCert) Unmarshal(b []byte) error {
 	return qc.setData(data)
 }
 
-func castViewAndHashBytes(view uint32, hash []byte) []byte {
+func appendUint32(hash []byte, view uint32) []byte {
 	buf := make([]byte, 4)
 	binary.LittleEndian.PutUint32(buf, view)
-	return append(buf, hash...)
+	hash = append(hash, buf...)
+	return hash
+}
+
+func appendFloat64(hash []byte, quota float64) []byte {
+	buf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(buf, math.Float64bits(quota))
+	hash = append(hash, buf...)
+	return hash
 }

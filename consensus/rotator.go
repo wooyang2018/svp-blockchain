@@ -96,7 +96,8 @@ func (d *driver) newViewProposal() {
 	logger.I().Infow("proposed new view proposal",
 		"view", pro.View(),
 		"qc", d.qcRefHeight(pro.QuorumCert()))
-	vote := pro.Vote(d.resources.Signer)
+	quota := d.resources.RoleStore.GetValidatorQuota(d.resources.Signer.PublicKey())
+	vote := pro.Vote(d.resources.Signer, quota)
 	d.onReceiveVote(vote)
 	d.updateQCHigh(pro.QuorumCert())
 }
@@ -106,7 +107,9 @@ func (d *driver) onNewProposal(pro *core.Proposal) {
 	var ltreset, vtreset bool
 	if d.isNormalApproval(pro.View(), proposer) {
 		ltreset = true
-		logger.I().Debugw("refresh leader", "view", pro.View(), "proposer", proposer)
+		logger.I().Debugw("refresh leader",
+			"view", pro.View(),
+			"leader", proposer)
 	}
 	if d.isNewViewApproval(pro.View(), proposer) {
 		ltreset = true
@@ -137,7 +140,8 @@ func (d *driver) isNewViewApproval(view uint32, proposer uint32) bool {
 	} else if view == curView {
 		leaderIdx := d.status.getLeaderIndex()
 		pending := d.status.getViewChange()
-		return pending == 0 && proposer != leaderIdx || pending == 1 && proposer == leaderIdx
+		return pending == 0 && proposer != leaderIdx ||
+			pending == 1 && proposer == leaderIdx
 	}
 	return false
 }
@@ -148,7 +152,9 @@ func (d *driver) approveViewLeader(view uint32, proposer uint32) {
 	d.status.setLeaderIndex(proposer)
 	d.status.setViewStart()
 	d.leaderTimeoutCount = 0
-	logger.I().Infow("approved leader", "view", view, "leader", proposer)
+	logger.I().Infow("approved leader",
+		"view", view,
+		"leader", proposer)
 }
 
 func (d *driver) sleepTime(delta time.Duration) {

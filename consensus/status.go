@@ -44,10 +44,11 @@ type status struct {
 	viewStart   int64 // start timestamp of current view
 	viewChange  int32 // -1:failed ; 0:success ; 1:ongoing
 
-	proposal *core.Proposal
-	block    *core.Block
-	votes    map[string]*core.Vote
-	mtx      sync.RWMutex
+	proposal   *core.Proposal
+	block      *core.Block
+	votes      map[string]*core.Vote
+	quotaCount float64
+	mtx        sync.RWMutex
 }
 
 func (s *status) setBExec(blk *core.Block)      { s.bExec.Store(blk) }
@@ -73,6 +74,7 @@ func (s *status) startProposal(pro *core.Proposal, blk *core.Block) {
 	s.proposal = pro
 	s.block = blk
 	s.votes = make(map[string]*core.Vote)
+	s.quotaCount = 0
 }
 
 func (s *status) endProposal() {
@@ -82,6 +84,7 @@ func (s *status) endProposal() {
 	s.proposal = nil
 	s.block = nil
 	s.votes = nil
+	s.quotaCount = 0
 }
 
 func (s *status) addVote(vote *core.Vote) error {
@@ -102,6 +105,7 @@ func (s *status) addVote(vote *core.Vote) error {
 		return fmt.Errorf("duplicate vote")
 	}
 	s.votes[key] = vote
+	s.quotaCount += vote.Quota()
 	return nil
 }
 
@@ -110,6 +114,13 @@ func (s *status) getVoteCount() int {
 	defer s.mtx.RUnlock()
 
 	return len(s.votes)
+}
+
+func (s *status) getQuotaCount() float64 {
+	s.mtx.RLock()
+	defer s.mtx.RUnlock()
+
+	return s.quotaCount
 }
 
 func (s *status) getVotes() []*core.Vote {

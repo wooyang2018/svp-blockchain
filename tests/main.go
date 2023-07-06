@@ -21,8 +21,9 @@ import (
 )
 
 var (
-	WorkDir   = "./workdir"
-	NodeCount = 4
+	WorkDir    = "./workdir"
+	NodeCount  = 4
+	StakeQuota = 100
 
 	LoadTxPerSec    = 10  //tps for client to submit tx during functional testing
 	LoadJobPerTick  = 100 //num of tasks to be completed per tick
@@ -142,6 +143,7 @@ func runExperiments(loadGen *testutil.LoadGenerator, cfactory cluster.ClusterFac
 
 func printAndCheckVars() {
 	fmt.Println("NodeCount =", NodeCount)
+	fmt.Println("StakeQuota =", StakeQuota)
 	fmt.Println("LoadJobPerTick =", LoadJobPerTick)
 	fmt.Println("LoadSubmitNodes =", LoadSubmitNodes)
 	fmt.Println("LoadBatchSubmit =", LoadBatchSubmit)
@@ -153,9 +155,8 @@ func printAndCheckVars() {
 	fmt.Println("RemoteNetworkLoss =", RemoteNetworkLoss)
 	fmt.Println("RunBenchmark =", RunBenchmark)
 	fmt.Println("BenchLoads =", BenchLoads)
-	fmt.Println("SetupClusterTemplate =", SetupClusterTemplate)
-	fmt.Println("consensus.ExecuteTxFlag =", consensus.ExecuteTxFlag)
-	fmt.Println("consensus.PreserveTxFlag =", consensus.PreserveTxFlag)
+	fmt.Println("ExecuteTxFlag =", consensus.ExecuteTxFlag)
+	fmt.Println("PreserveTxFlag =", consensus.PreserveTxFlag)
 	fmt.Println()
 	pass := true
 	if !BroadcastTx && len(LoadSubmitNodes) != 1 {
@@ -169,7 +170,7 @@ func printAndCheckVars() {
 		fmt.Println("RunBenchmark ---> LoadBatchSubmit")
 	}
 	if !consensus.ExecuteTxFlag && !EmptyChainCode {
-		fmt.Println("!consensus.ExecuteTxFlag ===> EmptyChainCode")
+		fmt.Println("!ExecuteTxFlag ===> EmptyChainCode")
 		pass = false
 	}
 	if !RunBenchmark && !CheckRotation {
@@ -181,10 +182,10 @@ func printAndCheckVars() {
 		pass = false
 	}
 	if !consensus.ExecuteTxFlag && BroadcastTx {
-		fmt.Println("!consensus.ExecuteTxFlag ---> !BroadcastTx")
+		fmt.Println("!ExecuteTxFlag ---> !BroadcastTx")
 	}
 	if consensus.ExecuteTxFlag && !BroadcastTx {
-		fmt.Println("consensus.ExecuteTxFlag ===> BroadcastTx")
+		fmt.Println("ExecuteTxFlag ===> BroadcastTx")
 		pass = false
 	}
 	if RunBenchmark && !RemoteLinuxCluster {
@@ -196,15 +197,15 @@ func printAndCheckVars() {
 		pass = false
 	}
 	if !RunBenchmark && !consensus.ExecuteTxFlag {
-		fmt.Println("!RunBenchmark ===> consensus.ExecuteTxFlag")
+		fmt.Println("!RunBenchmark ===> ExecuteTxFlag")
 		pass = false
 	}
 	if !RunBenchmark && consensus.PreserveTxFlag {
-		fmt.Println("!RunBenchmark ===> !consensus.PreserveTxFlag")
+		fmt.Println("!RunBenchmark ===> !PreserveTxFlag")
 		pass = false
 	}
 	if consensus.ExecuteTxFlag && consensus.PreserveTxFlag {
-		fmt.Println("consensus.ExecuteTxFlag ===> !consensus.PreserveTxFlag")
+		fmt.Println("ExecuteTxFlag ===> !PreserveTxFlag")
 		pass = false
 	}
 	if pass {
@@ -259,6 +260,7 @@ func makeLocalClusterFactory() *cluster.LocalFactory {
 		BinPath:    "./chain",
 		WorkDir:    path.Join(WorkDir, "local-clusters"),
 		NodeCount:  NodeCount,
+		StakeQuota: StakeQuota,
 		NodeConfig: getNodeConfig(),
 	})
 	check(err)
@@ -270,6 +272,7 @@ func makeRemoteClusterFactory() *cluster.RemoteFactory {
 		BinPath:         "./chain",
 		WorkDir:         path.Join(WorkDir, "remote-clusters"),
 		NodeCount:       NodeCount,
+		StakeQuota:      StakeQuota,
 		NodeConfig:      getNodeConfig(),
 		KeySSH:          RemoteKeySSH,
 		HostsPath:       RemoteHostsPath,

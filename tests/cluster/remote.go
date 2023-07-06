@@ -19,9 +19,10 @@ import (
 )
 
 type RemoteFactoryParams struct {
-	BinPath   string
-	WorkDir   string
-	NodeCount int
+	BinPath    string
+	WorkDir    string
+	NodeCount  int
+	StakeQuota int
 
 	NodeConfig node.Config
 
@@ -104,8 +105,9 @@ func (ftry *RemoteFactory) setup() error {
 		return err
 	}
 	keys := MakeRandomKeys(ftry.params.NodeCount)
+	quotas := MakeRandomQuotas(ftry.params.NodeCount, ftry.params.StakeQuota)
 	peers := MakePeers(keys, addrs)
-	if err := SetupTemplateDir(ftry.templateDir, keys, peers); err != nil {
+	if err := SetupTemplateDir(ftry.templateDir, keys, quotas, peers); err != nil {
 		return err
 	}
 	fmt.Println()

@@ -83,14 +83,14 @@ func (pro *Proposal) Validate(rs RoleStore) error {
 }
 
 // Vote creates a vote for proposal
-func (pro *Proposal) Vote(signer Signer) *Vote {
-	vote := &pb.Vote{Quota: 1, View: pro.data.View}
+func (pro *Proposal) Vote(signer Signer, quota float64) *Vote {
+	vote := &pb.Vote{View: pro.data.View, Quota: quota}
 	if pro.block != nil {
 		vote.BlockHash = pro.block.Hash()
 	} else {
 		vote.BlockHash = pro.quorumCert.BlockHash()
 	}
-	hash := castViewAndHashBytes(vote.View, vote.BlockHash)
+	hash := appendUint32(vote.BlockHash, vote.View)
 	vote.Signature = signer.Sign(hash).data
 	res := NewVote()
 	res.setData(vote)
@@ -147,9 +147,9 @@ func (pro *Proposal) Sign(signer Signer) *Proposal {
 }
 
 func (pro *Proposal) Hash() []byte            { return pro.data.Hash }
+func (pro *Proposal) View() uint32            { return pro.data.View }
 func (pro *Proposal) Block() *Block           { return pro.block }
 func (pro *Proposal) QuorumCert() *QuorumCert { return pro.quorumCert }
-func (pro *Proposal) View() uint32            { return pro.data.View }
 func (pro *Proposal) Proposer() *PublicKey    { return pro.signature.pubKey }
 
 // Marshal encodes proposal as bytes

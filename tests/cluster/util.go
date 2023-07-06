@@ -6,11 +6,13 @@ package cluster
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/multiformats/go-multiaddr"
 	"github.com/wooyang2018/posv-blockchain/consensus"
@@ -60,6 +62,19 @@ func MakeRandomKeys(count int) []*core.PrivateKey {
 	return keys
 }
 
+func MakeRandomQuotas(count int, quota int) []float64 {
+	r := rand.New(rand.NewSource(time.Now().Unix()))
+	quotas := make([]float64, count)
+	sum := 0
+	for i := 0; i <= count-2; i++ {
+		temp := r.Intn(quota - sum - (count - 1 - i))
+		sum += temp
+		quotas[i] = float64(temp)
+	}
+	quotas[count-1] = float64(quota - sum)
+	return quotas
+}
+
 func MakePeers(keys []*core.PrivateKey, addrs []multiaddr.Multiaddr) []node.Peer {
 	vlds := make([]node.Peer, len(addrs))
 	// create validator infos (pubkey + addr)
@@ -72,18 +87,21 @@ func MakePeers(keys []*core.PrivateKey, addrs []multiaddr.Multiaddr) []node.Peer
 	return vlds
 }
 
-func SetupTemplateDir(dir string, keys []*core.PrivateKey, vlds []node.Peer) error {
+func SetupTemplateDir(dir string, keys []*core.PrivateKey, quotas []float64, vlds []node.Peer) error {
 	if err := os.RemoveAll(dir); err != nil {
 		return err
 	}
 	if err := os.Mkdir(dir, 0755); err != nil {
 		return err
 	}
+	//assert len(keys) == len(quotas)
 	genesis := &node.Genesis{
-		Validators: make([]string, 0, 0),
+		Validators: make([]string, len(keys)),
+		Quotas:     make([]float64, len(keys)),
 	}
-	for _, v := range keys {
-		genesis.Validators = append(genesis.Validators, v.PublicKey().String())
+	for i, v := range keys {
+		genesis.Validators[i] = v.PublicKey().String()
+		genesis.Quotas[i] = quotas[i]
 	}
 	for i, key := range keys {
 		d := path.Join(dir, strconv.Itoa(i))

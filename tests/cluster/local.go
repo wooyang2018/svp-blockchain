@@ -19,9 +19,10 @@ import (
 )
 
 type LocalFactoryParams struct {
-	BinPath   string
-	WorkDir   string
-	NodeCount int
+	BinPath    string
+	WorkDir    string
+	NodeCount  int
+	StakeQuota int
 
 	NodeConfig node.Config
 }
@@ -51,8 +52,9 @@ func (ftry *LocalFactory) setup() error {
 		return err
 	}
 	keys := MakeRandomKeys(ftry.params.NodeCount)
+	quotas := MakeRandomQuotas(ftry.params.NodeCount, ftry.params.StakeQuota)
 	peers := MakePeers(keys, addrs)
-	return SetupTemplateDir(ftry.templateDir, keys, peers)
+	return SetupTemplateDir(ftry.templateDir, keys, quotas, peers)
 }
 
 func (ftry *LocalFactory) makeAddrs() ([]multiaddr.Multiaddr, error) {

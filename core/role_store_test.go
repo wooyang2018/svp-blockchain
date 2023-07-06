@@ -26,6 +26,11 @@ func (m *MockValidatorStore) MajorityValidatorCount() int {
 	return args.Int(0)
 }
 
+func (m *MockValidatorStore) MajorityQuotaCount() float64 {
+	args := m.Called()
+	return args.Get(0).(float64)
+}
+
 func (m *MockValidatorStore) IsValidator(pubKey *PublicKey) bool {
 	args := m.Called(pubKey)
 	return args.Bool(0)
@@ -43,6 +48,11 @@ func (m *MockValidatorStore) GetValidator(idx int) *PublicKey {
 func (m *MockValidatorStore) GetValidatorIndex(pubKey *PublicKey) int {
 	args := m.Called(pubKey)
 	return args.Int(0)
+}
+
+func (m *MockValidatorStore) GetValidatorQuota(pubKey *PublicKey) float64 {
+	args := m.Called(pubKey)
+	return args.Get(0).(float64)
 }
 
 func TestMajorityCount(t *testing.T) {

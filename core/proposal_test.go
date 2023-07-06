@@ -23,7 +23,7 @@ func TestProposal(t *testing.T) {
 	privKey := GenerateKey(nil)
 
 	pro := newProposal(privKey)
-	v := pro.Vote(privKey)
+	v := pro.Vote(privKey, 1)
 	qc := NewQuorumCert().Build(privKey, []*Vote{v})
 	pro.SetQuorumCert(qc).Sign(privKey)
 
@@ -78,7 +78,7 @@ func TestProposal_Vote(t *testing.T) {
 	privKey := GenerateKey(nil)
 
 	pro := newProposal(privKey)
-	vote := pro.Vote(privKey)
+	vote := pro.Vote(privKey, 1)
 	asrt.Equal(pro.Block().Hash(), vote.BlockHash())
 
 	vs := new(MockValidatorStore)

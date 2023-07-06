@@ -54,7 +54,11 @@ func (t *tester) saveItem(height uint64, t0, t1, t2 int64, txs int) {
 	if height > 0 && height%10 == 0 {
 		t.writer.Flush()
 		tps := float32(t.txCount) / float32(t.elapsed) * 1e9
-		logger.I().Debugw("benchmark test", "height", height, "elapsed", time.Duration(t.elapsed), "txs", t.txCount, "tps", tps)
+		logger.I().Debugw("benchmark test",
+			"height", height,
+			"txs", t.txCount,
+			"elapsed", time.Duration(t.elapsed),
+			"tps", tps)
 		t.txCount = 0
 		t.elapsed = 0
 	}

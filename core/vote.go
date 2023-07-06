@@ -39,7 +39,7 @@ func (vote *Vote) Validate(rs RoleStore) error {
 	if !rs.IsValidator(sig.PublicKey()) {
 		return ErrInvalidValidator
 	}
-	if !sig.Verify(castViewAndHashBytes(vote.data.View, vote.data.BlockHash)) {
+	if !sig.Verify(appendUint32(vote.data.BlockHash, vote.data.View)) {
 		return ErrInvalidSig
 	}
 	return nil
@@ -55,9 +55,9 @@ func (vote *Vote) setData(data *pb.Vote) error {
 	return nil
 }
 
-func (vote *Vote) BlockHash() []byte { return vote.data.BlockHash }
 func (vote *Vote) View() uint32      { return vote.data.View }
 func (vote *Vote) Quota() float64    { return vote.data.Quota }
+func (vote *Vote) BlockHash() []byte { return vote.data.BlockHash }
 func (vote *Vote) Voter() *PublicKey { return vote.voter.pubKey }
 
 // Marshal encodes vote as bytes

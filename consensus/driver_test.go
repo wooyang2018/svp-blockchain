@@ -37,10 +37,13 @@ func newTestBlock(priv core.Signer, height, execHeight uint64,
 
 func TestCommit(t *testing.T) {
 	d := setupTestDriver()
-	parent := newTestBlock(d.resources.Signer, 10, 9, nil, nil, nil)
-	bfork := newTestBlock(d.resources.Signer, 10, 9, nil, nil, [][]byte{[]byte("tx from fork")})
+	parent := newTestBlock(d.resources.Signer, 10, 9,
+		nil, nil, nil)
+	bfork := newTestBlock(d.resources.Signer, 10, 9,
+		nil, nil, [][]byte{[]byte("tx from fork")})
 	tx := core.NewTransaction().Sign(d.resources.Signer)
-	bexec := newTestBlock(d.resources.Signer, 11, 10, parent.Hash(), nil, [][]byte{tx.Hash()})
+	bexec := newTestBlock(d.resources.Signer, 11, 10,
+		parent.Hash(), nil, [][]byte{tx.Hash()})
 	d.state.setBlock(parent)
 	d.state.setCommittedBlock(parent)
 	d.state.setBlock(bfork)
@@ -51,10 +54,11 @@ func TestCommit(t *testing.T) {
 	if ExecuteTxFlag {
 		txPool.On("GetTxsToExecute", bexec.Transactions()).Return(txs, nil)
 	}
-	if !PreserveTxFlag {
-		txPool.On("RemoveTxs", bexec.Transactions()).Once() // should remove txs from pool after commit
+	if !PreserveTxFlag { // should remove txs from pool after commit
+		txPool.On("RemoveTxs", bexec.Transactions()).Once()
 	}
-	txPool.On("PutTxsToQueue", bfork.Transactions()).Once() // should put txs of forked block back to queue from pending
+	// should put txs of forked block back to queue from pending
+	txPool.On("PutTxsToQueue", bfork.Transactions()).Once()
 	d.resources.TxPool = txPool
 
 	bcm := core.NewBlockCommit().SetHash(bexec.Hash())

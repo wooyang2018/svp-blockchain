@@ -29,7 +29,7 @@ func TestQuorumCert(t *testing.T) {
 	votes := make([]*Vote, len(privKeys))
 	pro := newProposal(privKeys[1])
 	for i, priv := range privKeys {
-		votes[i] = pro.Vote(priv)
+		votes[i] = pro.Vote(priv, 1)
 	}
 
 	qc := NewQuorumCert().Build(privKeys[1], []*Vote{votes[3], votes[2], votes[1]})

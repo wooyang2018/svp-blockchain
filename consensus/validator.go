@@ -117,7 +117,6 @@ func (vld *validator) onReceiveProposal(pro *core.Proposal) error {
 		"view", pro.View(),
 		"proposer", pidx,
 		"height", blk.Height(),
-		"exec", blk.ExecHeight(),
 		"txs", len(blk.Transactions()))
 
 	return vld.updateQCHighAndVote(pro, blk)
@@ -268,17 +267,32 @@ func (vld *validator) updateQCHighAndVote(pro *core.Proposal, blk *core.Block) e
 	if vld.status.getView() != pro.View() {
 		return fmt.Errorf("not same view")
 	}
+	proposer := vld.resources.RoleStore.GetValidatorIndex(pro.Proposer())
 	if !vld.driver.isLeader(pro.Proposer()) {
-		pidx := vld.resources.RoleStore.GetValidatorIndex(pro.Proposer())
-		return fmt.Errorf("proposer %d is not leader", pidx)
+		return fmt.Errorf("proposer %d is not leader", proposer)
 	}
-
+	if vld.driver.cmpQCPriority(pro.QuorumCert(), vld.status.getQCHigh()) < 0 {
+		return fmt.Errorf("can not vote by lower qc, height %d", blk.Height())
+	}
 	if pro.Block() != nil { //new view proposal
 		if err := vld.verifyBlockToVote(blk); err != nil {
 			return err
 		}
 	}
-	vld.voteProposal(pro, blk)
+
+	quota := vld.resources.RoleStore.GetValidatorQuota(vld.resources.Signer.PublicKey())
+	vote := pro.Vote(vld.resources.Signer, quota)
+	if !PreserveTxFlag {
+		vld.resources.TxPool.SetTxsPending(blk.Transactions())
+	}
+	vld.resources.MsgSvc.SendVote(pro.Proposer(), vote)
+	logger.I().Infow("voted proposal",
+		"view", vote.View(),
+		"proposer", proposer,
+		"height", blk.Height(),
+		"qc", vld.driver.qcRefHeight(pro.QuorumCert()),
+		"quota", quota,
+	)
 
 	return nil
 }
@@ -326,28 +340,6 @@ func (vld *validator) verifyBlockTxs(blk *core.Block) error {
 	return nil
 }
 
-func (d *validator) voteProposal(pro *core.Proposal, blk *core.Block) {
-	if d.driver.cmpQCPriority(pro.QuorumCert(), d.status.getQCHigh()) < 0 {
-		logger.I().Warnw("can not vote by lower qc", "height", blk.Height())
-		return
-	}
-	proposer := d.resources.RoleStore.GetValidatorIndex(pro.Proposer())
-	if uint32(proposer) != d.status.getLeaderIndex() {
-		logger.I().Warnf("can not vote by different leader, expected %d, got %d", d.status.getLeaderIndex(), proposer)
-		return // view changed happened
-	}
-	vote := pro.Vote(d.resources.Signer)
-	if !PreserveTxFlag {
-		d.resources.TxPool.SetTxsPending(blk.Transactions())
-	}
-	d.resources.MsgSvc.SendVote(pro.Proposer(), vote)
-	logger.I().Infow("voted proposal",
-		"proposer", proposer,
-		"height", blk.Height(),
-		"qc", d.driver.qcRefHeight(pro.QuorumCert()),
-	)
-}
-
 func (vld *validator) onReceiveVote(vote *core.Vote) error {
 	if err := vote.Validate(vld.resources.RoleStore); err != nil {
 		return err
@@ -373,8 +365,10 @@ func (vld *validator) onReceiveQC(qc *core.QuorumCert) error {
 		vld.status.setView(qc.View())
 		leaderIdx := vld.status.getView() % uint32(vld.resources.RoleStore.ValidatorCount())
 		vld.status.setLeaderIndex(leaderIdx)
-		logger.I().Infow("view changed by higher qc", "view", vld.status.getView(),
-			"leader", vld.driver.status.getLeaderIndex(), "qc", vld.driver.qcRefHeight(qc))
+		logger.I().Infow("view changed by higher qc",
+			"view", vld.status.getView(),
+			"leader", vld.driver.status.getLeaderIndex(),
+			"qc", vld.driver.qcRefHeight(qc))
 	}
 
 	vld.driver.mtxUpdate.Lock()

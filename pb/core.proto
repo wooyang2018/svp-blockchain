@@ -6,8 +6,8 @@ syntax = "proto3";
 package core.pb;
 
 message Proposal{
-  uint32 view = 1;
-  bytes hash = 2;
+  bytes hash = 1;
+  uint32 view = 2;
   Block block = 3;
   QuorumCert quorumCert = 4;
   Signature signature  = 5; // signature of proposer
@@ -41,15 +41,16 @@ message Signature {
 
 message QuorumCert {
   uint32 view = 1;
-  bytes blockHash = 2;
-  repeated Signature signatures = 3;
-  Signature signature  = 4;
+  double quota = 2;
+  bytes blockHash = 3;
+  repeated Signature signatures = 4;
+  Signature signature  = 5;
 }
 
 message Vote {
   uint32 view = 1;
-  bytes blockHash = 2;
-  double quota = 3;
+  double quota = 2;
+  bytes blockHash = 3;
   Signature signature = 4;
 }
 

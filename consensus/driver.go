@@ -134,8 +134,12 @@ func (d *driver) onReceiveVote(vote *core.Vote) error {
 		return err
 	}
 	blk := d.getBlockByHash(vote.BlockHash())
-	logger.I().Debugw("received vote", "height", blk.Height())
-	if d.status.getVoteCount() >= d.resources.RoleStore.MajorityValidatorCount() {
+	logger.I().Debugw("received vote",
+		"view", vote.View(),
+		"height", blk.Height(),
+		"quota", vote.Quota())
+	if d.status.getVoteCount() >= d.resources.RoleStore.MajorityValidatorCount() &&
+		d.status.getQuotaCount() > d.resources.RoleStore.MajorityQuotaCount() {
 		votes := d.status.getVotes()
 		d.status.endProposal()
 		qc := core.NewQuorumCert().Build(d.resources.Signer, votes)
@@ -150,7 +154,10 @@ func (d *driver) onReceiveVote(vote *core.Vote) error {
 func (d *driver) updateQCHigh(qc *core.QuorumCert) {
 	if d.cmpQCPriority(qc, d.status.getQCHigh()) == 1 {
 		blk := d.getBlockByHash(qc.BlockHash())
-		logger.I().Infow("updated high qc", "view", qc.View(), "qc", d.qcRefHeight(qc))
+		logger.I().Infow("updated high qc",
+			"view", qc.View(),
+			"qc", d.qcRefHeight(qc),
+			"quota", qc.Quota())
 		d.status.setQCHigh(qc)
 		d.status.setBLeaf(blk)
 		d.commitRecursive(blk)
@@ -170,7 +177,9 @@ func (d *driver) onCommit(blk *core.Block) {
 		d.onCommit(d.getBlockByHash(blk.ParentHash())) // commit parent blocks recursively
 		d.commit(blk)
 	} else if !bytes.Equal(d.status.getBExec().Hash(), blk.Hash()) {
-		logger.I().Fatalw("safety breached", "hash", base64String(blk.Hash()), "height", blk.Height())
+		logger.I().Fatalw("safety breached",
+			"height", blk.Height(),
+			"hash", base64String(blk.Hash()))
 	}
 }
 

@@ -70,7 +70,8 @@ func (gns *genesis) propose() {
 	gns.setB0(pro.Block())
 	logger.I().Info("created genesis block, broadcasting...")
 	go gns.broadcastProposalLoop()
-	gns.onReceiveVote(pro.Vote(gns.resources.Signer))
+	quota := gns.resources.RoleStore.GetValidatorQuota(gns.resources.Signer.PublicKey())
+	gns.onReceiveVote(pro.Vote(gns.resources.Signer, quota))
 }
 
 func (gns *genesis) createGenesisProposal() *core.Proposal {
@@ -172,7 +173,8 @@ func (gns *genesis) onReceiveProposal(pro *core.Proposal) error {
 	}
 	gns.setB0(pro.Block())
 	logger.I().Info("got genesis block, voting...")
-	return gns.resources.MsgSvc.SendVote(pro.Proposer(), pro.Vote(gns.resources.Signer))
+	quota := gns.resources.RoleStore.GetValidatorQuota(gns.resources.Signer.PublicKey())
+	return gns.resources.MsgSvc.SendVote(pro.Proposer(), pro.Vote(gns.resources.Signer, quota))
 }
 
 func (gns *genesis) fetchGenesisBlockAndQC(peer *core.PublicKey) error {
@@ -201,7 +203,7 @@ func (gns *genesis) fetchGenesisBlockAndQC(peer *core.PublicKey) error {
 func (gns *genesis) requestBlockByHeight(peer *core.PublicKey, height uint64) (*core.Block, error) {
 	blk, err := gns.resources.MsgSvc.RequestBlockByHeight(peer, height)
 	if err != nil {
-		return nil, fmt.Errorf("cannot get block, height %d, %w", height, err)
+		return nil, fmt.Errorf("request block failed, height %d, %w", height, err)
 	}
 	if err := blk.Validate(gns.resources.RoleStore); err != nil {
 		return nil, fmt.Errorf("validate block failed, height %d, %w", height, err)

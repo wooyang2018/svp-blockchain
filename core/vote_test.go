@@ -20,7 +20,7 @@ func TestVote(t *testing.T) {
 	validator := GenerateKey(nil)
 
 	pro := newProposal(proposer)
-	vote = pro.Vote(validator)
+	vote = pro.Vote(validator, 1)
 	vOk, _ := vote.Marshal()
 
 	vote.data.BlockHash = []byte("invalid hash")
