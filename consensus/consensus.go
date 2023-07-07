@@ -54,13 +54,13 @@ func (cons *Consensus) GetQC(blkHash []byte) *core.QuorumCert {
 
 func (cons *Consensus) start() {
 	cons.startTime = time.Now().UnixNano()
-	b0, q0 := cons.getInitialBlockAndQC()
+	exec, leaf, qc := cons.getInitialBlockAndQC()
 	cons.state = newState()
-	cons.state.setBlock(b0)
-	cons.state.setQC(q0)
-	cons.setupStatus(b0, q0)
+	cons.state.setBlock(leaf)
+	cons.state.setQC(qc)
+	cons.setupStatus(exec, leaf, qc)
 	cons.setupDriver()
-	cons.setupWindow(q0)
+	cons.setupWindow(qc)
 	cons.setupValidator()
 	cons.setupPacemaker()
 
@@ -86,31 +86,37 @@ func (cons *Consensus) stop() {
 	}
 }
 
-func (cons *Consensus) getInitialBlockAndQC() (*core.Block, *core.QuorumCert) {
-	b0, err := cons.resources.Storage.GetLastBlock()
+func (cons *Consensus) getInitialBlockAndQC() (exec *core.Block, leaf *core.Block, qc *core.QuorumCert) {
+	var err error
+	exec, err = cons.resources.Storage.GetLastBlock()
 	if err == nil {
-		q0, err := cons.resources.Storage.GetLastQC()
+		qc, err = cons.resources.Storage.GetLastQC()
 		if err != nil {
-			logger.I().Fatalw("cannot get last qc", "height", b0.Height())
+			panic("cannot get last qc")
 		}
-		return b0, q0
+		leaf, err = cons.resources.Storage.GetBlock(qc.BlockHash())
+		if err != nil {
+			panic("cannot get block with qc")
+		}
+		return exec, leaf, qc
 	}
 	// not started blockchain yet, create genesis block
 	genesis := &genesis{
 		resources: cons.resources,
 		chainID:   cons.config.ChainID,
 	}
-	return genesis.run()
+	exec, qc = genesis.run()
+	return exec, exec, qc
 }
 
-func (cons *Consensus) setupStatus(b0 *core.Block, q0 *core.QuorumCert) {
+func (cons *Consensus) setupStatus(exec *core.Block, leaf *core.Block, qc *core.QuorumCert) {
 	cons.status = new(status)
-	cons.status.setBLeaf(b0)
-	cons.status.setBExec(b0)
-	cons.status.setQCHigh(q0)
+	cons.status.setBLeaf(leaf)
+	cons.status.setBExec(exec)
+	cons.status.setQCHigh(qc)
 	// proposer of q0 may not be leader, but it doesn't matter
-	cons.status.setView(q0.View())
-	cons.status.setLeaderIndex(uint32(cons.resources.RoleStore.GetValidatorIndex(q0.Proposer())))
+	cons.status.setView(qc.View())
+	cons.status.setLeaderIndex(uint32(cons.resources.RoleStore.GetValidatorIndex(qc.Proposer())))
 }
 
 func (cons *Consensus) setupDriver() {
@@ -129,19 +135,23 @@ func (cons *Consensus) setupDriver() {
 	cons.driver.tester = newTester(cons.logfile)
 }
 
-func (cons *Consensus) setupWindow(q0 *core.QuorumCert) {
-	quotas := make([]float64, cons.resources.RoleStore.GetWindowSize()-1)
+func (cons *Consensus) setupWindow(qc *core.QuorumCert) {
+	quotas := make([]float64, cons.resources.RoleStore.GetWindowSize())
+	cur := qc
 	for i := len(quotas) - 1; i >= 0; i-- {
-		if q0 != nil {
-			quotas[i] = q0.Quota()
-			block := cons.driver.getBlockByHash(q0.BlockHash())
-			q0 = cons.driver.getQCByBlockHash(block.ParentHash())
+		if cur != nil {
+			quotas[i] = cur.Quota()
+			block := cons.driver.getBlockByHash(cur.BlockHash())
+			cur = cons.driver.getQCByBlockHash(block.ParentHash())
 		} else {
+			// ensure satisfaction of propose rule when height < window size
 			quotas[i] = cons.resources.RoleStore.MajorityQuotaCount()
+			break
 		}
 	}
-	logger.I().Infof("setup stake window %+v", quotas)
-	cons.status.setWindow(quotas)
+	height := cons.driver.getBlockByHash(qc.BlockHash()).Height()
+	cons.status.setWindow(quotas, height)
+	logger.I().Infow("setup stake window", "quotas", quotas, "height", height)
 }
 
 func (cons *Consensus) setupValidator() {

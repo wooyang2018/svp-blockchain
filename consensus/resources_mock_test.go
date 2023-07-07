@@ -90,6 +90,11 @@ func (m *MockStorage) Commit(data *storage.CommitData) error {
 	return args.Error(0)
 }
 
+func (m *MockStorage) StoreBlock(blk *core.Block) error {
+	args := m.Called(blk)
+	return args.Error(0)
+}
+
 func (m *MockStorage) GetBlock(hash []byte) (*core.Block, error) {
 	args := m.Called(hash)
 	return castCoreBlock(args.Get(0)), args.Error(1)
@@ -98,6 +103,11 @@ func (m *MockStorage) GetBlock(hash []byte) (*core.Block, error) {
 func (m *MockStorage) GetLastBlock() (*core.Block, error) {
 	args := m.Called()
 	return castCoreBlock(args.Get(0)), args.Error(1)
+}
+
+func (m *MockStorage) StoreQC(qc *core.QuorumCert) error {
+	args := m.Called(qc)
+	return args.Error(0)
 }
 
 func (m *MockStorage) GetQC(blkHash []byte) (*core.QuorumCert, error) {

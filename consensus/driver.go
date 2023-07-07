@@ -140,10 +140,8 @@ func (d *driver) onReceiveVote(vote *core.Vote) error {
 		"quota", vote.Quota())
 	if d.status.getVoteCount() >= d.resources.RoleStore.MajorityValidatorCount() &&
 		d.status.getQuotaCount() > d.resources.RoleStore.MajorityQuotaCount() {
-		votes := d.status.getVotes()
+		qc := core.NewQuorumCert().Build(d.resources.Signer, d.status.getVotes())
 		d.status.endProposal()
-		logger.I().Debugf("current stake window %+v", d.status.getWindow())
-		qc := core.NewQuorumCert().Build(d.resources.Signer, votes)
 		d.state.setQC(qc)
 		d.updateQCHigh(qc)
 		d.proposeCh <- struct{}{} // trigger propose rule
@@ -159,9 +157,22 @@ func (d *driver) updateQCHigh(qc *core.QuorumCert) {
 			"view", qc.View(),
 			"qc", d.qcRefHeight(qc),
 			"quota", qc.Quota())
+		d.resources.Storage.StoreBlock(blk)
+		d.resources.Storage.StoreQC(qc)
 		d.status.setQCHigh(qc)
 		d.status.setBLeaf(blk)
-		d.commitRecursive(blk)
+		d.status.updateWindow(qc.Quota(), blk.Height())
+		quotas, height := d.status.getWindow()
+		logger.I().Debugw("updated stake window", "quotas", quotas, "height", height)
+		acc := 0.0
+		for i := len(quotas) - 1; i >= 0 && blk != nil; i-- {
+			acc += quotas[i]
+			if acc > d.resources.RoleStore.MajorityQuotaCount() {
+				d.commitRecursive(blk)
+				break
+			}
+			blk = d.getBlockByHash(blk.ParentHash())
+		}
 	}
 }
 
@@ -193,7 +204,7 @@ func (d *driver) commit(blk *core.Block) {
 	if ExecuteTxFlag {
 		txs, old := d.resources.TxPool.GetTxsToExecute(rawTxs)
 		txCount = len(txs)
-		logger.I().Debugw("committing block", "height", blk.Height(), "txs", txCount)
+		logger.I().Debugw("executing block", "height", blk.Height(), "txs", txCount)
 		bcm, txcs := d.resources.Execution.Execute(blk, txs)
 		bcm.SetOldBlockTxs(old)
 		data = &storage.CommitData{
@@ -205,7 +216,7 @@ func (d *driver) commit(blk *core.Block) {
 		}
 	} else {
 		txCount = len(rawTxs)
-		logger.I().Debugw("committing block", "height", blk.Height(), "txs", txCount)
+		logger.I().Debugw("executing block", "height", blk.Height(), "txs", txCount)
 		bcm, txcs := d.resources.Execution.MockExecute(blk)
 		bcm.SetOldBlockTxs(rawTxs)
 		data = &storage.CommitData{

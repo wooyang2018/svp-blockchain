@@ -65,12 +65,20 @@ func (strg *Storage) Commit(data *CommitData) error {
 	return strg.commit(data)
 }
 
+func (strg *Storage) StoreBlock(blk *core.Block) error {
+	return updateLevelDB(strg.db, strg.chainStore.setBlock(blk))
+}
+
 func (strg *Storage) GetBlock(hash []byte) (*core.Block, error) {
 	return strg.chainStore.getBlock(hash)
 }
 
 func (strg *Storage) GetLastBlock() (*core.Block, error) {
 	return strg.chainStore.getLastBlock()
+}
+
+func (strg *Storage) StoreQC(qc *core.QuorumCert) error {
+	return updateLevelDB(strg.db, strg.chainStore.setQC(qc))
 }
 
 func (strg *Storage) GetQC(blkHash []byte) (*core.QuorumCert, error) {
@@ -190,7 +198,7 @@ func (strg *Storage) writeChainData(data *CommitData) error {
 	updFns := make([]updateFunc, 0)
 	updFns = append(updFns, strg.chainStore.setBlock(data.Block)...)
 	if data.QC != nil {
-		updFns = append(updFns, strg.chainStore.setQC((data.QC))...)
+		updFns = append(updFns, strg.chainStore.setQC(data.QC)...)
 	}
 	updFns = append(updFns, strg.chainStore.setTxs(data.Transactions)...)
 	updFns = append(updFns, strg.chainStore.setTxCommits(data.TxCommits)...)

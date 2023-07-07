@@ -240,7 +240,7 @@ func (gns *genesis) acceptVote(vote *core.Vote) {
 	defer gns.mtxVote.Unlock()
 
 	gns.votes[vote.Voter().String()] = vote
-	if len(gns.votes) < gns.resources.RoleStore.MajorityValidatorCount() {
+	if len(gns.votes) < gns.resources.RoleStore.ValidatorCount() {
 		return
 	}
 	vlist := make([]*core.Vote, 0, len(gns.votes))

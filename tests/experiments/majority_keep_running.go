@@ -23,12 +23,12 @@ func (expm *MajorityKeepRunning) Name() string {
 // The blockchain should keep remain healthy
 // When the stopped nodes up again, they should sync the history
 func (expm *MajorityKeepRunning) Run(cls *cluster.Cluster) error {
-	total := cls.NodeCount()
-	faulty := testutil.PickUniqueRandoms(total, total-core.MajorityCount(total))
-	for _, i := range faulty {
+	faulty := make([]int, cls.NodeCount()-core.MajorityCount(cls.NodeCount()))
+	for i := 0; i < len(faulty); i++ {
+		faulty[i] = i
 		cls.GetNode(i).Stop()
 	}
-	fmt.Printf("Stopped %d out of %d nodes: %v\n", len(faulty), total, faulty)
+	fmt.Printf("Stopped %d out of %d nodes: %v\n", len(faulty), cls.NodeCount(), faulty)
 
 	testutil.Sleep(20 * time.Second)
 	if err := health.CheckMajorityNodes(cls); err != nil {

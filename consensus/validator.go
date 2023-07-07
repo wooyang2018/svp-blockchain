@@ -274,7 +274,7 @@ func (vld *validator) updateQCHighAndVote(pro *core.Proposal, blk *core.Block) e
 	if vld.driver.cmpQCPriority(pro.QuorumCert(), vld.status.getQCHigh()) < 0 {
 		return fmt.Errorf("can not vote by lower qc, height %d", blk.Height())
 	}
-	if pro.Block() != nil { //new view proposal
+	if pro.Block() != nil { //not new view proposal
 		if err := vld.verifyBlockToVote(blk); err != nil {
 			return err
 		}
@@ -291,7 +291,7 @@ func (vld *validator) updateQCHighAndVote(pro *core.Proposal, blk *core.Block) e
 		"proposer", proposer,
 		"height", blk.Height(),
 		"qc", vld.driver.qcRefHeight(pro.QuorumCert()),
-		"quota", quota,
+		"quota", quota/float64(vld.resources.RoleStore.GetWindowSize()),
 	)
 
 	return nil

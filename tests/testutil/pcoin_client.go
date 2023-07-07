@@ -32,8 +32,7 @@ type PCoinClient struct {
 
 var _ LoadClient = (*PCoinClient)(nil)
 
-// create and setup a LoadService
-// submit chaincode deploy tx and wait for commit
+// NewPCoinClient creates and setups a Load Service, submits chaincode deploy tx and waits for commission
 func NewPCoinClient(nodes []int, mintCount, destCount int, binccPath string) *PCoinClient {
 	client := &PCoinClient{
 		binccPath: binccPath,

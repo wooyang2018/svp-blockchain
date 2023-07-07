@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -65,13 +66,10 @@ func MakeRandomKeys(count int) []*core.PrivateKey {
 func MakeRandomQuotas(count int, quota int) []float64 {
 	r := rand.New(rand.NewSource(time.Now().Unix()))
 	quotas := make([]float64, count)
-	sum := 0
-	for i := 0; i <= count-2; i++ {
-		temp := r.Intn(quota-sum-count+i) + 1
-		sum += temp
-		quotas[i] = float64(temp)
+	for i := 0; i < quota; i++ {
+		quotas[r.Intn(count)]++
 	}
-	quotas[count-1] = float64(quota - sum)
+	sort.Float64s(quotas)
 	return quotas
 }
 

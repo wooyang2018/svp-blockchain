@@ -32,8 +32,10 @@ var _ TxPool = (*txpool.TxPool)(nil)
 type Storage interface {
 	GetMerkleRoot() []byte
 	Commit(data *storage.CommitData) error
+	StoreBlock(blk *core.Block) error
 	GetBlock(hash []byte) (*core.Block, error)
 	GetLastBlock() (*core.Block, error)
+	StoreQC(qc *core.QuorumCert) error
 	GetQC(blkHash []byte) (*core.QuorumCert, error)
 	GetLastQC() (*core.QuorumCert, error)
 	GetBlockHeight() uint64

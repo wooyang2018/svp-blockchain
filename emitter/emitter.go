@@ -19,7 +19,7 @@ type Subscription struct {
 	ch       chan Event
 }
 
-// Listen invokes given function for each event
+// Events returns listening channel for event
 func (s *Subscription) Events() <-chan Event {
 	return s.ch
 }

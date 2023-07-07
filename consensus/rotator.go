@@ -107,7 +107,7 @@ func (d *driver) onNewProposal(pro *core.Proposal) {
 	var ltreset, vtreset bool
 	if d.isNormalApproval(pro.View(), proposer) {
 		ltreset = true
-		logger.I().Debugw("refresh leader",
+		logger.I().Debugw("refreshed leader",
 			"view", pro.View(),
 			"leader", proposer)
 	}

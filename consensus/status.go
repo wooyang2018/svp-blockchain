@@ -35,6 +35,33 @@ type Status struct {
 	View   uint32
 }
 
+type Window struct {
+	quotas []float64
+	size   int
+	height uint64
+	acc    float64
+}
+
+func (w *Window) update(val float64, height uint64) {
+	if height > w.height {
+		w.acc -= w.quotas[0]
+		w.quotas = w.quotas[1:]
+		w.quotas = append(w.quotas, val)
+		w.acc += val
+		w.height = height
+	} else if height == w.height {
+		w.acc -= w.quotas[w.size-1]
+		w.quotas[w.size-1] = val
+		w.acc += val
+	} else {
+		panic("cannot update window with lower height")
+	}
+}
+
+func (w *Window) sum() float64 {
+	return w.acc - w.quotas[0]
+}
+
 type status struct {
 	bExec       atomic.Value
 	bLeaf       atomic.Value
@@ -48,7 +75,7 @@ type status struct {
 	block      *core.Block
 	votes      map[string]*core.Vote
 	quotaCount float64
-	window     []float64
+	window     *Window
 	mtx        sync.RWMutex
 }
 
@@ -68,18 +95,32 @@ func (s *status) getLeaderIndex() uint32      { return atomic.LoadUint32(&s.lead
 func (s *status) getViewStart() int64         { return atomic.LoadInt64(&s.viewStart) }
 func (s *status) getViewChange() int32        { return atomic.LoadInt32(&s.viewChange) }
 
-func (s *status) setWindow(quotas []float64) {
+func (s *status) setWindow(quotas []float64, height uint64) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	s.window = quotas
+	s.window = &Window{
+		quotas: quotas,
+		size:   len(quotas),
+		height: height,
+	}
+	for _, v := range quotas {
+		s.window.acc += v
+	}
 }
 
-func (s *status) getWindow() []float64 {
+func (s *status) getWindow() ([]float64, uint64) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	return s.window
+	return s.window.quotas, s.window.height
+}
+
+func (s *status) updateWindow(quota float64, height uint64) {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
+	s.window.update(quota, height)
 }
 
 func (s *status) startProposal(pro *core.Proposal, blk *core.Block) {
@@ -99,8 +140,6 @@ func (s *status) endProposal() {
 	s.proposal = nil
 	s.block = nil
 	s.votes = nil
-	s.window = s.window[1:]
-	s.window = append(s.window, s.quotaCount)
 	s.quotaCount = 0
 }
 
@@ -136,11 +175,8 @@ func (s *status) getVoteCount() int {
 func (s *status) getQuotaCount() float64 {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
-	res := s.quotaCount
-	for _, v := range s.window {
-		res += v
-	}
-	return res
+
+	return s.quotaCount + s.window.sum()
 }
 
 func (s *status) getVotes() []*core.Vote {
