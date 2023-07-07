@@ -109,8 +109,8 @@ func main() {
 			}
 			return
 		}
-		runExperiments(testutil.NewLoadGenerator(makeLoadClient(),
-			LoadTxPerSec, LoadJobPerTick), cfactory)
+		testutil.NewLoadGenerator(makeLoadClient(), LoadTxPerSec, LoadJobPerTick)
+		runExperiments(cfactory)
 	}
 }
 
@@ -132,11 +132,10 @@ func runBenchmark() {
 	bm.Run()
 }
 
-func runExperiments(loadGen *testutil.LoadGenerator, cfactory cluster.ClusterFactory) {
+func runExperiments(cfactory cluster.ClusterFactory) {
 	r := &ExperimentRunner{
 		experiments: setupExperiments(),
 		cfactory:    cfactory,
-		loadGen:     loadGen,
 	}
 	pass, fail := r.Run()
 	fmt.Printf("\nTotal: %d  |  Pass: %d  |  Fail: %d\n", len(r.experiments), pass, fail)

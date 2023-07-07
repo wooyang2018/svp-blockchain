@@ -18,10 +18,15 @@ func (expm *RestartCluster) Name() string {
 }
 
 func (expm *RestartCluster) Run(cls *cluster.Cluster) error {
+	//make sure no pending txs in pool
+	testutil.LoadGen.Pause()
+	testutil.Sleep(10 * time.Second)
+
 	cls.Stop()
 	fmt.Println("Stopped cluster")
 	testutil.Sleep(20 * time.Second)
 
+	testutil.LoadGen.UnPause()
 	if err := cls.Start(); err != nil {
 		return err
 	}

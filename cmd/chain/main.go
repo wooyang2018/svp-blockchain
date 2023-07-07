@@ -68,7 +68,7 @@ func init() {
 
 	rootCmd.Flags().DurationVar(&nodeConfig.ConsensusConfig.TxWaitTime,
 		consensus.FlagTxWaitTime, nodeConfig.ConsensusConfig.TxWaitTime,
-		"proposal creation delay if no transactions in the pool")
+		"proposal creation delay if no transactions in pool")
 
 	rootCmd.Flags().DurationVar(&nodeConfig.ConsensusConfig.ViewWidth,
 		consensus.FlagViewWidth, nodeConfig.ConsensusConfig.ViewWidth,

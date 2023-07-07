@@ -13,11 +13,13 @@ import (
 	"github.com/wooyang2018/posv-blockchain/tests/cluster"
 )
 
-type LoadGenerator struct {
-	txPerSec   int
-	jobPerTick int //每一次嘀嗒需完成的任务数
-	client     LoadClient
+var LoadGen *LoadGenerator
 
+type LoadGenerator struct {
+	txPerSec       int
+	jobPerTick     int //每一次嘀嗒需完成的任务数
+	client         LoadClient
+	paused         bool
 	totalSubmitted int64
 }
 
@@ -25,15 +27,25 @@ func NewLoadGenerator(client LoadClient, tps int, jobs int) *LoadGenerator {
 	if tps < jobs {
 		jobs = tps
 	}
-	return &LoadGenerator{
+	LoadGen = &LoadGenerator{
 		txPerSec:   tps,
 		jobPerTick: jobs,
 		client:     client,
+		paused:     true,
 	}
+	return LoadGen
 }
 
 func (lg *LoadGenerator) SetupOnCluster(cls *cluster.Cluster) error {
 	return lg.client.SetupOnCluster(cls)
+}
+
+func (lg *LoadGenerator) Pause() {
+	lg.paused = true
+}
+
+func (lg *LoadGenerator) UnPause() {
+	lg.paused = false
 }
 
 func (lg *LoadGenerator) Run(ctx context.Context) {
@@ -44,6 +56,7 @@ func (lg *LoadGenerator) Run(ctx context.Context) {
 	jobCh := make(chan struct{}, lg.txPerSec)
 	defer close(jobCh)
 
+	lg.paused = false
 	for i := 0; i < lg.txPerSec; i++ {
 		go lg.loadWorker(jobCh)
 	}
@@ -52,6 +65,9 @@ func (lg *LoadGenerator) Run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			if lg.paused {
+				continue
+			}
 			for i := 0; i < lg.jobPerTick; i++ {
 				jobCh <- struct{}{}
 			}
