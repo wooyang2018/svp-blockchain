@@ -65,7 +65,6 @@ func TestCommit(t *testing.T) {
 	txcs := []*core.TxCommit{core.NewTxCommit().SetHash(tx.Hash())}
 	cdata := &storage.CommitData{
 		Block:        bexec,
-		QC:           nil,
 		Transactions: txs,
 		BlockCommit:  bcm,
 		TxCommits:    txcs,
@@ -82,7 +81,6 @@ func TestCommit(t *testing.T) {
 
 	strg := new(MockStorage)
 	strg.On("Commit", cdata).Return(nil)
-	strg.On("GetQC", bexec.Hash()).Return(nil, nil)
 	d.resources.Storage = strg
 
 	d.commit(bexec)

@@ -50,10 +50,8 @@ func (gns *genesis) run() (*core.Block, *core.QuorumCert) {
 }
 
 func (gns *genesis) commit() {
-	data := &storage.CommitData{
-		Block: gns.getB0(),
-		QC:    gns.getQ0(),
-	}
+	gns.resources.Storage.StoreQC(gns.getQ0())
+	data := &storage.CommitData{Block: gns.getB0()}
 	data.BlockCommit = core.NewBlockCommit().SetHash(data.Block.Hash())
 	if err := gns.resources.Storage.Commit(data); err != nil {
 		logger.I().Fatalf("commit storage error, %+v", err)

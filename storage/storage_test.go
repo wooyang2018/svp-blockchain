@@ -41,7 +41,6 @@ func TestStorage_Commit(t *testing.T) {
 		})
 	data := &CommitData{
 		Block:       b0,
-		QC:          core.NewQuorumCert(),
 		BlockCommit: bcmInput,
 	}
 	err := strg.Commit(data)
@@ -99,7 +98,6 @@ func TestStorage_Commit(t *testing.T) {
 		})
 	data = &CommitData{
 		Block:        b1,
-		QC:           core.NewQuorumCert(),
 		Transactions: []*core.Transaction{tx1, tx2},
 		TxCommits:    []*core.TxCommit{txc1, txc2},
 		BlockCommit:  bcmInput,

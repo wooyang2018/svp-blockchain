@@ -19,7 +19,6 @@ import (
 
 type CommitData struct {
 	Block        *core.Block
-	QC           *core.QuorumCert // QC for committed block
 	Transactions []*core.Transaction
 	BlockCommit  *core.BlockCommit
 	TxCommits    []*core.TxCommit
@@ -197,9 +196,6 @@ func (strg *Storage) computeMerkleUpdate(data *CommitData) {
 func (strg *Storage) writeChainData(data *CommitData) error {
 	updFns := make([]updateFunc, 0)
 	updFns = append(updFns, strg.chainStore.setBlock(data.Block)...)
-	if data.QC != nil {
-		updFns = append(updFns, strg.chainStore.setQC(data.QC)...)
-	}
 	updFns = append(updFns, strg.chainStore.setTxs(data.Transactions)...)
 	updFns = append(updFns, strg.chainStore.setTxCommits(data.TxCommits)...)
 	return updateLevelDB(strg.db, updFns)

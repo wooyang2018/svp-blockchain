@@ -151,8 +151,9 @@ func (d *driver) onReceiveVote(vote *core.Vote) error {
 
 // updateQCHigh replaces high qc if the given qc is higher than it
 func (d *driver) updateQCHigh(qc *core.QuorumCert) {
-	if d.cmpQCPriority(qc, d.status.getQCHigh()) == 1 {
-		blk := d.getBlockByHash(qc.BlockHash())
+	blk := d.getBlockByHash(qc.BlockHash())
+	if d.cmpQCPriority(qc, d.status.getQCHigh()) == 1 &&
+		d.cmpBlockHeight(blk, d.status.getBExec()) == 1 {
 		logger.I().Infow("updated high qc",
 			"view", qc.View(),
 			"qc", d.qcRefHeight(qc),
@@ -198,7 +199,6 @@ func (d *driver) onCommit(blk *core.Block) {
 func (d *driver) commit(blk *core.Block) {
 	start := time.Now()
 	rawTxs := blk.Transactions()
-	qc := d.getQCByBlockHash(blk.Hash())
 	var txCount int
 	var data *storage.CommitData
 	if ExecuteTxFlag {
@@ -209,7 +209,6 @@ func (d *driver) commit(blk *core.Block) {
 		bcm.SetOldBlockTxs(old)
 		data = &storage.CommitData{
 			Block:        blk,
-			QC:           qc,
 			Transactions: txs,
 			BlockCommit:  bcm,
 			TxCommits:    txcs,
@@ -221,7 +220,6 @@ func (d *driver) commit(blk *core.Block) {
 		bcm.SetOldBlockTxs(rawTxs)
 		data = &storage.CommitData{
 			Block:        blk,
-			QC:           qc,
 			Transactions: nil,
 			BlockCommit:  bcm,
 			TxCommits:    txcs,
