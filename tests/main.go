@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"runtime"
 	"strings"
 	"time"
 
@@ -38,7 +39,7 @@ var (
 	BroadcastTx    = true
 
 	// run tests in remote linux cluster
-	RemoteLinuxCluster    = false // if false it'll use local cluster (running multiple nodes on single local machine)
+	RemoteLinuxCluster    = true // if false it'll use local cluster (running multiple nodes on single local machine)
 	RemoteSetupRequired   = true
 	RemoteInstallRequired = false // if false it will not try to install dstat on remote machine
 	RemoteKeySSH          = "~/.ssh/id_rsa"
@@ -142,6 +143,10 @@ func runExperiments(cfactory cluster.ClusterFactory) {
 }
 
 func printAndCheckVars() {
+	if !SetupClusterTemplate && runtime.GOOS == "windows" {
+		fmt.Println("cannot use windows to run experiments")
+		os.Exit(1)
+	}
 	fmt.Println("NodeCount =", NodeCount)
 	fmt.Println("StakeQuota =", StakeQuota)
 	fmt.Println("LoadJobPerTick =", LoadJobPerTick)
@@ -248,7 +253,8 @@ func buildPCoinBinCC() {
 	cmd.Args = append(cmd.Args, "../execution/bincc/pcoin")
 	if RemoteLinuxCluster {
 		cmd.Env = os.Environ()
-		cmd.Env = append(cmd.Env, "GOOS=linux GOARCH=amd64")
+		os.Setenv("GOOS", "linux")
+		os.Setenv("GOARCH", "amd64")
 		fmt.Printf(" $ export %s\n", "GOOS=linux GOARCH=amd64")
 	}
 	fmt.Printf(" $ %s\n\n", strings.Join(cmd.Args, " "))

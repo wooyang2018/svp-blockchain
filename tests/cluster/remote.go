@@ -71,8 +71,7 @@ func (ftry *RemoteFactory) ReadHosts(hostsPath string, nodeCount int) error {
 	}
 	lines := strings.Split(string(raw), "\n")
 	if len(lines) < nodeCount {
-		return fmt.Errorf("not enough hosts, %d | %d",
-			len(lines), nodeCount)
+		return fmt.Errorf("not enough hosts, expected %d, got %d", nodeCount, len(lines))
 	}
 	hosts := make([]string, nodeCount)
 	loginNames := make([]string, nodeCount)
