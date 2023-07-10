@@ -26,6 +26,10 @@ func (pm *pacemaker) start() {
 	}
 	pm.stopCh = make(chan struct{})
 	go pm.run()
+	if PreserveTxFlag {
+		time.Sleep(pm.config.DeltaTime)
+		pm.driver.proposeCh <- struct{}{}
+	}
 	logger.I().Info("started pacemaker")
 }
 

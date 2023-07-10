@@ -29,14 +29,14 @@ var (
 
 	LoadTxPerSec    = 10  //tps for client to submit tx during functional testing
 	LoadJobPerTick  = 100 //num of tasks to be completed per tick
-	LoadSubmitNodes = []int{}
+	LoadSubmitNodes = []int{0}
 	LoadBatchSubmit = true //whether to enable batch transaction submission
 
 	//chaincode priority: empty > pcoin bincc > pcoin
-	EmptyChainCode = false // deploy empty chaincode instead of pcoin
-	PCoinBinCC     = true  // deploy pcoin chaincode as bincc type (not embeded in node)
-	CheckRotation  = true
-	BroadcastTx    = true
+	EmptyChainCode = true  // deploy empty chaincode instead of pcoin
+	PCoinBinCC     = false // deploy pcoin chaincode as bincc type (not embeded in node)
+	CheckRotation  = false
+	BroadcastTx    = false
 
 	// run tests in remote linux cluster
 	RemoteLinuxCluster    = true // if false it'll use local cluster (running multiple nodes on single local machine)
@@ -48,9 +48,9 @@ var (
 	RemoteNetworkLoss     = 10.0
 
 	// run benchmark, otherwise run experiments
-	RunBenchmark  = false
+	RunBenchmark  = true
 	BenchDuration = 5 * time.Minute
-	BenchLoads    = []int{5000, 10000, 15000}
+	BenchLoads    = []int{5000}
 
 	SetupClusterTemplate = false
 )
@@ -178,6 +178,9 @@ func printAndCheckVars() {
 		fmt.Println("!ExecuteTxFlag ===> EmptyChainCode")
 		pass = false
 	}
+	if !BroadcastTx && CheckRotation {
+		fmt.Println("!BroadcastTx ---> !CheckRotation")
+	}
 	if !RunBenchmark && !CheckRotation {
 		fmt.Println("!RunBenchmark ===> CheckRotation")
 		pass = false
@@ -199,6 +202,10 @@ func printAndCheckVars() {
 	}
 	if SetupClusterTemplate && RunBenchmark {
 		fmt.Println("SetupClusterTemplate ===> !RunBenchmark")
+		pass = false
+	}
+	if consensus.PreserveTxFlag && len(BenchLoads) != 1 {
+		fmt.Println("PreserveTxFlag ===> len(BenchLoads)=1")
 		pass = false
 	}
 	if !RunBenchmark && !consensus.ExecuteTxFlag {
