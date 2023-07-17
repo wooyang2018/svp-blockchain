@@ -27,7 +27,7 @@ func (pm *pacemaker) start() {
 	pm.stopCh = make(chan struct{})
 	go pm.run()
 	if PreserveTxFlag {
-		time.Sleep(pm.config.DeltaTime)
+		time.Sleep(2 * time.Second)
 		pm.driver.proposeCh <- struct{}{}
 	}
 	logger.I().Info("started pacemaker")
@@ -72,24 +72,24 @@ func (pm *pacemaker) newProposal() {
 		return
 	}
 
-	pro := pm.createProposal()
-	pm.status.setBLeaf(pro.Block())
-	pm.status.startProposal(pro, pro.Block())
-	pm.driver.onNewProposal(pro)
-	if err := pm.resources.MsgSvc.BroadcastProposal(pro); err != nil {
+	blk := pm.createProposal()
+	pm.status.setBLeaf(blk)
+	pm.status.startProposal(blk)
+	pm.driver.onNewProposal(blk)
+	if err := pm.resources.MsgSvc.BroadcastProposal(blk); err != nil {
 		logger.I().Errorf("broadcast proposal failed, %+v", err)
 	}
 
 	logger.I().Infow("proposed proposal",
-		"view", pro.View(),
-		"height", pro.Block().Height(),
-		"exec", pro.Block().ExecHeight(),
-		"qc", pm.driver.qcRefHeight(pro.QuorumCert()),
-		"txs", len(pro.Block().Transactions()))
+		"view", blk.View(),
+		"height", blk.Height(),
+		"exec", blk.ExecHeight(),
+		"qc", pm.driver.qcRefHeight(blk.QuorumCert()),
+		"txs", len(blk.Transactions()))
 	quota := pm.resources.RoleStore.GetValidatorQuota(pm.resources.Signer.PublicKey())
-	vote := pro.Vote(pm.resources.Signer, quota/float64(pm.resources.RoleStore.GetWindowSize()))
+	vote := blk.Vote(pm.resources.Signer, quota/float64(pm.resources.RoleStore.GetWindowSize()))
 	pm.driver.onReceiveVote(vote)
-	pm.driver.updateQCHigh(pro.QuorumCert())
+	pm.driver.updateQCHigh(blk.QuorumCert())
 }
 
 func (pm *pacemaker) delayProposeWhenNoTxs() {
@@ -104,7 +104,7 @@ func (pm *pacemaker) delayProposeWhenNoTxs() {
 	}
 }
 
-func (pm *pacemaker) createProposal() *core.Proposal {
+func (pm *pacemaker) createProposal() *core.Block {
 	var txs [][]byte
 	if PreserveTxFlag {
 		txs = pm.resources.TxPool.GetTxsFromQueue(pm.config.BlockTxLimit)
@@ -113,18 +113,15 @@ func (pm *pacemaker) createProposal() *core.Proposal {
 	}
 	parent := pm.status.getBLeaf()
 	blk := core.NewBlock().
+		SetView(pm.status.getView()).
 		SetParentHash(parent.Hash()).
 		SetHeight(parent.Height() + 1).
 		SetTransactions(txs).
 		SetExecHeight(pm.resources.Storage.GetBlockHeight()).
 		SetMerkleRoot(pm.resources.Storage.GetMerkleRoot()).
 		SetTimestamp(time.Now().UnixNano()).
+		SetQuorumCert(pm.status.getQCHigh()).
 		Sign(pm.resources.Signer)
 	pm.state.setBlock(blk)
-	pro := core.NewProposal().
-		SetBlock(blk).
-		SetQuorumCert(pm.status.getQCHigh()).
-		SetView(pm.status.getView()).
-		Sign(pm.resources.Signer)
-	return pro
+	return blk
 }

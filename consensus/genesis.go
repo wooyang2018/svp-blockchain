@@ -64,24 +64,21 @@ func (gns *genesis) propose() {
 		return
 	}
 	gns.votes = make(map[string]*core.Vote, gns.resources.RoleStore.MajorityValidatorCount())
-	pro := gns.createGenesisProposal()
-	gns.setB0(pro.Block())
+	blk := gns.createGenesisProposal()
+	gns.setB0(blk)
 	logger.I().Info("created genesis block, broadcasting...")
 	go gns.broadcastProposalLoop()
 	quota := gns.resources.RoleStore.GetValidatorQuota(gns.resources.Signer.PublicKey())
-	gns.onReceiveVote(pro.Vote(gns.resources.Signer,
+	gns.onReceiveVote(blk.Vote(gns.resources.Signer,
 		quota/float64(gns.resources.RoleStore.GetWindowSize())))
 }
 
-func (gns *genesis) createGenesisProposal() *core.Proposal {
-	blk := core.NewBlock().
+func (gns *genesis) createGenesisProposal() *core.Block {
+	return core.NewBlock().
+		SetView(0).
 		SetHeight(0).
 		SetParentHash(hashChainID(gns.chainID)).
 		SetTimestamp(time.Now().UnixNano()).
-		Sign(gns.resources.Signer)
-	return core.NewProposal().
-		SetView(0).
-		SetBlock(blk).
 		Sign(gns.resources.Signer)
 }
 
@@ -93,8 +90,7 @@ func (gns *genesis) broadcastProposalLoop() {
 		default:
 		}
 		if gns.getQ0() == nil {
-			pro := core.NewProposal().SetBlock(gns.getB0()).Sign(gns.resources.Signer)
-			if err := gns.resources.MsgSvc.BroadcastProposal(pro); err != nil {
+			if err := gns.resources.MsgSvc.BroadcastProposal(gns.getB0()); err != nil {
 				logger.I().Errorf("broadcast proposal failed, %+v", err)
 			}
 		}
@@ -112,7 +108,7 @@ func (gns *genesis) proposalLoop() {
 			return
 
 		case e := <-sub.Events():
-			if err := gns.onReceiveProposal(e.(*core.Proposal)); err != nil {
+			if err := gns.onReceiveProposal(e.(*core.Block)); err != nil {
 				logger.I().Errorf("receive proposal failed, %+v", err)
 			}
 		}
@@ -153,27 +149,27 @@ func (gns *genesis) newViewLoop() {
 	}
 }
 
-func (gns *genesis) onReceiveProposal(pro *core.Proposal) error {
-	if err := pro.Validate(gns.resources.RoleStore); err != nil {
+func (gns *genesis) onReceiveProposal(blk *core.Block) error {
+	if err := blk.Validate(gns.resources.RoleStore); err != nil {
 		return err
 	}
-	if pro.Block() == nil || pro.Block().Height() != 0 {
+	if blk.Height() != 0 {
 		logger.I().Info("left behind, fetching genesis block...")
-		return gns.fetchGenesisBlockAndQC(pro.Proposer())
+		return gns.fetchGenesisBlockAndQC(blk.Proposer())
 	}
-	if !bytes.Equal(hashChainID(gns.chainID), pro.Block().ParentHash()) {
+	if !bytes.Equal(hashChainID(gns.chainID), blk.ParentHash()) {
 		return fmt.Errorf("different chain id")
 	}
-	if !gns.isLeader(pro.Proposer()) {
+	if !gns.isLeader(blk.Proposer()) {
 		return fmt.Errorf("proposer is not leader")
 	}
-	if len(pro.Block().Transactions()) != 0 {
+	if len(blk.Transactions()) != 0 {
 		return fmt.Errorf("genesis block with txs")
 	}
-	gns.setB0(pro.Block())
+	gns.setB0(blk)
 	logger.I().Info("got genesis block, voting...")
 	quota := gns.resources.RoleStore.GetValidatorQuota(gns.resources.Signer.PublicKey())
-	return gns.resources.MsgSvc.SendVote(pro.Proposer(), pro.Vote(gns.resources.Signer,
+	return gns.resources.MsgSvc.SendVote(blk.Proposer(), blk.Vote(gns.resources.Signer,
 		quota/float64(gns.resources.RoleStore.GetWindowSize())))
 }
 

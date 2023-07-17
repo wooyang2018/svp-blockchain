@@ -5,8 +5,8 @@ package consensus
 
 import "time"
 
-const ExecuteTxFlag = false //set to false when benchmark test
-const PreserveTxFlag = true //set to true when benchmark test
+const ExecuteTxFlag = true   //set to false when benchmark test
+const PreserveTxFlag = false //set to true when benchmark test
 
 const (
 	FlagDebug   = "debug"
@@ -30,7 +30,6 @@ const (
 	FlagTxWaitTime    = "consensus-txWaitTime"
 	FlagViewWidth     = "consensus-viewWidth"
 	FlagLeaderTimeout = "consensus-leaderTimeout"
-	FlagDeltaTime     = "consensus-deltaTime"
 	FlagBenchmarkPath = "consensus-benchmarkPath"
 )
 
@@ -49,9 +48,6 @@ type Config struct {
 	// leader must create next qc within this duration
 	LeaderTimeout time.Duration
 
-	// upper bound of message latency in a synchronous network
-	DeltaTime time.Duration
-
 	// path to save the benchmark log of the consensus algorithm (it will not be saved if blank)
 	BenchmarkPath string
 }
@@ -61,6 +57,5 @@ var DefaultConfig = Config{
 	TxWaitTime:    500 * time.Millisecond,
 	ViewWidth:     60 * time.Second,
 	LeaderTimeout: 15 * time.Second,
-	DeltaTime:     3 * time.Second,
 	BenchmarkPath: "",
 }

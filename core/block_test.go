@@ -12,6 +12,7 @@ import (
 
 func newBlock(privKey *PrivateKey) *Block {
 	blk := NewBlock().
+		SetView(1).
 		SetHeight(4).
 		SetParentHash([]byte{1}).
 		SetExecHeight(3).
@@ -26,14 +27,21 @@ func TestBlock(t *testing.T) {
 	privKey := GenerateKey(nil)
 	blk := newBlock(privKey)
 
+	asrt.Equal(uint32(1), blk.View())
 	asrt.Equal(uint64(4), blk.Height())
 	asrt.Equal([]byte{1}, blk.ParentHash())
-	asrt.Equal(privKey.PublicKey().Bytes(), blk.data.Signature.PubKey)
 	asrt.Equal(uint64(3), blk.ExecHeight())
 	asrt.Equal([]byte{1}, blk.MerkleRoot())
 	asrt.Equal([][]byte{{1}}, blk.Transactions())
+	asrt.Equal(privKey.PublicKey(), blk.Proposer())
+
+	v := blk.Vote(privKey, 1)
+	qc := NewQuorumCert().Build(privKey, []*Vote{v})
+	blk.SetQuorumCert(qc).Sign(privKey)
+	asrt.Equal(qc, blk.QuorumCert())
 
 	vs := new(MockValidatorStore)
+	vs.On("MajorityValidatorCount").Return(1)
 	vs.On("IsValidator", privKey.PublicKey()).Return(true)
 	vs.On("IsValidator", mock.Anything).Return(false)
 

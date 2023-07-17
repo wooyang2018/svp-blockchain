@@ -39,7 +39,7 @@ func (vote *Vote) Validate(rs RoleStore) error {
 	if !rs.IsValidator(sig.PublicKey()) {
 		return ErrInvalidValidator
 	}
-	if !sig.Verify(appendUint32(vote.data.BlockHash, vote.data.View)) {
+	if !sig.Verify(appendFloat64(appendUint32(vote.data.BlockHash, vote.data.View), vote.data.Quota)) {
 		return ErrInvalidSig
 	}
 	return nil

@@ -56,7 +56,7 @@ func (vld *validator) proposalLoop() {
 			return
 
 		case e := <-sub.Events():
-			if err := vld.onReceiveProposal(e.(*core.Proposal)); err != nil {
+			if err := vld.onReceiveProposal(e.(*core.Block)); err != nil {
 				logger.I().Errorf("receive proposal failed, %+v", err)
 			}
 		}
@@ -97,29 +97,26 @@ func (vld *validator) newViewLoop() {
 	}
 }
 
-func (vld *validator) onReceiveProposal(pro *core.Proposal) error {
-	if err := pro.Validate(vld.resources.RoleStore); err != nil {
+func (vld *validator) onReceiveProposal(blk *core.Block) error {
+	if err := blk.Validate(vld.resources.RoleStore); err != nil {
 		return err
 	}
 
-	hash := pro.QuorumCert().BlockHash()
-	if pro.Block() != nil {
-		hash = pro.Block().Hash()
-	}
-	blk, err := vld.syncBlockByHash(pro.Proposer(), hash)
-	if err != nil {
-		return err
+	if blk.Height() != 0 {
+		if _, err := vld.syncBlockByHash(blk.Proposer(), blk.ParentHash()); err != nil {
+			return fmt.Errorf("sync block failed, %w", err)
+		}
 	}
 
-	vld.state.setQC(pro.QuorumCert())
-	pidx := vld.resources.RoleStore.GetValidatorIndex(pro.Proposer())
+	vld.state.setQC(blk.QuorumCert())
+	pidx := vld.resources.RoleStore.GetValidatorIndex(blk.Proposer())
 	logger.I().Infow("received proposal",
-		"view", pro.View(),
+		"view", blk.View(),
 		"proposer", pidx,
 		"height", blk.Height(),
 		"txs", len(blk.Transactions()))
 
-	return vld.updateQCHighAndVote(pro, blk)
+	return vld.updateQCHighAndVote(blk)
 }
 
 func (vld *validator) syncBlockByHash(peer *core.PublicKey, hash []byte) (*core.Block, error) {
@@ -135,7 +132,7 @@ func (vld *validator) syncBlockByHash(peer *core.PublicKey, hash []byte) (*core.
 	}
 	if ExecuteTxFlag { // must sync transactions before updating block
 		if err = vld.resources.TxPool.SyncTxs(peer, blk.Transactions()); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("sync txs failed, %w", err)
 		}
 	}
 	vld.state.setBlock(blk)
@@ -258,39 +255,37 @@ func (vld *validator) requestBlock(peer *core.PublicKey, hash []byte) (*core.Blo
 	return blk, nil
 }
 
-func (vld *validator) updateQCHighAndVote(pro *core.Proposal, blk *core.Block) error {
+func (vld *validator) updateQCHighAndVote(blk *core.Block) error {
 	vld.driver.mtxUpdate.Lock()
 	defer vld.driver.mtxUpdate.Unlock()
 
-	vld.driver.onNewProposal(pro)
-	vld.driver.updateQCHigh(pro.QuorumCert())
-	if vld.status.getView() != pro.View() {
+	vld.driver.onNewProposal(blk)
+	vld.driver.updateQCHigh(blk.QuorumCert())
+	if vld.status.getView() != blk.View() {
 		return fmt.Errorf("not same view")
 	}
-	proposer := vld.resources.RoleStore.GetValidatorIndex(pro.Proposer())
-	if !vld.driver.isLeader(pro.Proposer()) {
+	proposer := vld.resources.RoleStore.GetValidatorIndex(blk.Proposer())
+	if !vld.driver.isLeader(blk.Proposer()) {
 		return fmt.Errorf("proposer %d is not leader", proposer)
 	}
-	if vld.driver.cmpQCPriority(pro.QuorumCert(), vld.status.getQCHigh()) < 0 {
+	if vld.driver.cmpQCPriority(blk.QuorumCert(), vld.status.getQCHigh()) < 0 {
 		return fmt.Errorf("can not vote by lower qc, height %d", blk.Height())
 	}
-	if pro.Block() != nil { //not new view proposal
-		if err := vld.verifyBlockToVote(blk); err != nil {
-			return err
-		}
+	if err := vld.verifyBlockToVote(blk); err != nil {
+		return err
 	}
 
 	quota := vld.resources.RoleStore.GetValidatorQuota(vld.resources.Signer.PublicKey())
-	vote := pro.Vote(vld.resources.Signer, quota/float64(vld.resources.RoleStore.GetWindowSize()))
+	vote := blk.Vote(vld.resources.Signer, quota/float64(vld.resources.RoleStore.GetWindowSize()))
 	if !PreserveTxFlag {
 		vld.resources.TxPool.SetTxsPending(blk.Transactions())
 	}
-	vld.resources.MsgSvc.SendVote(pro.Proposer(), vote)
+	vld.resources.MsgSvc.SendVote(blk.Proposer(), vote)
 	logger.I().Infow("voted proposal",
 		"view", vote.View(),
 		"proposer", proposer,
 		"height", blk.Height(),
-		"qc", vld.driver.qcRefHeight(pro.QuorumCert()),
+		"qc", vld.driver.qcRefHeight(blk.QuorumCert()),
 		"quota", quota/float64(vld.resources.RoleStore.GetWindowSize()),
 	)
 
@@ -356,7 +351,7 @@ func (vld *validator) onReceiveQC(qc *core.QuorumCert) error {
 		return err
 	}
 	if _, err := vld.syncBlockByHash(qc.Proposer(), qc.BlockHash()); err != nil {
-		return err
+		return fmt.Errorf("sync block failed, %w", err)
 	}
 	vld.state.setQC(qc)
 

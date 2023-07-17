@@ -23,8 +23,9 @@ var (
 
 // Block type
 type Block struct {
-	data      *pb.Block
-	signature *Signature
+	data       *pb.Block
+	quorumCert *QuorumCert
+	signature  *Signature
 }
 
 var _ json.Marshaler = (*Block)(nil)
@@ -39,6 +40,7 @@ func NewBlock() *Block {
 // Sum returns sha3 sum of block
 func (blk *Block) Sum() []byte {
 	h := sha3.New256()
+	binary.Write(h, binary.BigEndian, blk.data.View)
 	binary.Write(h, binary.BigEndian, blk.data.Height)
 	h.Write(blk.data.ParentHash)
 	binary.Write(h, binary.BigEndian, blk.data.ExecHeight)
@@ -46,6 +48,10 @@ func (blk *Block) Sum() []byte {
 	binary.Write(h, binary.BigEndian, blk.data.Timestamp)
 	for _, txHash := range blk.data.Transactions {
 		h.Write(txHash)
+	}
+	if blk.data.QuorumCert != nil {
+		binary.Write(h, binary.BigEndian, blk.data.QuorumCert.View)
+		h.Write(blk.data.QuorumCert.BlockHash) // qc reference block hash
 	}
 	return h.Sum(nil)
 }
@@ -57,6 +63,11 @@ func (blk *Block) Validate(rs RoleStore) error {
 	}
 	if !bytes.Equal(blk.Sum(), blk.Hash()) {
 		return ErrInvalidBlockHash
+	}
+	if blk.quorumCert != nil { // skip quorum cert validation for genesis block
+		if err := blk.quorumCert.Validate(rs); err != nil {
+			return err
+		}
 	}
 	sig, err := newSignature(blk.data.Signature)
 	if err != nil {
@@ -71,14 +82,35 @@ func (blk *Block) Validate(rs RoleStore) error {
 	return nil
 }
 
+// Vote creates a vote for block
+func (blk *Block) Vote(signer Signer, quota float64) *Vote {
+	vote := &pb.Vote{View: blk.data.View, Quota: quota, BlockHash: blk.Hash()}
+	hash := appendFloat64(appendUint32(vote.BlockHash, vote.View), vote.Quota)
+	vote.Signature = signer.Sign(hash).data
+	res := NewVote()
+	res.setData(vote)
+	return res
+}
+
 func (blk *Block) setData(data *pb.Block) error {
 	blk.data = data
+	if blk.data.QuorumCert != nil { // every block contains qc except for genesis
+		blk.quorumCert = NewQuorumCert()
+		if err := blk.quorumCert.setData(blk.data.QuorumCert); err != nil {
+			return err
+		}
+	}
 	sig, err := newSignature(blk.data.Signature)
 	if err != nil {
 		return err
 	}
 	blk.signature = sig
 	return nil
+}
+
+func (blk *Block) SetView(val uint32) *Block {
+	blk.data.View = val
+	return blk
 }
 
 func (blk *Block) SetHeight(val uint64) *Block {
@@ -111,6 +143,12 @@ func (blk *Block) SetTransactions(val [][]byte) *Block {
 	return blk
 }
 
+func (blk *Block) SetQuorumCert(val *QuorumCert) *Block {
+	blk.quorumCert = val
+	blk.data.QuorumCert = val.data
+	return blk
+}
+
 func (blk *Block) Sign(signer Signer) *Block {
 	blk.data.Hash = blk.Sum()
 	blk.signature = signer.Sign(blk.data.Hash)
@@ -118,14 +156,16 @@ func (blk *Block) Sign(signer Signer) *Block {
 	return blk
 }
 
-func (blk *Block) Hash() []byte           { return blk.data.Hash }
-func (blk *Block) Height() uint64         { return blk.data.Height }
-func (blk *Block) ParentHash() []byte     { return blk.data.ParentHash }
-func (blk *Block) ExecHeight() uint64     { return blk.data.ExecHeight }
-func (blk *Block) MerkleRoot() []byte     { return blk.data.MerkleRoot }
-func (blk *Block) Timestamp() int64       { return blk.data.Timestamp }
-func (blk *Block) Transactions() [][]byte { return blk.data.Transactions }
-func (blk *Block) Proposer() *PublicKey   { return blk.signature.pubKey }
+func (blk *Block) Hash() []byte            { return blk.data.Hash }
+func (blk *Block) View() uint32            { return blk.data.View }
+func (blk *Block) Height() uint64          { return blk.data.Height }
+func (blk *Block) ParentHash() []byte      { return blk.data.ParentHash }
+func (blk *Block) ExecHeight() uint64      { return blk.data.ExecHeight }
+func (blk *Block) MerkleRoot() []byte      { return blk.data.MerkleRoot }
+func (blk *Block) Timestamp() int64        { return blk.data.Timestamp }
+func (blk *Block) Transactions() [][]byte  { return blk.data.Transactions }
+func (blk *Block) QuorumCert() *QuorumCert { return blk.quorumCert }
+func (blk *Block) Proposer() *PublicKey    { return blk.signature.pubKey }
 
 // Marshal encodes block as bytes
 func (blk *Block) Marshal() ([]byte, error) {

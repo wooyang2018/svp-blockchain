@@ -150,9 +150,6 @@ func AddCmdFlags(cmd *exec.Cmd, config *node.Config) {
 	cmd.Args = append(cmd.Args, "--"+consensus.FlagLeaderTimeout,
 		config.ConsensusConfig.LeaderTimeout.String())
 
-	cmd.Args = append(cmd.Args, "--"+consensus.FlagDeltaTime,
-		config.ConsensusConfig.DeltaTime.String())
-
 	cmd.Args = append(cmd.Args, "--"+consensus.FlagBenchmarkPath,
 		config.ConsensusConfig.BenchmarkPath)
 }

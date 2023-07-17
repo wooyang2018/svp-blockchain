@@ -75,8 +75,8 @@ func (svc *MsgService) SubscribeTxList(buffer int) *emitter.Subscription {
 	return svc.txListEmitter.Subscribe(buffer)
 }
 
-func (svc *MsgService) BroadcastProposal(pro *core.Proposal) error {
-	data, err := pro.Marshal()
+func (svc *MsgService) BroadcastProposal(blk *core.Block) error {
+	data, err := blk.Marshal()
 	if err != nil {
 		return err
 	}
@@ -206,12 +206,12 @@ func (svc *MsgService) listenPeer(peer *Peer) {
 }
 
 func (svc *MsgService) onReceiveProposal(peer *Peer, data []byte) {
-	pro := core.NewProposal()
-	if err := pro.Unmarshal(data); err != nil {
+	blk := core.NewBlock()
+	if err := blk.Unmarshal(data); err != nil {
 		logger.I().Errorw("msg service receive proposal failed", "error", err)
 		return
 	}
-	svc.proposalEmitter.Emit(pro)
+	svc.proposalEmitter.Emit(blk)
 }
 
 func (svc *MsgService) onReceiveVote(peer *Peer, data []byte) {

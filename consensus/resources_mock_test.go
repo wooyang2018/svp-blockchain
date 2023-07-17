@@ -136,7 +136,7 @@ type MockMsgService struct {
 
 var _ MsgService = (*MockMsgService)(nil)
 
-func (m *MockMsgService) BroadcastProposal(blk *core.Proposal) error {
+func (m *MockMsgService) BroadcastProposal(blk *core.Block) error {
 	args := m.Called(blk)
 	return args.Error(0)
 }

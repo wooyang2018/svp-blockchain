@@ -116,7 +116,8 @@ func (cons *Consensus) setupStatus(exec *core.Block, leaf *core.Block, qc *core.
 	cons.status.setQCHigh(qc)
 	// proposer of q0 may not be leader, but it doesn't matter
 	cons.status.setView(qc.View())
-	cons.status.setLeaderIndex(uint32(cons.resources.RoleStore.GetValidatorIndex(qc.Proposer())))
+	leaderIdx := uint32(cons.resources.RoleStore.GetValidatorIndex(qc.Proposer()))
+	cons.status.setLeaderIndex(leaderIdx)
 }
 
 func (cons *Consensus) setupDriver() {
@@ -140,7 +141,7 @@ func (cons *Consensus) setupWindow(qc *core.QuorumCert) {
 	cur := qc
 	for i := len(quotas) - 1; i >= 0; i-- {
 		if cur != nil {
-			quotas[i] = cur.Quota()
+			quotas[i] = cur.SumQuota()
 			block := cons.driver.getBlockByHash(cur.BlockHash())
 			cur = cons.driver.getQCByBlockHash(block.ParentHash())
 		} else {

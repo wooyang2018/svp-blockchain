@@ -47,9 +47,9 @@ func (hc *checker) getLivenessWaitTime() time.Duration {
 	if !hc.cluster.CheckRotation {
 		return 10 * time.Second
 	}
-	d := hc.LeaderTimeout() + 3*hc.DeltaTime()
+	d := 20 * time.Second
 	if hc.majority {
-		d += time.Duration(hc.getFaultyCount()) * d
+		d += time.Duration(hc.getFaultyCount()) * hc.LeaderTimeout()
 	}
 	return d
 }

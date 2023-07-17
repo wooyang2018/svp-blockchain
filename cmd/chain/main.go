@@ -78,10 +78,6 @@ func init() {
 		consensus.FlagLeaderTimeout, nodeConfig.ConsensusConfig.LeaderTimeout,
 		"leader must create next qc in this duration")
 
-	rootCmd.Flags().DurationVar(&nodeConfig.ConsensusConfig.DeltaTime,
-		consensus.FlagDeltaTime, nodeConfig.ConsensusConfig.DeltaTime,
-		"upper bound of message latency in a synchronous network")
-
 	rootCmd.Flags().StringVar(&nodeConfig.ConsensusConfig.BenchmarkPath,
 		consensus.FlagBenchmarkPath, nodeConfig.ConsensusConfig.BenchmarkPath,
 		"path to save the benchmark log of the consensus algorithm")

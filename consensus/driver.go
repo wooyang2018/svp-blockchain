@@ -154,27 +154,21 @@ func (d *driver) updateQCHigh(qc *core.QuorumCert) {
 	blk := d.getBlockByHash(qc.BlockHash())
 	if d.cmpQCPriority(qc, d.status.getQCHigh()) == 1 &&
 		d.cmpBlockHeight(blk, d.status.getBExec()) == 1 {
+		blk0 := d.getBlockByHash(blk.ParentHash())
+		if blk0 != nil && blk0.View() == blk0.View() {
+			d.commitRecursive(blk0)
+		}
 		d.resources.Storage.StoreBlock(blk)
 		d.resources.Storage.StoreQC(qc)
 		d.status.setQCHigh(qc)
 		d.status.setBLeaf(blk)
-		d.status.updateWindow(qc.Quota(), blk.Height())
+		d.status.updateWindow(qc.SumQuota(), blk.Height())
 
 		quotas, _ := d.status.getWindow()
-		acc := 0.0
-		for i := len(quotas) - 1; i >= 0 && blk != nil; i-- {
-			acc += quotas[i]
-			if acc > d.resources.RoleStore.MajorityQuotaCount() {
-				d.commitRecursive(blk)
-				break
-			}
-			blk = d.getBlockByHash(blk.ParentHash())
-		}
-
 		logger.I().Infow("updated high qc",
 			"view", qc.View(),
 			"qc", d.qcRefHeight(qc),
-			"quota", qc.Quota(),
+			"quota", qc.SumQuota(),
 			"window", quotas)
 	}
 }

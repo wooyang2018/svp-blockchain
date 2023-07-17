@@ -45,7 +45,7 @@ type Storage interface {
 var _ Storage = (*storage.Storage)(nil)
 
 type MsgService interface {
-	BroadcastProposal(blk *core.Proposal) error
+	BroadcastProposal(blk *core.Block) error
 	BroadcastQC(qc *core.QuorumCert) error
 	SendVote(pubKey *core.PublicKey, vote *core.Vote) error
 	RequestBlock(pubKey *core.PublicKey, hash []byte) (*core.Block, error)

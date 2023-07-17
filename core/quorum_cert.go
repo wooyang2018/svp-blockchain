@@ -25,6 +25,7 @@ var (
 // QuorumCert type
 type QuorumCert struct {
 	data      *pb.QuorumCert
+	quota     float64
 	sigs      sigList
 	signature *Signature
 }
@@ -42,14 +43,19 @@ func (qc *QuorumCert) Validate(rs RoleStore) error {
 	if len(qc.sigs) < rs.MajorityValidatorCount() {
 		return ErrNotEnoughSig
 	}
-	if qc.sigs.hasDuplicate() {
-		return ErrDuplicateSig
-	}
-	if qc.sigs.hasInvalidValidator(rs) {
-		return ErrInvalidValidator
-	}
-	if qc.sigs.hasInvalidSig(appendUint32(qc.data.BlockHash, qc.data.View)) {
-		return ErrInvalidSig
+	dmap := make(map[string]struct{}, len(qc.sigs))
+	for i, sig := range qc.sigs {
+		key := sig.PublicKey().String()
+		if _, found := dmap[key]; found {
+			return ErrDuplicateSig
+		}
+		dmap[key] = struct{}{}
+		if !rs.IsValidator(sig.PublicKey()) {
+			return ErrInvalidValidator
+		}
+		if !sig.Verify(appendFloat64(appendUint32(qc.data.BlockHash, qc.data.View), qc.data.Quotas[i])) {
+			return ErrInvalidSig
+		}
 	}
 	sig, err := newSignature(qc.data.Signature)
 	if err != nil {
@@ -58,7 +64,7 @@ func (qc *QuorumCert) Validate(rs RoleStore) error {
 	if !rs.IsValidator(sig.PublicKey()) {
 		return ErrInvalidValidator
 	}
-	if !sig.Verify(appendFloat64(appendUint32(qc.data.BlockHash, qc.data.View), qc.data.Quota)) {
+	if !sig.Verify(appendUint32(qc.data.BlockHash, qc.data.View)) {
 		return ErrInvalidSig
 	}
 	return nil
@@ -66,43 +72,48 @@ func (qc *QuorumCert) Validate(rs RoleStore) error {
 
 func (qc *QuorumCert) setData(data *pb.QuorumCert) error {
 	qc.data = data
-	signature, err := newSignature(qc.data.Signature)
-	if err != nil {
-		return err
+	for _, v := range qc.data.Quotas {
+		qc.quota += v
 	}
-	qc.signature = signature
-
 	sigs, err := newSigList(qc.data.Signatures)
 	if err != nil {
 		return err
 	}
 	qc.sigs = sigs
+	signature, err := newSignature(qc.data.Signature)
+	if err != nil {
+		return err
+	}
+	qc.signature = signature
 	return nil
 }
 
 func (qc *QuorumCert) Build(signer Signer, votes []*Vote) *QuorumCert {
+	qc.data.Quotas = make([]float64, len(votes))
 	qc.data.Signatures = make([]*pb.Signature, len(votes))
 	qc.sigs = make(sigList, len(votes))
 	for i, vote := range votes {
 		if qc.data.BlockHash == nil {
-			qc.data.BlockHash = vote.data.BlockHash
 			qc.data.View = vote.data.View
+			qc.data.BlockHash = vote.data.BlockHash
 		}
-		qc.data.Quota += vote.data.Quota
+		qc.quota += vote.data.Quota
+		qc.data.Quotas[i] = vote.data.Quota
 		qc.data.Signatures[i] = vote.data.Signature
 		qc.sigs[i] = &Signature{
 			data:   vote.data.Signature,
 			pubKey: vote.voter.pubKey,
 		}
 	}
-	qc.signature = signer.Sign(appendFloat64(appendUint32(qc.data.BlockHash, qc.data.View), qc.data.Quota))
+	qc.signature = signer.Sign(appendUint32(qc.data.BlockHash, qc.data.View))
 	qc.data.Signature = qc.signature.data
 	return qc
 }
 
 func (qc *QuorumCert) View() uint32             { return qc.data.View }
-func (qc *QuorumCert) Quota() float64           { return qc.data.Quota }
+func (qc *QuorumCert) SumQuota() float64        { return qc.quota }
 func (qc *QuorumCert) BlockHash() []byte        { return qc.data.BlockHash }
+func (qc *QuorumCert) Quotas() []float64        { return qc.data.Quotas }
 func (qc *QuorumCert) Signatures() []*Signature { return qc.sigs }
 func (qc *QuorumCert) Proposer() *PublicKey     { return qc.signature.pubKey }
 

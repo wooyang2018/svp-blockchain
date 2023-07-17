@@ -27,9 +27,9 @@ func TestQuorumCert(t *testing.T) {
 	vs.On("IsValidator", mock.Anything).Return(false)
 
 	votes := make([]*Vote, len(privKeys))
-	pro := newProposal(privKeys[1])
+	blk := newBlock(privKeys[1])
 	for i, priv := range privKeys {
-		votes[i] = pro.Vote(priv, 1)
+		votes[i] = blk.Vote(priv, 1)
 	}
 
 	qc := NewQuorumCert().Build(privKeys[1], []*Vote{votes[3], votes[2], votes[1]})
@@ -65,14 +65,15 @@ func TestQuorumCert(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			asrt := assert.New(t)
-
 			qc := NewQuorumCert()
+
 			err := qc.Unmarshal(tt.b)
 			if tt.unmarshalErr {
 				asrt.Error(err)
 				return
 			}
 			asrt.NoError(err)
+
 			err = qc.Validate(vs)
 			if tt.validateErr {
 				asrt.Error(err)

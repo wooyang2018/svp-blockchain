@@ -120,11 +120,6 @@ func (hc *checker) LeaderTimeout() time.Duration {
 	return config.ConsensusConfig.LeaderTimeout
 }
 
-func (hc *checker) DeltaTime() time.Duration {
-	config := hc.cluster.NodeConfig()
-	return config.ConsensusConfig.DeltaTime
-}
-
 func (hc *checker) ViewWidth() time.Duration {
 	config := hc.cluster.NodeConfig()
 	return config.ConsensusConfig.ViewWidth

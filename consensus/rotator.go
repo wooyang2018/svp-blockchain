@@ -54,11 +54,10 @@ func (d *driver) onViewTimeout() {
 
 func (d *driver) changeView() {
 	d.status.setViewChange(1)
-	d.sleepTime(d.config.DeltaTime)
 	if err := d.resources.MsgSvc.BroadcastQC(d.status.getQCHigh()); err != nil {
 		logger.I().Errorf("broadcast qc failed, %+v", err)
 	}
-	d.sleepTime(d.config.DeltaTime * 2)
+	d.sleepTime(2 * time.Second)
 	if d.status.getViewChange() == 1 {
 		d.status.setViewStart()
 		d.status.setView(d.status.getView() + 1)
@@ -81,40 +80,47 @@ func (d *driver) newViewProposal() {
 	}
 
 	qcHigh := d.status.getQCHigh()
-	pro := core.NewProposal().
-		SetQuorumCert(qcHigh).
+	parent := d.getBlockByHash(qcHigh.BlockHash())
+	blk := core.NewBlock().
 		SetView(d.status.getView()).
+		SetParentHash(parent.Hash()).
+		SetHeight(parent.Height() + 1).
+		SetExecHeight(d.resources.Storage.GetBlockHeight()).
+		SetMerkleRoot(d.resources.Storage.GetMerkleRoot()).
+		SetTimestamp(time.Now().UnixNano()).
+		SetQuorumCert(qcHigh).
 		Sign(d.resources.Signer)
-	blk := d.getBlockByHash(qcHigh.BlockHash())
+
+	d.state.setBlock(blk)
 	d.status.setBLeaf(blk)
-	d.status.startProposal(pro, blk)
-	d.onNewProposal(pro)
-	if err := d.resources.MsgSvc.BroadcastProposal(pro); err != nil {
+	d.status.startProposal(blk)
+	d.onNewProposal(blk)
+	if err := d.resources.MsgSvc.BroadcastProposal(blk); err != nil {
 		logger.I().Errorf("broadcast proposal failed, %+v", err)
 	}
 
 	logger.I().Infow("proposed new view proposal",
-		"view", pro.View(),
-		"qc", d.qcRefHeight(pro.QuorumCert()))
+		"view", blk.View(),
+		"qc", d.qcRefHeight(blk.QuorumCert()))
 	quota := d.resources.RoleStore.GetValidatorQuota(d.resources.Signer.PublicKey())
-	vote := pro.Vote(d.resources.Signer, quota/float64(d.resources.RoleStore.GetWindowSize()))
+	vote := blk.Vote(d.resources.Signer, quota/float64(d.resources.RoleStore.GetWindowSize()))
 	d.onReceiveVote(vote)
-	d.updateQCHigh(pro.QuorumCert())
+	d.updateQCHigh(blk.QuorumCert())
 }
 
-func (d *driver) onNewProposal(pro *core.Proposal) {
-	proposer := uint32(d.resources.RoleStore.GetValidatorIndex(pro.Proposer()))
+func (d *driver) onNewProposal(blk *core.Block) {
+	proposer := uint32(d.resources.RoleStore.GetValidatorIndex(blk.Proposer()))
 	var ltreset, vtreset bool
-	if d.isNormalApproval(pro.View(), proposer) {
+	if d.isNormalApproval(blk.View(), proposer) {
 		ltreset = true
 		logger.I().Debugw("refreshed leader",
-			"view", pro.View(),
+			"view", blk.View(),
 			"leader", proposer)
 	}
-	if d.isNewViewApproval(pro.View(), proposer) {
+	if d.isNewViewApproval(blk.View(), proposer) {
 		ltreset = true
 		vtreset = true
-		d.approveViewLeader(pro.View(), proposer)
+		d.approveViewLeader(blk.View(), proposer)
 	}
 	if ltreset {
 		drainStopTimer(d.leaderTimer)

@@ -71,8 +71,7 @@ type status struct {
 	viewStart   int64 // start timestamp of current view
 	viewChange  int32 // -1:failed ; 0:success ; 1:ongoing
 
-	proposal   *core.Proposal
-	block      *core.Block
+	proposal   *core.Block
 	votes      map[string]*core.Vote
 	quotaCount float64
 	window     *Window
@@ -123,12 +122,11 @@ func (s *status) updateWindow(quota float64, height uint64) {
 	s.window.update(quota, height)
 }
 
-func (s *status) startProposal(pro *core.Proposal, blk *core.Block) {
+func (s *status) startProposal(blk *core.Block) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	s.proposal = pro
-	s.block = blk
+	s.proposal = blk
 	s.votes = make(map[string]*core.Vote)
 	s.quotaCount = 0
 }
@@ -138,7 +136,6 @@ func (s *status) endProposal() {
 	defer s.mtx.Unlock()
 
 	s.proposal = nil
-	s.block = nil
 	s.votes = nil
 	s.quotaCount = 0
 }
@@ -150,7 +147,7 @@ func (s *status) addVote(vote *core.Vote) error {
 	if s.proposal == nil {
 		return fmt.Errorf("no proposal in progress")
 	}
-	if !bytes.Equal(s.block.Hash(), vote.BlockHash()) {
+	if !bytes.Equal(s.proposal.Hash(), vote.BlockHash()) {
 		return fmt.Errorf("not same block")
 	}
 	if s.proposal.View() != vote.View() {

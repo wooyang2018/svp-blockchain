@@ -141,30 +141,9 @@ func newSigList(pbsigs []*pb.Signature) (sigList, error) {
 	return sigs, nil
 }
 
-func (sigs sigList) hasDuplicate() bool {
-	dmap := make(map[string]struct{}, len(sigs))
-	for _, sig := range sigs {
-		key := sig.PublicKey().String()
-		if _, found := dmap[key]; found {
-			return true
-		}
-		dmap[key] = struct{}{}
-	}
-	return false
-}
-
 func (sigs sigList) hasInvalidValidator(rs RoleStore) bool {
 	for _, sig := range sigs {
 		if !rs.IsValidator(sig.PublicKey()) {
-			return true
-		}
-	}
-	return false
-}
-
-func (sigs sigList) hasInvalidSig(msg []byte) bool {
-	for _, sig := range sigs {
-		if !sig.Verify(msg) {
 			return true
 		}
 	}

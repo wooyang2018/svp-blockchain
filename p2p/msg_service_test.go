@@ -48,17 +48,17 @@ func setupMsgServiceWithLoopBackPeers() (*MsgService, [][]byte, []*Peer) {
 	return svc, raws, peers
 }
 
-func newTestProposal(priv core.Signer) (*core.Vote, *core.QuorumCert, *core.Proposal) {
-	vote := core.NewProposal().
-		SetBlock(core.NewBlock().SetHeight(9).Sign(priv)).
+func newTestProposal(priv core.Signer) (*core.Vote, *core.QuorumCert, *core.Block) {
+	blk0 := core.NewBlock().
+		SetHeight(9).
 		Sign(priv).
 		Vote(priv, 1)
-	qc := core.NewQuorumCert().Build(priv, []*core.Vote{vote})
-	pro := core.NewProposal().
-		SetBlock(core.NewBlock().SetHeight(10).Sign(priv)).
+	qc := core.NewQuorumCert().Build(priv, []*core.Vote{blk0})
+	blk := core.NewBlock().
+		SetHeight(10).
 		SetQuorumCert(qc).
 		Sign(priv)
-	return vote, qc, pro
+	return blk0, qc, blk
 }
 
 func TestMsgService_BroadcastProposal(t *testing.T) {
@@ -66,17 +66,17 @@ func TestMsgService_BroadcastProposal(t *testing.T) {
 
 	svc, raws, _ := setupMsgServiceWithLoopBackPeers()
 	sub := svc.SubscribeProposal(5)
-	var recvBlk *core.Proposal
+	var recvBlk *core.Block
 	var recvCount int
 	go func() {
 		for e := range sub.Events() {
 			recvCount++
-			recvBlk = e.(*core.Proposal)
+			recvBlk = e.(*core.Block)
 		}
 	}()
 
-	_, _, pro := newTestProposal(core.GenerateKey(nil))
-	err := svc.BroadcastProposal(pro)
+	_, _, blk := newTestProposal(core.GenerateKey(nil))
+	err := svc.BroadcastProposal(blk)
 
 	if !asrt.NoError(err) {
 		return
@@ -91,7 +91,7 @@ func TestMsgService_BroadcastProposal(t *testing.T) {
 
 	asrt.Equal(2, recvCount)
 	if asrt.NotNil(recvBlk) {
-		asrt.Equal(pro.Block().Height(), recvBlk.Block().Height())
+		asrt.Equal(blk.Height(), recvBlk.Height())
 	}
 }
 
@@ -197,11 +197,11 @@ func TestMsgService_BroadcastTxList(t *testing.T) {
 func TestMsgService_RequestBlock(t *testing.T) {
 	asrt := assert.New(t)
 
-	_, _, pro := newTestProposal(core.GenerateKey(nil))
+	_, _, blk := newTestProposal(core.GenerateKey(nil))
 	blkReqHandler := &BlockReqHandler{
 		GetBlock: func(hash []byte) (*core.Block, error) {
-			if bytes.Equal(pro.Hash(), hash) {
-				return pro.Block(), nil
+			if bytes.Equal(blk.Hash(), hash) {
+				return blk, nil
 			}
 			return nil, errors.New("block not found")
 		},
@@ -209,9 +209,9 @@ func TestMsgService_RequestBlock(t *testing.T) {
 	svc, _, peers := setupMsgServiceWithLoopBackPeers()
 	svc.SetReqHandler(blkReqHandler)
 
-	recvBlk, err := svc.RequestBlock(peers[0].PublicKey(), pro.Hash())
+	recvBlk, err := svc.RequestBlock(peers[0].PublicKey(), blk.Hash())
 	if asrt.NoError(err) && asrt.NotNil(recvBlk) {
-		asrt.Equal(pro.Block().Height(), recvBlk.Height())
+		asrt.Equal(blk.Height(), recvBlk.Height())
 	}
 
 	_, err = svc.RequestBlock(peers[0].PublicKey(), []byte{1})

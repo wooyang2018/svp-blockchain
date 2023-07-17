@@ -36,12 +36,11 @@ func (hc *checker) checkRotation() error {
 }
 
 func (hc *checker) getRotationTimeout() time.Duration {
-	viewT := hc.ViewWidth() + 3*hc.DeltaTime()
+	d := hc.ViewWidth() + 10*time.Second
 	if hc.majority {
-		d := hc.LeaderTimeout() + 3*hc.DeltaTime()
-		viewT += time.Duration(hc.getFaultyCount()) * d
+		d += time.Duration(hc.getFaultyCount()) * hc.LeaderTimeout()
 	}
-	return viewT
+	return d
 }
 
 func (hc *checker) updateViewChangeStatus(last, changed map[int]*consensus.Status) error {

@@ -19,8 +19,11 @@ func TestVote(t *testing.T) {
 	proposer := GenerateKey(nil)
 	validator := GenerateKey(nil)
 
-	pro := newProposal(proposer)
-	vote = pro.Vote(validator, 1)
+	vs := new(MockValidatorStore)
+	vs.On("IsValidator", mock.Anything).Return(true)
+
+	blk := newBlock(proposer)
+	vote = blk.Vote(validator, 1)
 	vOk, _ := vote.Marshal()
 
 	vote.data.BlockHash = []byte("invalid hash")
@@ -41,17 +44,14 @@ func TestVote(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			asrt := assert.New(t)
-
 			vote := NewVote()
+
 			err := vote.Unmarshal(tt.b)
 			if tt.unmarshalErr {
 				asrt.Error(err)
 				return
 			}
 			asrt.NoError(err)
-
-			vs := new(MockValidatorStore)
-			vs.On("IsValidator", mock.Anything).Return(true)
 
 			err = vote.Validate(vs)
 			if tt.validateErr {

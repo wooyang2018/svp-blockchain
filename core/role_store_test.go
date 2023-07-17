@@ -70,10 +70,10 @@ func TestMajorityCount(t *testing.T) {
 		want int
 	}{
 		{"single node", args{1}, 1},
-		{"exact factor", args{2}, 2},
-		{"exact factor", args{3}, 2},
-		{"middle", args{4}, 3},
-		{"middle", args{5}, 3},
+		{"exact factor", args{4}, 3},  // n = 3f+1, f=1
+		{"exact factor", args{10}, 7}, // f=3, m=10-3
+		{"middle", args{12}, 9},       // f=3, m=12-3
+		{"middle", args{14}, 10},      // f=4, m=14-4
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
