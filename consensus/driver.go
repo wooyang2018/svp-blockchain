@@ -79,6 +79,7 @@ func (d *driver) getBlockByHash(hash []byte) *core.Block {
 	return blk
 }
 
+// Deprecated
 func (d *driver) getQCByBlockHash(blkHash []byte) *core.QuorumCert {
 	qc := d.state.getQC(blkHash)
 	if qc != nil {
@@ -128,6 +129,40 @@ func (d *driver) cmpQCPriority(qc1, qc2 *core.QuorumCert) int {
 	return 0
 }
 
+func (d *driver) createProposal(view uint32, parent *core.Block, qcHigh *core.QuorumCert) *core.Block {
+	var txs [][]byte
+	if PreserveTxFlag {
+		txs = d.resources.TxPool.GetTxsFromQueue(d.config.BlockTxLimit)
+	} else {
+		txs = d.resources.TxPool.PopTxsFromQueue(d.config.BlockTxLimit)
+	}
+
+	blk := core.NewBlock().
+		SetView(view).
+		SetParentHash(parent.Hash()).
+		SetHeight(parent.Height() + 1).
+		SetTransactions(txs).
+		SetExecHeight(d.resources.Storage.GetBlockHeight()).
+		SetMerkleRoot(d.resources.Storage.GetMerkleRoot()).
+		SetTimestamp(time.Now().UnixNano()).
+		SetQuorumCert(qcHigh).
+		Sign(d.resources.Signer)
+
+	d.state.setBlock(blk)
+	d.status.setBLeaf(blk)
+	d.status.startProposal(blk)
+	d.onNewProposal(blk)
+
+	logger.I().Infow("proposed proposal",
+		"view", blk.View(),
+		"height", blk.Height(),
+		"exec", blk.ExecHeight(),
+		"qc", d.qcRefHeight(blk.QuorumCert()),
+		"txs", len(blk.Transactions()))
+
+	return blk
+}
+
 // onReceiveVote is called when received a vote
 func (d *driver) onReceiveVote(vote *core.Vote) error {
 	if err := d.status.addVote(vote); err != nil {
@@ -142,7 +177,6 @@ func (d *driver) onReceiveVote(vote *core.Vote) error {
 		d.status.getQuotaCount() > d.resources.RoleStore.MajorityQuotaCount() {
 		qc := core.NewQuorumCert().Build(d.resources.Signer, d.status.getVotes())
 		d.status.endProposal()
-		d.state.setQC(qc)
 		d.updateQCHigh(qc)
 		d.proposeCh <- struct{}{} // trigger propose rule
 	}
@@ -154,22 +188,23 @@ func (d *driver) updateQCHigh(qc *core.QuorumCert) {
 	blk := d.getBlockByHash(qc.BlockHash())
 	if d.cmpQCPriority(qc, d.status.getQCHigh()) == 1 &&
 		d.cmpBlockHeight(blk, d.status.getBExec()) == 1 {
-		blk0 := d.getBlockByHash(blk.ParentHash())
-		if blk0 != nil && blk0.View() == blk0.View() {
-			d.commitRecursive(blk0)
-		}
-		d.resources.Storage.StoreBlock(blk)
-		d.resources.Storage.StoreQC(qc)
+		d.state.setQC(qc)
 		d.status.setQCHigh(qc)
 		d.status.setBLeaf(blk)
 		d.status.updateWindow(qc.SumQuota(), blk.Height())
 
-		quotas, _ := d.status.getWindow()
+		d.resources.Storage.StoreBlock(blk)
+		d.resources.Storage.StoreQC(qc)
+		blk0 := d.getBlockByHash(blk.ParentHash())
+		if blk0 != nil && blk0.View() == blk0.View() {
+			d.commitRecursive(blk0)
+		}
+
 		logger.I().Infow("updated high qc",
 			"view", qc.View(),
 			"qc", d.qcRefHeight(qc),
 			"quota", qc.SumQuota(),
-			"window", quotas)
+			"window", d.status.getWindow())
 	}
 }
 

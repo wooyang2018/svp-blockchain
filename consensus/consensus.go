@@ -138,19 +138,17 @@ func (cons *Consensus) setupDriver() {
 
 func (cons *Consensus) setupWindow(qc *core.QuorumCert) {
 	quotas := make([]float64, cons.resources.RoleStore.GetWindowSize())
-	cur := qc
+	height := cons.driver.getBlockByHash(qc.BlockHash()).Height()
 	for i := len(quotas) - 1; i >= 0; i-- {
-		if cur != nil {
-			quotas[i] = cur.SumQuota()
-			block := cons.driver.getBlockByHash(cur.BlockHash())
-			cur = cons.driver.getQCByBlockHash(block.ParentHash())
+		if qc != nil {
+			quotas[i] = qc.SumQuota()
+			qc = cons.driver.getBlockByHash(qc.BlockHash()).QuorumCert()
 		} else {
 			// ensure satisfaction of propose rule when height < window size
 			quotas[i] = cons.resources.RoleStore.MajorityQuotaCount()
 			break
 		}
 	}
-	height := cons.driver.getBlockByHash(qc.BlockHash()).Height()
 	cons.status.setWindow(quotas, height)
 	logger.I().Infow("setup stake window", "quotas", quotas, "height", height)
 }

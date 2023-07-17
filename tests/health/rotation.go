@@ -4,6 +4,7 @@
 package health
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -28,7 +29,7 @@ func (hc *checker) checkRotation() error {
 			return nil
 
 		case <-timeout.C:
-			return fmt.Errorf("cluster failed to rotate leader")
+			return errors.New("cluster failed to rotate leader")
 
 		case <-time.After(1 * time.Second):
 		}
@@ -85,5 +86,5 @@ func (hc *checker) shouldEqualLeader(changedView map[int]*consensus.Status) erro
 		}
 	}
 	fmt.Printf("View status map[leader]count: %v\n", equalCount)
-	return fmt.Errorf("inconsistant view change")
+	return errors.New("inconsistent view change")
 }

@@ -109,7 +109,7 @@ func (gns *genesis) proposalLoop() {
 
 		case e := <-sub.Events():
 			if err := gns.onReceiveProposal(e.(*core.Block)); err != nil {
-				logger.I().Errorf("receive proposal failed, %+v", err)
+				logger.I().Warnf("receive proposal failed, %+v", err)
 			}
 		}
 	}
@@ -126,7 +126,7 @@ func (gns *genesis) voteLoop() {
 
 		case e := <-sub.Events():
 			if err := gns.onReceiveVote(e.(*core.Vote)); err != nil {
-				logger.I().Errorf("receive vote failed, %+v", err)
+				logger.I().Warnf("receive vote failed, %+v", err)
 			}
 		}
 	}
@@ -143,7 +143,7 @@ func (gns *genesis) newViewLoop() {
 
 		case e := <-sub.Events():
 			if err := gns.onReceiveQC(e.(*core.QuorumCert)); err != nil {
-				logger.I().Errorf("receive new view failed, %+v", err)
+				logger.I().Warnf("receive qc failed, %+v", err)
 			}
 		}
 	}
@@ -158,13 +158,13 @@ func (gns *genesis) onReceiveProposal(blk *core.Block) error {
 		return gns.fetchGenesisBlockAndQC(blk.Proposer())
 	}
 	if !bytes.Equal(hashChainID(gns.chainID), blk.ParentHash()) {
-		return fmt.Errorf("different chain id")
+		return errors.New("different chain id")
 	}
 	if !gns.isLeader(blk.Proposer()) {
-		return fmt.Errorf("proposer is not leader")
+		return errors.New("proposer is not leader")
 	}
 	if len(blk.Transactions()) != 0 {
-		return fmt.Errorf("genesis block with txs")
+		return errors.New("genesis block with txs")
 	}
 	gns.setB0(blk)
 	logger.I().Info("got genesis block, voting...")
@@ -179,14 +179,14 @@ func (gns *genesis) fetchGenesisBlockAndQC(peer *core.PublicKey) error {
 		return err
 	}
 	if b0.Height() != 0 {
-		return fmt.Errorf("not genesis block")
+		return errors.New("not genesis block")
 	}
 	qc, err := gns.requestQC(peer, b0.Hash())
 	if err != nil {
 		return err
 	}
 	if !bytes.Equal(b0.Hash(), qc.BlockHash()) {
-		return fmt.Errorf("qc ref is not b0")
+		return errors.New("qc ref is not b0")
 	}
 	gns.setB0(b0)
 	gns.setQ0(qc)
@@ -266,10 +266,10 @@ func (gns *genesis) onReceiveQC(qc *core.QuorumCert) error {
 	}
 	b0 := gns.getB0()
 	if b0 == nil {
-		return fmt.Errorf("no received genesis block yet")
+		return errors.New("no received genesis block yet")
 	}
 	if !bytes.Equal(b0.Hash(), qc.BlockHash()) {
-		return fmt.Errorf("invalid qc ref")
+		return errors.New("invalid qc ref")
 	}
 	gns.acceptQC(qc)
 	return nil

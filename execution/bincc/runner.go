@@ -5,6 +5,7 @@ package bincc
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os/exec"
 	"time"
@@ -75,7 +76,7 @@ func (r *Runner) startCode(callType CallType) error {
 	logger.I().Warnf("start code error %f", err)
 	select {
 	case <-r.timer.C:
-		return fmt.Errorf("chaincode start timeout")
+		return errors.New("chaincode start timeout")
 	default:
 	}
 	time.Sleep(5 * time.Millisecond)
@@ -110,7 +111,7 @@ func (r *Runner) serveStateAndGetResult() ([]byte, error) {
 	for {
 		select {
 		case <-r.timer.C:
-			return nil, fmt.Errorf("chaincode call timeout")
+			return nil, errors.New("chaincode call timeout")
 		default:
 		}
 		b, err := r.rw.read()
@@ -119,11 +120,11 @@ func (r *Runner) serveStateAndGetResult() ([]byte, error) {
 		}
 		up := new(UpStream)
 		if err := json.Unmarshal(b, up); err != nil {
-			return nil, fmt.Errorf("cannot parse upstream data")
+			return nil, errors.New("cannot parse upstream data")
 		}
 		if up.Type == UpStreamResult {
 			if len(up.Error) > 0 {
-				return nil, fmt.Errorf(up.Error)
+				return nil, errors.New(up.Error)
 			}
 			return up.Value, nil
 		}

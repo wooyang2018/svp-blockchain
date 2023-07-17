@@ -5,7 +5,7 @@ package consensus
 
 import (
 	"bytes"
-	"fmt"
+	"errors"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -108,11 +108,11 @@ func (s *status) setWindow(quotas []float64, height uint64) {
 	}
 }
 
-func (s *status) getWindow() ([]float64, uint64) {
+func (s *status) getWindow() []float64 {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	return s.window.quotas, s.window.height
+	return s.window.quotas
 }
 
 func (s *status) updateWindow(quota float64, height uint64) {
@@ -145,17 +145,17 @@ func (s *status) addVote(vote *core.Vote) error {
 	defer s.mtx.Unlock()
 
 	if s.proposal == nil {
-		return fmt.Errorf("no proposal in progress")
+		return errors.New("no proposal in progress")
 	}
 	if !bytes.Equal(s.proposal.Hash(), vote.BlockHash()) {
-		return fmt.Errorf("not same block")
+		return errors.New("not same block")
 	}
 	if s.proposal.View() != vote.View() {
-		return fmt.Errorf("not same view")
+		return errors.New("not same view")
 	}
 	key := vote.Voter().String()
 	if _, found := s.votes[key]; found {
-		return fmt.Errorf("duplicate vote")
+		return errors.New("duplicate vote")
 	}
 	s.votes[key] = vote
 	s.quotaCount += vote.Quota()

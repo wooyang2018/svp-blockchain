@@ -6,6 +6,7 @@ package consensus
 import (
 	"bytes"
 	"encoding/base64"
+	"errors"
 	"fmt"
 
 	"github.com/wooyang2018/posv-blockchain/core"
@@ -57,7 +58,7 @@ func (vld *validator) proposalLoop() {
 
 		case e := <-sub.Events():
 			if err := vld.onReceiveProposal(e.(*core.Block)); err != nil {
-				logger.I().Errorf("receive proposal failed, %+v", err)
+				logger.I().Warnf("receive proposal failed, %+v", err)
 			}
 		}
 	}
@@ -74,7 +75,7 @@ func (vld *validator) voteLoop() {
 
 		case e := <-sub.Events():
 			if err := vld.onReceiveVote(e.(*core.Vote)); err != nil {
-				logger.I().Errorf("receive vote failed, %+v", err)
+				logger.I().Warnf("receive vote failed, %+v", err)
 			}
 		}
 	}
@@ -91,7 +92,7 @@ func (vld *validator) newViewLoop() {
 
 		case e := <-sub.Events():
 			if err := vld.onReceiveQC(e.(*core.QuorumCert)); err != nil {
-				logger.I().Errorf("receive qc failed, %+v", err)
+				logger.I().Warnf("receive qc failed, %+v", err)
 			}
 		}
 	}
@@ -101,11 +102,8 @@ func (vld *validator) onReceiveProposal(blk *core.Block) error {
 	if err := blk.Validate(vld.resources.RoleStore); err != nil {
 		return err
 	}
-
-	if blk.Height() != 0 {
-		if _, err := vld.syncBlockByHash(blk.Proposer(), blk.ParentHash()); err != nil {
-			return fmt.Errorf("sync block failed, %w", err)
-		}
+	if _, err := vld.getParentBlock(blk); err != nil { // fetch parent block recursively
+		return err
 	}
 
 	vld.state.setQC(blk.QuorumCert())
@@ -159,7 +157,7 @@ func (vld *validator) syncMissingCommittedBlocks(blk *core.Block) error {
 		return nil // already sync committed blocks
 	}
 	if blk.Height() == 0 {
-		return fmt.Errorf("missing genesis block")
+		return errors.New("missing genesis block")
 	}
 	qcRef := vld.driver.getBlockByHash(blk.ParentHash())
 	if qcRef == nil {
@@ -182,7 +180,7 @@ func (vld *validator) syncForwardCommittedBlocks(peer *core.PublicKey, start, en
 		}
 		parent := vld.driver.getBlockByHash(blk.ParentHash())
 		if parent == nil {
-			return fmt.Errorf("cannot connect chain, parent not found")
+			return errors.New("cannot connect chain, parent not found")
 		}
 		if err := vld.verifyParentAndCommitRecursive(peer, blk, parent); err != nil {
 			return err
@@ -247,7 +245,7 @@ func (vld *validator) syncMissingParentRecursive(peer *core.PublicKey, blk *core
 func (vld *validator) requestBlock(peer *core.PublicKey, hash []byte) (*core.Block, error) {
 	blk, err := vld.resources.MsgSvc.RequestBlock(peer, hash)
 	if err != nil {
-		return nil, fmt.Errorf("cannot request block, %w", err)
+		return nil, fmt.Errorf("request block failed, %w", err)
 	}
 	if err := blk.Validate(vld.resources.RoleStore); err != nil {
 		return nil, fmt.Errorf("validate block failed, %w", err)
@@ -256,65 +254,68 @@ func (vld *validator) requestBlock(peer *core.PublicKey, hash []byte) (*core.Blo
 }
 
 func (vld *validator) updateQCHighAndVote(blk *core.Block) error {
+	if vld.status.getView() > blk.View() {
+		return errors.New("not same view")
+	}
+
 	vld.driver.mtxUpdate.Lock()
 	defer vld.driver.mtxUpdate.Unlock()
 
 	vld.driver.onNewProposal(blk)
-	vld.driver.updateQCHigh(blk.QuorumCert())
-	if vld.status.getView() != blk.View() {
-		return fmt.Errorf("not same view")
+	if vld.driver.cmpQCPriority(blk.QuorumCert(), vld.status.getQCHigh()) < 0 {
+		return fmt.Errorf("can not vote by lower qc, height %d", blk.Height())
 	}
+	vld.driver.updateQCHigh(blk.QuorumCert())
+
 	proposer := vld.resources.RoleStore.GetValidatorIndex(blk.Proposer())
 	if !vld.driver.isLeader(blk.Proposer()) {
 		return fmt.Errorf("proposer %d is not leader", proposer)
 	}
-	if vld.driver.cmpQCPriority(blk.QuorumCert(), vld.status.getQCHigh()) < 0 {
-		return fmt.Errorf("can not vote by lower qc, height %d", blk.Height())
-	}
+
 	if err := vld.verifyBlockToVote(blk); err != nil {
 		return err
 	}
+	quota := vld.voteBlock(blk)
 
-	quota := vld.resources.RoleStore.GetValidatorQuota(vld.resources.Signer.PublicKey())
-	vote := blk.Vote(vld.resources.Signer, quota/float64(vld.resources.RoleStore.GetWindowSize()))
-	if !PreserveTxFlag {
-		vld.resources.TxPool.SetTxsPending(blk.Transactions())
-	}
-	vld.resources.MsgSvc.SendVote(blk.Proposer(), vote)
 	logger.I().Infow("voted proposal",
-		"view", vote.View(),
+		"view", blk.View(),
 		"proposer", proposer,
 		"height", blk.Height(),
 		"qc", vld.driver.qcRefHeight(blk.QuorumCert()),
-		"quota", quota/float64(vld.resources.RoleStore.GetWindowSize()),
+		"quota", quota,
 	)
-
 	return nil
 }
 
 func (vld *validator) verifyBlockToVote(blk *core.Block) error {
 	// on node restart, not committed any blocks yet, don't check merkle root
 	if vld.state.getCommittedHeight() != 0 {
-		vld.verifyExecHeight(blk)
-		vld.verifyMerkleRoot(blk)
+		if err := vld.verifyExecHeight(blk); err != nil {
+			return err
+		}
+		if err := vld.verifyMerkleRoot(blk); err != nil {
+			return err
+		}
 	}
 	return vld.verifyBlockTxs(blk)
 }
 
-func (vld *validator) verifyMerkleRoot(blk *core.Block) {
+func (vld *validator) verifyMerkleRoot(blk *core.Block) error {
 	if ExecuteTxFlag {
 		mr := vld.resources.Storage.GetMerkleRoot()
 		if !bytes.Equal(mr, blk.MerkleRoot()) {
-			logger.I().Warnw("invalid merkle root", "height", blk.Height())
+			return fmt.Errorf("invalid merkle root, height %d", blk.Height())
 		}
 	}
+	return nil
 }
 
-func (vld *validator) verifyExecHeight(blk *core.Block) {
+func (vld *validator) verifyExecHeight(blk *core.Block) error {
 	bh := vld.resources.Storage.GetBlockHeight()
 	if bh != blk.ExecHeight() {
-		logger.I().Warnf("invalid exec height, expected %d, got %d", bh, blk.ExecHeight())
+		return fmt.Errorf("invalid exec height, expected %d, got %d", bh, blk.ExecHeight())
 	}
+	return nil
 }
 
 func (vld *validator) verifyBlockTxs(blk *core.Block) error {
@@ -335,6 +336,19 @@ func (vld *validator) verifyBlockTxs(blk *core.Block) error {
 	return nil
 }
 
+func (vld *validator) voteBlock(blk *core.Block) float64 {
+	quota := vld.resources.RoleStore.GetValidatorQuota(vld.resources.Signer.PublicKey()) /
+		float64(vld.resources.RoleStore.GetWindowSize())
+	vote := blk.Vote(vld.resources.Signer, quota)
+	if !PreserveTxFlag {
+		vld.resources.TxPool.SetTxsPending(blk.Transactions())
+	}
+	if err := vld.resources.MsgSvc.SendVote(blk.Proposer(), vote); err != nil {
+		logger.I().Errorf("send vote failed, %+v", err)
+	}
+	return quota
+}
+
 func (vld *validator) onReceiveVote(vote *core.Vote) error {
 	if err := vote.Validate(vld.resources.RoleStore); err != nil {
 		return err
@@ -351,19 +365,7 @@ func (vld *validator) onReceiveQC(qc *core.QuorumCert) error {
 		return err
 	}
 	if _, err := vld.syncBlockByHash(qc.Proposer(), qc.BlockHash()); err != nil {
-		return fmt.Errorf("sync block failed, %w", err)
-	}
-	vld.state.setQC(qc)
-
-	if qc.View() > vld.status.getView() {
-		vld.status.setViewStart()
-		vld.status.setView(qc.View())
-		leaderIdx := vld.status.getView() % uint32(vld.resources.RoleStore.ValidatorCount())
-		vld.status.setLeaderIndex(leaderIdx)
-		logger.I().Infow("view changed by higher qc",
-			"view", vld.status.getView(),
-			"leader", vld.driver.status.getLeaderIndex(),
-			"qc", vld.driver.qcRefHeight(qc))
+		return err
 	}
 
 	vld.driver.mtxUpdate.Lock()

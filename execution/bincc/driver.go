@@ -6,7 +6,7 @@ package bincc
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
+	"errors"
 	"io"
 	"net/http"
 	"os"
@@ -59,7 +59,7 @@ func (drv *CodeDriver) downloadCodeIfRequired(codeID, data []byte) error {
 		return err
 	}
 	if !bytes.Equal(codeID, sum) {
-		return fmt.Errorf("invalid code hash")
+		return errors.New("invalid code hash")
 	}
 	return writeCodeFile(drv.codeDir, codeID, buf)
 }
@@ -68,7 +68,7 @@ func (drv *CodeDriver) downloadCode(url string, retry int) (*http.Response, erro
 	resp, err := http.Get(url)
 	if err == nil {
 		if resp.StatusCode != 200 {
-			err = fmt.Errorf("status not 200")
+			err = errors.New("status not 200")
 		}
 	}
 	if err != nil {

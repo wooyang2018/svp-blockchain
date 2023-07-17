@@ -54,54 +54,38 @@ func (d *driver) onViewTimeout() {
 
 func (d *driver) changeView() {
 	d.status.setViewChange(1)
-	if err := d.resources.MsgSvc.BroadcastQC(d.status.getQCHigh()); err != nil {
-		logger.I().Errorf("broadcast qc failed, %+v", err)
-	}
-	d.sleepTime(2 * time.Second)
+
+	d.mtxUpdate.Lock()
+	defer d.mtxUpdate.Unlock()
+
 	if d.status.getViewChange() == 1 {
 		d.status.setViewStart()
 		d.status.setView(d.status.getView() + 1)
 		leaderIdx := d.status.getView() % uint32(d.resources.RoleStore.ValidatorCount())
 		d.status.setLeaderIndex(leaderIdx)
+
+		if err := d.resources.MsgSvc.BroadcastQC(d.status.getQCHigh()); err != nil {
+			logger.I().Errorf("broadcast qc failed, %+v", err)
+		}
+		if d.isLeader(d.resources.Signer.PublicKey()) {
+			d.newViewProposal()
+		}
+
 		logger.I().Infow("view changed",
 			"view", d.status.getView(),
 			"leader", d.status.getLeaderIndex(),
 			"qc", d.qcRefHeight(d.status.getQCHigh()))
-		d.newViewProposal()
 	}
 }
 
 func (d *driver) newViewProposal() {
-	d.mtxUpdate.Lock()
-	defer d.mtxUpdate.Unlock()
-
-	if !d.isLeader(d.resources.Signer.PublicKey()) {
-		return
-	}
-
 	qcHigh := d.status.getQCHigh()
 	parent := d.getBlockByHash(qcHigh.BlockHash())
-	blk := core.NewBlock().
-		SetView(d.status.getView()).
-		SetParentHash(parent.Hash()).
-		SetHeight(parent.Height() + 1).
-		SetExecHeight(d.resources.Storage.GetBlockHeight()).
-		SetMerkleRoot(d.resources.Storage.GetMerkleRoot()).
-		SetTimestamp(time.Now().UnixNano()).
-		SetQuorumCert(qcHigh).
-		Sign(d.resources.Signer)
-
-	d.state.setBlock(blk)
-	d.status.setBLeaf(blk)
-	d.status.startProposal(blk)
-	d.onNewProposal(blk)
+	blk := d.createProposal(d.status.getView(), parent, qcHigh)
 	if err := d.resources.MsgSvc.BroadcastProposal(blk); err != nil {
 		logger.I().Errorf("broadcast proposal failed, %+v", err)
 	}
 
-	logger.I().Infow("proposed new view proposal",
-		"view", blk.View(),
-		"qc", d.qcRefHeight(blk.QuorumCert()))
 	quota := d.resources.RoleStore.GetValidatorQuota(d.resources.Signer.PublicKey())
 	vote := blk.Vote(d.resources.Signer, quota/float64(d.resources.RoleStore.GetWindowSize()))
 	d.onReceiveVote(vote)
@@ -161,16 +145,6 @@ func (d *driver) approveViewLeader(view uint32, proposer uint32) {
 	logger.I().Infow("approved leader",
 		"view", view,
 		"leader", proposer)
-}
-
-func (d *driver) sleepTime(delta time.Duration) {
-	t := time.NewTimer(delta)
-	defer t.Stop()
-	select {
-	case <-d.stopCh:
-		return
-	case <-t.C:
-	}
 }
 
 func drainStopTimer(timer *time.Timer) {

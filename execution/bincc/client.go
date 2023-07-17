@@ -5,7 +5,7 @@ package bincc
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"os"
 	"time"
 
@@ -118,7 +118,7 @@ func (c *Client) request(key, value []byte, upType UpStreamType) ([]byte, error)
 		return nil, err
 	}
 	if len(down.Error) > 0 {
-		return nil, fmt.Errorf(down.Error)
+		return nil, errors.New(down.Error)
 	}
 	return down.Value, nil
 }

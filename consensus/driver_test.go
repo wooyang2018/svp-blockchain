@@ -5,6 +5,7 @@ package consensus
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/wooyang2018/posv-blockchain/core"
@@ -25,25 +26,27 @@ func setupTestDriver() *driver {
 }
 
 func newTestBlock(priv core.Signer, height, execHeight uint64,
-	parentHash []byte, mRoot []byte, txs [][]byte) *core.Block {
+	parentHash []byte, txs [][]byte) *core.Block {
 	return core.NewBlock().
-		SetHeight(height).
-		SetExecHeight(execHeight).
+		SetView(0).
 		SetParentHash(parentHash).
-		SetMerkleRoot(mRoot).
+		SetHeight(height).
 		SetTransactions(txs).
+		SetExecHeight(execHeight).
+		SetMerkleRoot(nil).
+		SetTimestamp(time.Now().UnixNano()).
 		Sign(priv)
 }
 
 func TestCommit(t *testing.T) {
 	d := setupTestDriver()
 	parent := newTestBlock(d.resources.Signer, 10, 9,
-		nil, nil, nil)
+		nil, nil)
 	bfork := newTestBlock(d.resources.Signer, 10, 9,
-		nil, nil, [][]byte{[]byte("tx from fork")})
+		nil, [][]byte{[]byte("tx from fork")})
 	tx := core.NewTransaction().Sign(d.resources.Signer)
 	bexec := newTestBlock(d.resources.Signer, 11, 10,
-		parent.Hash(), nil, [][]byte{tx.Hash()})
+		parent.Hash(), [][]byte{tx.Hash()})
 	d.state.setBlock(parent)
 	d.state.setCommittedBlock(parent)
 	d.state.setBlock(bfork)

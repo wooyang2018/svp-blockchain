@@ -5,7 +5,6 @@ package txpool
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -94,7 +93,7 @@ func TestTxPool_SubmitTx(t *testing.T) {
 
 	storage.On("HasTx", tx2.Hash()).Return(false)
 	// tx2 is invalid to execute
-	execution.On("VerifyTx", tx2).Return(fmt.Errorf("invalid tx"))
+	execution.On("VerifyTx", tx2).Return(errors.New("invalid tx"))
 	err = pool.SubmitTx(tx2)
 
 	asrt.Error(err, "verify should failed for executed tx")

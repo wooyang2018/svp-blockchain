@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -45,14 +46,14 @@ func WaitTxCommitted(node cluster.Node, tx *core.Transaction) error {
 			return fmt.Errorf("get tx status error %w", err)
 		} else {
 			if status == txpool.TxStatusNotFound {
-				return fmt.Errorf("submited tx status not found")
+				return errors.New("submited tx status not found")
 			}
 			if status == txpool.TxStatusCommitted {
 				return nil
 			}
 		}
 		if time.Since(start) > 1*time.Second {
-			return fmt.Errorf("tx wait timeout")
+			return errors.New("tx wait timeout")
 		}
 		time.Sleep(50 * time.Millisecond)
 	}

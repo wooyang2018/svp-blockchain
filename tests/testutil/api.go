@@ -5,6 +5,7 @@ package testutil
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -47,7 +48,7 @@ func getRequestWithRetry(url string) (*http.Response, error) {
 
 func GetStatus(node cluster.Node) (*consensus.Status, error) {
 	if !node.IsRunning() {
-		return nil, fmt.Errorf("node is not running")
+		return nil, errors.New("node is not running")
 	}
 	resp, err := getRequestWithRetry(node.GetEndpoint() + "/consensus")
 	if err != nil {
@@ -63,7 +64,7 @@ func GetStatus(node cluster.Node) (*consensus.Status, error) {
 
 func GetTxPoolStatus(node cluster.Node) (*txpool.Status, error) {
 	if !node.IsRunning() {
-		return nil, fmt.Errorf("node is not running")
+		return nil, errors.New("node is not running")
 	}
 	resp, err := getRequestWithRetry(node.GetEndpoint() + "/txpool")
 	if err != nil {
@@ -119,7 +120,7 @@ func GetTxPoolStatusAll(cls *cluster.Cluster) map[int]*txpool.Status {
 
 func GetBlockByHeight(node cluster.Node, height uint64) (*core.Block, error) {
 	if !node.IsRunning() {
-		return nil, fmt.Errorf("node is not running")
+		return nil, errors.New("node is not running")
 	}
 	resp, err := getRequestWithRetry(fmt.Sprintf("%s/blocks/height/%d", node.GetEndpoint(), height))
 	if err != nil {

@@ -5,6 +5,7 @@ package p2p
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -111,7 +112,7 @@ func (p *Peer) setConnecting() error {
 	defer p.mtxStatus.Unlock()
 
 	if p.status != PeerStatusDisconnected {
-		return fmt.Errorf("status must be disconnected")
+		return errors.New("status must be disconnected")
 	}
 	p.status = PeerStatusConnecting
 	logger.I().Infow("connecting", "addr", p.addr)
@@ -163,7 +164,7 @@ func (p *Peer) WriteMsg(msg []byte) error {
 	defer p.mtxWrite.Unlock()
 
 	if p.Status() != PeerStatusConnected {
-		return fmt.Errorf("peer not connected")
+		return errors.New("peer not connected")
 	}
 	return p.write(msg)
 }
