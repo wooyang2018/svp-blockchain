@@ -32,7 +32,7 @@ func (d *driver) newViewLoop() {
 }
 
 func (d *driver) onLeaderTimeout() {
-	logger.I().Warnw("leader timeout", "leader", d.status.getLeaderIndex())
+	logger.I().Warnw("leader timeout", "view", d.status.getView(), "leader", d.status.getLeaderIndex())
 	d.leaderTimeoutCount++
 	d.changeView()
 	drainStopTimer(d.leaderTimer)
@@ -46,7 +46,7 @@ func (d *driver) onLeaderTimeout() {
 }
 
 func (d *driver) onViewTimeout() {
-	logger.I().Warnw("view timeout", "leader", d.status.getLeaderIndex())
+	logger.I().Warnw("view timeout", "view", d.status.getView(), "leader", d.status.getLeaderIndex())
 	d.changeView()
 	drainStopTimer(d.leaderTimer)
 	d.leaderTimer.Reset(d.config.LeaderTimeout)
@@ -54,11 +54,11 @@ func (d *driver) onViewTimeout() {
 
 func (d *driver) changeView() {
 	d.status.setViewChange(1)
-
+	view := d.status.getView()
 	d.mtxUpdate.Lock()
 	defer d.mtxUpdate.Unlock()
 
-	if d.status.getViewChange() == 1 {
+	if d.status.getViewChange() == 1 && view == d.status.getView() {
 		d.status.setViewStart()
 		d.status.setView(d.status.getView() + 1)
 		leaderIdx := d.status.getView() % uint32(d.resources.RoleStore.ValidatorCount())
@@ -67,14 +67,15 @@ func (d *driver) changeView() {
 		if err := d.resources.MsgSvc.BroadcastQC(d.status.getQCHigh()); err != nil {
 			logger.I().Errorf("broadcast qc failed, %+v", err)
 		}
-		if d.isLeader(d.resources.Signer.PublicKey()) {
-			d.newViewProposal()
-		}
 
 		logger.I().Infow("view changed",
 			"view", d.status.getView(),
 			"leader", d.status.getLeaderIndex(),
 			"qc", d.qcRefHeight(d.status.getQCHigh()))
+
+		if d.isLeader(d.resources.Signer.PublicKey()) {
+			d.newViewProposal()
+		}
 	}
 }
 

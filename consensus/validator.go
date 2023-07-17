@@ -102,42 +102,25 @@ func (vld *validator) onReceiveProposal(blk *core.Block) error {
 	if err := blk.Validate(vld.resources.RoleStore); err != nil {
 		return err
 	}
-	if _, err := vld.getParentBlock(blk); err != nil { // fetch parent block recursively
+	if _, err := vld.syncParentBlock(blk); err != nil { // fetch parent block recursively
 		return err
 	}
-
-	vld.state.setQC(blk.QuorumCert())
+	if ExecuteTxFlag { // must sync transactions before updating block
+		if err := vld.resources.TxPool.SyncTxs(blk.Proposer(), blk.Transactions()); err != nil {
+			return fmt.Errorf("sync txs failed, %w", err)
+		}
+	}
+	vld.state.setBlock(blk)
 	pidx := vld.resources.RoleStore.GetValidatorIndex(blk.Proposer())
 	logger.I().Infow("received proposal",
 		"view", blk.View(),
 		"proposer", pidx,
 		"height", blk.Height(),
 		"txs", len(blk.Transactions()))
-
 	return vld.updateQCHighAndVote(blk)
 }
 
-func (vld *validator) syncBlockByHash(peer *core.PublicKey, hash []byte) (*core.Block, error) {
-	var err error
-	blk := vld.driver.getBlockByHash(hash)
-	if blk == nil {
-		if blk, err = vld.requestBlock(peer, hash); err != nil {
-			return nil, err
-		}
-	}
-	if _, err = vld.getParentBlock(blk); err != nil { // fetch parent block recursively
-		return nil, err
-	}
-	if ExecuteTxFlag { // must sync transactions before updating block
-		if err = vld.resources.TxPool.SyncTxs(peer, blk.Transactions()); err != nil {
-			return nil, fmt.Errorf("sync txs failed, %w", err)
-		}
-	}
-	vld.state.setBlock(blk)
-	return blk, nil
-}
-
-func (vld *validator) getParentBlock(blk *core.Block) (*core.Block, error) {
+func (vld *validator) syncParentBlock(blk *core.Block) (*core.Block, error) {
 	if blk.Height() == 0 { // genesis block
 		return nil, nil
 	}
@@ -197,6 +180,7 @@ func (vld *validator) requestBlockByHeight(peer *core.PublicKey, height uint64) 
 	if err := blk.Validate(vld.resources.RoleStore); err != nil {
 		return nil, fmt.Errorf("validate block failed, %w", err)
 	}
+	vld.state.setBlock(blk)
 	return blk, nil
 }
 
@@ -209,7 +193,6 @@ func (vld *validator) verifyParentAndCommitRecursive(peer *core.PublicKey, blk, 
 			return err
 		}
 	}
-	vld.state.setBlock(blk)
 
 	vld.driver.mtxUpdate.Lock()
 	defer vld.driver.mtxUpdate.Unlock()
@@ -219,18 +202,20 @@ func (vld *validator) verifyParentAndCommitRecursive(peer *core.PublicKey, blk, 
 }
 
 func (vld *validator) syncMissingParentRecursive(peer *core.PublicKey, blk *core.Block) (*core.Block, error) {
+	var err error
 	parent := vld.driver.getBlockByHash(blk.ParentHash())
-	if parent != nil {
-		return parent, nil // not missing
+	if parent == nil {
+		parent, err = vld.requestBlock(peer, blk.ParentHash())
+		if err != nil {
+			return nil, err
+		}
 	}
-	parent, err := vld.requestBlock(peer, blk.ParentHash())
-	if err != nil {
-		return nil, err
+	if blk.Height() == vld.resources.Storage.GetBlockHeight() {
+		return parent, nil
 	}
 	if blk.Height() != parent.Height()+1 {
 		return nil, fmt.Errorf("invalid block, height %d, parent %d", blk.Height(), parent.Height())
 	}
-	vld.state.setBlock(parent)
 	if ExecuteTxFlag { // must sync transactions before updating block
 		if err := vld.resources.TxPool.SyncTxs(peer, parent.Transactions()); err != nil {
 			return nil, err
@@ -250,6 +235,7 @@ func (vld *validator) requestBlock(peer *core.PublicKey, hash []byte) (*core.Blo
 	if err := blk.Validate(vld.resources.RoleStore); err != nil {
 		return nil, fmt.Errorf("validate block failed, %w", err)
 	}
+	vld.state.setBlock(blk)
 	return blk, nil
 }
 
@@ -361,17 +347,27 @@ func (vld *validator) onReceiveVote(vote *core.Vote) error {
 }
 
 func (vld *validator) onReceiveQC(qc *core.QuorumCert) error {
-	if err := qc.Validate(vld.resources.RoleStore); err != nil {
+	var err error
+	if err = qc.Validate(vld.resources.RoleStore); err != nil {
 		return err
 	}
-	if _, err := vld.syncBlockByHash(qc.Proposer(), qc.BlockHash()); err != nil {
+	blk := vld.driver.getBlockByHash(qc.BlockHash())
+	if blk == nil {
+		if blk, err = vld.requestBlock(qc.Proposer(), qc.BlockHash()); err != nil {
+			return err
+		}
+	}
+	if _, err = vld.syncParentBlock(blk); err != nil { // fetch parent block recursively
 		return err
 	}
-
+	if ExecuteTxFlag { // must sync transactions before updating block
+		if err = vld.resources.TxPool.SyncTxs(qc.Proposer(), blk.Transactions()); err != nil {
+			return fmt.Errorf("sync txs failed, %w", err)
+		}
+	}
 	vld.driver.mtxUpdate.Lock()
 	defer vld.driver.mtxUpdate.Unlock()
 	vld.driver.updateQCHigh(qc)
-
 	return nil
 }
 

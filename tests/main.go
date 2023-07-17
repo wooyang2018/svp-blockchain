@@ -33,19 +33,19 @@ var (
 	LoadBatchSubmit = true //whether to enable batch transaction submission
 
 	//chaincode priority: empty > pcoin bincc > pcoin
-	EmptyChainCode = true  // deploy empty chaincode instead of pcoin
-	PCoinBinCC     = false // deploy pcoin chaincode as bincc type (not embeded in node)
+	EmptyChainCode = false // deploy empty chaincode instead of pcoin
+	PCoinBinCC     = true  // deploy pcoin chaincode as bincc type (not embeded in node)
 	CheckRotation  = true
 	BroadcastTx    = true
 
 	// run tests in remote linux cluster
-	RemoteLinuxCluster    = false // if false it'll use local cluster (running multiple nodes on single local machine)
+	RemoteLinuxCluster    = true // if false it'll use local cluster (running multiple nodes on single local machine)
 	RemoteSetupRequired   = true
 	RemoteInstallRequired = false // if false it will not try to install dstat on remote machine
 	RemoteKeySSH          = "~/.ssh/id_rsa"
 	RemoteHostsPath       = "hosts"
 	RemoteNetworkDelay    = 500 * time.Millisecond
-	RemoteNetworkLoss     = 10.0
+	RemoteNetworkLoss     = 15.0
 
 	// run benchmark, otherwise run experiments
 	RunBenchmark  = false
