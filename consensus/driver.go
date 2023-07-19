@@ -159,24 +159,25 @@ func (d *driver) onReceiveVote(vote *core.Vote) error {
 
 // updateQCHigh replaces high qc if the given qc is higher than it
 func (d *driver) updateQCHigh(qc *core.QuorumCert) {
-	blk := d.getBlockByHash(qc.BlockHash())
-	if d.cmpQCPriority(qc, d.status.getQCHigh()) == 1 &&
-		d.cmpBlockHeight(blk, d.status.getBExec()) == 1 {
+	if d.cmpQCPriority(qc, d.status.getQCHigh()) == 1 {
+		blk1 := d.getBlockByHash(qc.BlockHash())
+		blk0 := d.getBlockByHash(blk1.ParentHash())
+
 		d.state.setQC(qc)
 		d.status.setQCHigh(qc)
-		d.status.setBLeaf(blk)
-		d.status.updateWindow(qc.SumQuota(), blk.Height())
+		d.status.setBLeaf(blk1)
+		d.status.updateWindow(qc.SumQuota(), blk1.Height())
 
-		d.resources.Storage.StoreBlock(blk)
 		d.resources.Storage.StoreQC(qc)
-		blk0 := d.getBlockByHash(blk.ParentHash())
-		if blk0 != nil && blk0.View() == blk0.View() {
+		d.resources.Storage.StoreBlock(blk1)
+
+		if d.cmpBlockHeight(blk0, d.status.getBExec()) == 1 && blk0.View() == blk1.View() {
 			d.commitRecursive(blk0)
 		}
 
 		logger.I().Infow("updated high qc",
 			"view", qc.View(),
-			"qc", d.qcRefHeight(qc),
+			"qc", blk1.Height(),
 			"quota", qc.SumQuota(),
 			"window", d.status.getWindow())
 	}

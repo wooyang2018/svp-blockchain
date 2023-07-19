@@ -154,7 +154,8 @@ func (cons *Consensus) setupWindow(qc *core.QuorumCert) {
 			break
 		}
 	}
-	cons.status.setWindow(quotas, height)
+	limit := cons.resources.RoleStore.GetValidatorQuota(cons.resources.Signer.PublicKey())
+	cons.status.setupWindow(quotas, height, limit, cons.config.VoteStrategy)
 	logger.I().Infow("setup stake window", "quotas", quotas, "height", height)
 }
 

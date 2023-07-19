@@ -105,6 +105,12 @@ func (rot *rotator) onViewTimeout() {
 func (rot *rotator) changeView() {
 	rot.status.setViewChange(1)
 	view := rot.status.getView()
+	time.Sleep(1 * time.Second) //wait for leader to generate qc
+	if err := rot.resources.MsgSvc.BroadcastQC(rot.status.getQCHigh()); err != nil {
+		logger.I().Errorf("broadcast qc failed, %+v", err)
+	}
+	time.Sleep(2 * time.Second) //wait to receive n-f qcs
+
 	rot.driver.mtxUpdate.Lock()
 	defer rot.driver.mtxUpdate.Unlock()
 
@@ -113,10 +119,6 @@ func (rot *rotator) changeView() {
 		rot.status.setView(rot.status.getView() + 1)
 		leaderIdx := rot.status.getView() % uint32(rot.resources.RoleStore.ValidatorCount())
 		rot.status.setLeaderIndex(leaderIdx)
-
-		if err := rot.resources.MsgSvc.BroadcastQC(rot.status.getQCHigh()); err != nil {
-			logger.I().Errorf("broadcast qc failed, %+v", err)
-		}
 
 		logger.I().Infow("view changed",
 			"view", rot.status.getView(),
@@ -136,9 +138,7 @@ func (rot *rotator) newViewProposal() {
 	if err := rot.resources.MsgSvc.BroadcastProposal(blk); err != nil {
 		logger.I().Errorf("broadcast proposal failed, %+v", err)
 	}
-
-	quota := rot.resources.RoleStore.GetValidatorQuota(rot.resources.Signer.PublicKey())
-	vote := blk.Vote(rot.resources.Signer, quota/float64(rot.resources.RoleStore.GetWindowSize()))
+	vote := blk.Vote(rot.resources.Signer, rot.status.getVoteQuota())
 	rot.driver.onReceiveVote(vote)
 	rot.driver.updateQCHigh(blk.QuorumCert())
 }

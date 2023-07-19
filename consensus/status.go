@@ -13,6 +13,52 @@ import (
 	"github.com/wooyang2018/posv-blockchain/core"
 )
 
+// VoteStrategy vote strategy for validator
+type VoteStrategy byte
+
+const (
+	_ VoteStrategy = iota
+	AverageVote
+	RandomVote
+)
+
+type Window struct {
+	qcQuotas []float64
+	qcAcc    float64
+	size     int
+	height   uint64
+
+	voteLimit float64
+	strategy  VoteStrategy
+}
+
+func (w *Window) update(val float64, height uint64) {
+	if height > w.height {
+		w.qcAcc -= w.qcQuotas[0]
+		w.qcQuotas = w.qcQuotas[1:]
+		w.qcQuotas = append(w.qcQuotas, val)
+		w.qcAcc += val
+		w.height = height
+	} else {
+		panic("cannot update window with lower height")
+	}
+}
+
+func (w *Window) sum() float64 {
+	return w.qcAcc - w.qcQuotas[0]
+}
+
+func (w *Window) vote() float64 {
+	switch w.strategy {
+	case AverageVote:
+		return w.voteLimit / float64(w.size)
+	case RandomVote:
+		panic("no support vote strategy")
+	default:
+		panic("no support vote strategy")
+	}
+}
+
 type Status struct {
 	StartTime int64
 
@@ -33,33 +79,6 @@ type Status struct {
 	BLeaf  uint64
 	QCHigh uint64
 	View   uint32
-}
-
-type Window struct {
-	quotas []float64
-	size   int
-	height uint64
-	acc    float64
-}
-
-func (w *Window) update(val float64, height uint64) {
-	if height > w.height {
-		w.acc -= w.quotas[0]
-		w.quotas = w.quotas[1:]
-		w.quotas = append(w.quotas, val)
-		w.acc += val
-		w.height = height
-	} else if height == w.height {
-		w.acc -= w.quotas[w.size-1]
-		w.quotas[w.size-1] = val
-		w.acc += val
-	} else {
-		panic("cannot update window with lower height")
-	}
-}
-
-func (w *Window) sum() float64 {
-	return w.acc - w.quotas[0]
 }
 
 type status struct {
@@ -94,17 +113,19 @@ func (s *status) getLeaderIndex() uint32      { return atomic.LoadUint32(&s.lead
 func (s *status) getViewStart() int64         { return atomic.LoadInt64(&s.viewStart) }
 func (s *status) getViewChange() int32        { return atomic.LoadInt32(&s.viewChange) }
 
-func (s *status) setWindow(quotas []float64, height uint64) {
+func (s *status) setupWindow(quotas []float64, height uint64, limit float64, strategy VoteStrategy) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
 	s.window = &Window{
-		quotas: quotas,
-		size:   len(quotas),
-		height: height,
+		qcQuotas:  quotas,
+		size:      len(quotas),
+		height:    height,
+		voteLimit: limit,
+		strategy:  strategy,
 	}
 	for _, v := range quotas {
-		s.window.acc += v
+		s.window.qcAcc += v
 	}
 }
 
@@ -112,7 +133,7 @@ func (s *status) getWindow() []float64 {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	return s.window.quotas
+	return s.window.qcQuotas
 }
 
 func (s *status) updateWindow(quota float64, height uint64) {
@@ -138,6 +159,13 @@ func (s *status) endProposal() {
 	s.proposal = nil
 	s.votes = nil
 	s.quotaCount = 0
+}
+
+func (s *status) getVoteQuota() float64 {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
+	return s.window.vote()
 }
 
 func (s *status) addVote(vote *core.Vote) error {

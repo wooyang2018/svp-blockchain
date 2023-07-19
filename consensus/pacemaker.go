@@ -78,8 +78,7 @@ func (pm *pacemaker) newProposal() {
 		logger.I().Errorf("broadcast proposal failed, %+v", err)
 	}
 
-	quota := pm.resources.RoleStore.GetValidatorQuota(pm.resources.Signer.PublicKey())
-	vote := blk.Vote(pm.resources.Signer, quota/float64(pm.resources.RoleStore.GetWindowSize()))
+	vote := blk.Vote(pm.resources.Signer, pm.status.getVoteQuota())
 	pm.driver.onReceiveVote(vote)
 	pm.driver.updateQCHigh(blk.QuorumCert())
 }

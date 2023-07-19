@@ -112,6 +112,8 @@ func (vld *validator) onReceiveProposal(blk *core.Block) error {
 		}
 	}
 	vld.state.setBlock(blk)
+	vld.driver.receiveCh <- blk
+
 	pidx := vld.resources.RoleStore.GetValidatorIndex(blk.Proposer())
 	logger.I().Infow("received proposal",
 		"view", blk.View(),
@@ -248,7 +250,6 @@ func (vld *validator) updateQCHighAndVote(blk *core.Block) error {
 	vld.driver.mtxUpdate.Lock()
 	defer vld.driver.mtxUpdate.Unlock()
 
-	vld.driver.receiveCh <- blk
 	if vld.driver.cmpQCPriority(blk.QuorumCert(), vld.status.getQCHigh()) < 0 {
 		return fmt.Errorf("can not vote by lower qc, height %d", blk.Height())
 	}
@@ -324,16 +325,14 @@ func (vld *validator) verifyBlockTxs(blk *core.Block) error {
 }
 
 func (vld *validator) voteBlock(blk *core.Block) float64 {
-	quota := vld.resources.RoleStore.GetValidatorQuota(vld.resources.Signer.PublicKey()) /
-		float64(vld.resources.RoleStore.GetWindowSize())
-	vote := blk.Vote(vld.resources.Signer, quota)
+	vote := blk.Vote(vld.resources.Signer, vld.status.getVoteQuota())
 	if !PreserveTxFlag {
 		vld.resources.TxPool.SetTxsPending(blk.Transactions())
 	}
 	if err := vld.resources.MsgSvc.SendVote(blk.Proposer(), vote); err != nil {
 		logger.I().Errorf("send vote failed, %+v", err)
 	}
-	return quota
+	return vote.Quota()
 }
 
 func (vld *validator) onReceiveVote(vote *core.Vote) error {

@@ -48,6 +48,9 @@ type Config struct {
 	// leader must create next qc within this duration
 	LeaderTimeout time.Duration
 
+	// vote strategy for validator
+	VoteStrategy VoteStrategy
+
 	// path to save the benchmark log of the consensus algorithm (it will not be saved if blank)
 	BenchmarkPath string
 }
@@ -57,5 +60,6 @@ var DefaultConfig = Config{
 	TxWaitTime:    500 * time.Millisecond,
 	ViewWidth:     60 * time.Second,
 	LeaderTimeout: 15 * time.Second,
+	VoteStrategy:  AverageVote,
 	BenchmarkPath: "",
 }
