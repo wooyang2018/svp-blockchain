@@ -10,139 +10,189 @@ import (
 	"github.com/wooyang2018/posv-blockchain/logger"
 )
 
-func (d *driver) newViewLoop() {
-	d.viewTimer = time.NewTimer(d.config.ViewWidth)
-	defer d.viewTimer.Stop()
+type rotator struct {
+	resources *Resources
+	config    Config
+	state     *state
+	status    *status
+	driver    *driver
 
-	d.leaderTimer = time.NewTimer(d.config.LeaderTimeout)
-	defer d.leaderTimer.Stop()
+	leaderTimer  *time.Timer
+	viewTimer    *time.Timer
+	timeoutCount int
+	stopCh       chan struct{}
+}
+
+func (rot *rotator) start() {
+	if rot.stopCh != nil {
+		return
+	}
+	rot.stopCh = make(chan struct{})
+	rot.status.setViewStart()
+	go rot.proposalLoop()
+	go rot.newViewLoop()
+	logger.I().Info("started rotator")
+}
+
+func (rot *rotator) stop() {
+	if rot.stopCh == nil {
+		return // not started yet
+	}
+	select {
+	case <-rot.stopCh: // already stopped
+		return
+	default:
+	}
+	close(rot.stopCh)
+	logger.I().Info("stopped rotator")
+	rot.stopCh = nil
+}
+
+func (rot *rotator) newViewLoop() {
+	rot.viewTimer = time.NewTimer(rot.config.ViewWidth)
+	defer rot.viewTimer.Stop()
+
+	rot.leaderTimer = time.NewTimer(rot.config.LeaderTimeout)
+	defer rot.leaderTimer.Stop()
 
 	for {
 		select {
-		case <-d.stopCh:
+		case <-rot.stopCh:
 			return
 
-		case <-d.viewTimer.C:
-			d.onViewTimeout()
+		case <-rot.viewTimer.C:
+			rot.onViewTimeout()
 
-		case <-d.leaderTimer.C:
-			d.onLeaderTimeout()
+		case <-rot.leaderTimer.C:
+			rot.onLeaderTimeout()
 		}
 	}
 }
 
-func (d *driver) onLeaderTimeout() {
-	logger.I().Warnw("leader timeout", "view", d.status.getView(), "leader", d.status.getLeaderIndex())
-	d.leaderTimeoutCount++
-	d.changeView()
-	drainStopTimer(d.leaderTimer)
-	faultyCount := d.resources.RoleStore.ValidatorCount() - d.resources.RoleStore.MajorityValidatorCount()
-	if d.leaderTimeoutCount > faultyCount {
-		d.leaderTimer.Stop()
-		d.status.setViewChange(-1) //failed to change view when leader timeout
-	} else {
-		d.leaderTimer.Reset(d.config.LeaderTimeout)
+func (rot *rotator) proposalLoop() {
+	for {
+		select {
+		case <-rot.stopCh:
+			return
+
+		case blk := <-rot.driver.receiveCh:
+			rot.onNewProposal(blk)
+		}
 	}
 }
 
-func (d *driver) onViewTimeout() {
-	logger.I().Warnw("view timeout", "view", d.status.getView(), "leader", d.status.getLeaderIndex())
-	d.changeView()
-	drainStopTimer(d.leaderTimer)
-	d.leaderTimer.Reset(d.config.LeaderTimeout)
+func (rot *rotator) onLeaderTimeout() {
+	logger.I().Warnw("leader timeout", "view", rot.status.getView(), "leader", rot.status.getLeaderIndex())
+	rot.timeoutCount++
+	rot.changeView()
+	drainStopTimer(rot.leaderTimer)
+	faultyCount := rot.resources.RoleStore.ValidatorCount() - rot.resources.RoleStore.MajorityValidatorCount()
+	if rot.timeoutCount > faultyCount {
+		rot.leaderTimer.Stop()
+		rot.status.setViewChange(-1) //failed to change view when leader timeout
+	} else {
+		rot.leaderTimer.Reset(rot.config.LeaderTimeout)
+	}
 }
 
-func (d *driver) changeView() {
-	d.status.setViewChange(1)
-	view := d.status.getView()
-	d.mtxUpdate.Lock()
-	defer d.mtxUpdate.Unlock()
+func (rot *rotator) onViewTimeout() {
+	logger.I().Warnw("view timeout", "view", rot.status.getView(), "leader", rot.status.getLeaderIndex())
+	rot.changeView()
+	drainStopTimer(rot.leaderTimer)
+	rot.leaderTimer.Reset(rot.config.LeaderTimeout)
+}
 
-	if d.status.getViewChange() == 1 && view == d.status.getView() {
-		d.status.setViewStart()
-		d.status.setView(d.status.getView() + 1)
-		leaderIdx := d.status.getView() % uint32(d.resources.RoleStore.ValidatorCount())
-		d.status.setLeaderIndex(leaderIdx)
+func (rot *rotator) changeView() {
+	rot.status.setViewChange(1)
+	view := rot.status.getView()
+	rot.driver.mtxUpdate.Lock()
+	defer rot.driver.mtxUpdate.Unlock()
 
-		if err := d.resources.MsgSvc.BroadcastQC(d.status.getQCHigh()); err != nil {
+	if rot.status.getViewChange() == 1 && view == rot.status.getView() {
+		rot.status.setViewStart()
+		rot.status.setView(rot.status.getView() + 1)
+		leaderIdx := rot.status.getView() % uint32(rot.resources.RoleStore.ValidatorCount())
+		rot.status.setLeaderIndex(leaderIdx)
+
+		if err := rot.resources.MsgSvc.BroadcastQC(rot.status.getQCHigh()); err != nil {
 			logger.I().Errorf("broadcast qc failed, %+v", err)
 		}
 
 		logger.I().Infow("view changed",
-			"view", d.status.getView(),
-			"leader", d.status.getLeaderIndex(),
-			"qc", d.qcRefHeight(d.status.getQCHigh()))
+			"view", rot.status.getView(),
+			"leader", rot.status.getLeaderIndex(),
+			"qc", rot.driver.qcRefHeight(rot.status.getQCHigh()))
 
-		if d.isLeader(d.resources.Signer.PublicKey()) {
-			d.newViewProposal()
+		if rot.driver.isLeader(rot.resources.Signer.PublicKey()) {
+			rot.newViewProposal()
 		}
 	}
 }
 
-func (d *driver) newViewProposal() {
-	qcHigh := d.status.getQCHigh()
-	parent := d.getBlockByHash(qcHigh.BlockHash())
-	blk := d.createProposal(d.status.getView(), parent, qcHigh)
-	if err := d.resources.MsgSvc.BroadcastProposal(blk); err != nil {
+func (rot *rotator) newViewProposal() {
+	qcHigh := rot.status.getQCHigh()
+	parent := rot.driver.getBlockByHash(qcHigh.BlockHash())
+	blk := rot.driver.createProposal(rot.status.getView(), parent, qcHigh)
+	if err := rot.resources.MsgSvc.BroadcastProposal(blk); err != nil {
 		logger.I().Errorf("broadcast proposal failed, %+v", err)
 	}
 
-	quota := d.resources.RoleStore.GetValidatorQuota(d.resources.Signer.PublicKey())
-	vote := blk.Vote(d.resources.Signer, quota/float64(d.resources.RoleStore.GetWindowSize()))
-	d.onReceiveVote(vote)
-	d.updateQCHigh(blk.QuorumCert())
+	quota := rot.resources.RoleStore.GetValidatorQuota(rot.resources.Signer.PublicKey())
+	vote := blk.Vote(rot.resources.Signer, quota/float64(rot.resources.RoleStore.GetWindowSize()))
+	rot.driver.onReceiveVote(vote)
+	rot.driver.updateQCHigh(blk.QuorumCert())
 }
 
-func (d *driver) onNewProposal(blk *core.Block) {
-	proposer := uint32(d.resources.RoleStore.GetValidatorIndex(blk.Proposer()))
+func (rot *rotator) onNewProposal(blk *core.Block) {
+	proposer := uint32(rot.resources.RoleStore.GetValidatorIndex(blk.Proposer()))
 	var ltreset, vtreset bool
-	if d.isNormalApproval(blk.View(), proposer) {
+	if rot.isNormalApproval(blk.View(), proposer) {
 		ltreset = true
 		logger.I().Debugw("refreshed leader",
 			"view", blk.View(),
 			"leader", proposer)
 	}
-	if d.isNewViewApproval(blk.View(), proposer) {
+	if rot.isNewViewApproval(blk.View(), proposer) {
 		ltreset = true
 		vtreset = true
-		d.approveViewLeader(blk.View(), proposer)
+		rot.approveViewLeader(blk.View(), proposer)
 	}
 	if ltreset {
-		drainStopTimer(d.leaderTimer)
-		d.leaderTimer.Reset(d.config.LeaderTimeout)
+		drainStopTimer(rot.leaderTimer)
+		rot.leaderTimer.Reset(rot.config.LeaderTimeout)
 	}
 	if vtreset {
-		drainStopTimer(d.viewTimer)
-		d.viewTimer.Reset(d.config.ViewWidth)
+		drainStopTimer(rot.viewTimer)
+		rot.viewTimer.Reset(rot.config.ViewWidth)
 	}
 }
 
-func (d *driver) isNormalApproval(view uint32, proposer uint32) bool {
-	curView := d.status.getView()
-	leaderIdx := d.status.getLeaderIndex()
-	pending := d.status.getViewChange()
+func (rot *rotator) isNormalApproval(view uint32, proposer uint32) bool {
+	curView := rot.status.getView()
+	leaderIdx := rot.status.getLeaderIndex()
+	pending := rot.status.getViewChange()
 	return pending == 0 && view == curView && proposer == leaderIdx
 }
 
-func (d *driver) isNewViewApproval(view uint32, proposer uint32) bool {
-	curView := d.status.getView()
+func (rot *rotator) isNewViewApproval(view uint32, proposer uint32) bool {
+	curView := rot.status.getView()
 	if view > curView {
 		return true
 	} else if view == curView {
-		leaderIdx := d.status.getLeaderIndex()
-		pending := d.status.getViewChange()
+		leaderIdx := rot.status.getLeaderIndex()
+		pending := rot.status.getViewChange()
 		return pending == 0 && proposer != leaderIdx ||
 			pending == 1 && proposer == leaderIdx
 	}
 	return false
 }
 
-func (d *driver) approveViewLeader(view uint32, proposer uint32) {
-	d.status.setViewChange(0)
-	d.status.setView(view)
-	d.status.setLeaderIndex(proposer)
-	d.status.setViewStart()
-	d.leaderTimeoutCount = 0
+func (rot *rotator) approveViewLeader(view uint32, proposer uint32) {
+	rot.status.setViewChange(0)
+	rot.status.setView(view)
+	rot.status.setLeaderIndex(proposer)
+	rot.status.setViewStart()
+	rot.timeoutCount = 0
 	logger.I().Infow("approved leader",
 		"view", view,
 		"leader", proposer)

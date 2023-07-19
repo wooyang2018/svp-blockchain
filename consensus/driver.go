@@ -20,43 +20,17 @@ type driver struct {
 	status    *status
 	tester    *tester
 
-	leaderTimer        *time.Timer
-	viewTimer          *time.Timer
-	leaderTimeoutCount int
-	isCommitting       bool
-
-	proposeCh chan struct{}
-	stopCh    chan struct{}
+	isCommitting bool
+	proposeCh    chan struct{}
+	receiveCh    chan *core.Block
 
 	mtxUpdate sync.Mutex // lock for update call
 }
 
-func (d *driver) start() {
-	if d.stopCh != nil {
-		return
-	}
-	d.stopCh = make(chan struct{})
-	d.proposeCh = make(chan struct{})
-	d.status.setViewStart()
-	go d.newViewLoop()
-	logger.I().Info("started rotator")
-}
-
-func (d *driver) stop() {
-	if d.stopCh == nil {
-		return // not started yet
-	}
-	select {
-	case <-d.stopCh: // already stopped
-		return
-	default:
-	}
+func (d *driver) waitCommit() {
 	for d.isCommitting {
 		time.Sleep(200 * time.Millisecond)
 	}
-	close(d.stopCh)
-	logger.I().Info("stopped rotator")
-	d.stopCh = nil
 }
 
 func (d *driver) isLeader(pubKey *core.PublicKey) bool {
@@ -151,7 +125,7 @@ func (d *driver) createProposal(view uint32, parent *core.Block, qcHigh *core.Qu
 	d.state.setBlock(blk)
 	d.status.setBLeaf(blk)
 	d.status.startProposal(blk)
-	d.onNewProposal(blk)
+	d.receiveCh <- blk
 
 	logger.I().Infow("proposed proposal",
 		"view", blk.View(),

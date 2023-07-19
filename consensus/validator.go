@@ -19,7 +19,8 @@ type validator struct {
 	state     *state
 	status    *status
 	driver    *driver
-	stopCh    chan struct{}
+
+	stopCh chan struct{}
 }
 
 func (vld *validator) start() {
@@ -247,7 +248,7 @@ func (vld *validator) updateQCHighAndVote(blk *core.Block) error {
 	vld.driver.mtxUpdate.Lock()
 	defer vld.driver.mtxUpdate.Unlock()
 
-	vld.driver.onNewProposal(blk)
+	vld.driver.receiveCh <- blk
 	if vld.driver.cmpQCPriority(blk.QuorumCert(), vld.status.getQCHigh()) < 0 {
 		return fmt.Errorf("can not vote by lower qc, height %d", blk.Height())
 	}

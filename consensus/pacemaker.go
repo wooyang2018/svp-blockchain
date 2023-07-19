@@ -10,11 +10,12 @@ import (
 )
 
 type pacemaker struct {
-	resources  *Resources
-	config     Config
-	state      *state
-	status     *status
-	driver     *driver
+	resources *Resources
+	config    Config
+	state     *state
+	status    *status
+	driver    *driver
+
 	checkDelay time.Duration // latency to check tx num in pool
 	stopCh     chan struct{}
 }

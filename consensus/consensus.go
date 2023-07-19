@@ -16,10 +16,11 @@ type Consensus struct {
 	config    Config
 	state     *state
 	status    *status
-
 	driver    *driver
+
 	validator *validator
 	pacemaker *pacemaker
+	rotator   *rotator
 
 	startTime int64
 	logfile   *os.File
@@ -63,6 +64,7 @@ func (cons *Consensus) start() {
 	cons.setupWindow(qc)
 	cons.setupValidator()
 	cons.setupPacemaker()
+	cons.setupRotator()
 
 	status := cons.GetStatus()
 	logger.I().Infow("starting consensus",
@@ -71,15 +73,16 @@ func (cons *Consensus) start() {
 		"bLeaf", status.BLeaf,
 		"qc", status.QCHigh)
 
-	cons.driver.start()
 	cons.validator.start()
 	cons.pacemaker.start()
+	cons.rotator.start()
 }
 
 func (cons *Consensus) stop() {
-	cons.driver.stop()
+	cons.driver.waitCommit()
 	cons.pacemaker.stop()
 	cons.validator.stop()
+	cons.rotator.stop()
 	cons.resources.MsgSvc.BroadcastQC(cons.status.getQCHigh())
 	if cons.logfile != nil {
 		cons.logfile.Close()
@@ -126,6 +129,8 @@ func (cons *Consensus) setupDriver() {
 		config:    cons.config,
 		state:     cons.state,
 		status:    cons.status,
+		proposeCh: make(chan struct{}),
+		receiveCh: make(chan *core.Block),
 	}
 	if cons.config.BenchmarkPath != "" {
 		var err error
@@ -172,6 +177,16 @@ func (cons *Consensus) setupPacemaker() {
 		driver:    cons.driver,
 	}
 	cons.pacemaker.checkDelay = 100 * time.Millisecond
+}
+
+func (cons *Consensus) setupRotator() {
+	cons.rotator = &rotator{
+		resources: cons.resources,
+		config:    cons.config,
+		state:     cons.state,
+		status:    cons.status,
+		driver:    cons.driver,
+	}
 }
 
 func (cons *Consensus) getStatus() (status Status) {
