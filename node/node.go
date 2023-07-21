@@ -99,7 +99,6 @@ func (node *Node) setupComponents() {
 	node.setupRoleStore()
 	node.setupStorage()
 	node.setupHost()
-	logger.I().Infow("setup p2p host", "port", node.config.Port, "broadcast-tx", node.config.BroadcastTx)
 	node.msgSvc = p2p.NewMsgService(node.host)
 	node.execution = execution.New(node.storage, node.config.ExecutionConfig)
 	node.txpool = txpool.New(node.storage, node.execution, node.msgSvc, node.config.BroadcastTx)
@@ -110,6 +109,7 @@ func (node *Node) setupComponents() {
 
 func (node *Node) setupRoleStore() {
 	node.roleStore = core.NewRoleStore(node.genesis.Validators, node.genesis.Quotas, node.genesis.WinSize)
+	logger.I().Infow("setup role store", "window size", node.roleStore.GetWindowSize())
 }
 
 func (node *Node) setupStorage() {
@@ -136,6 +136,7 @@ func (node *Node) setupHost() {
 			host.AddPeer(p)
 		}
 	}
+	logger.I().Infow("setup p2p host", "port", node.config.Port)
 	node.host = host
 }
 

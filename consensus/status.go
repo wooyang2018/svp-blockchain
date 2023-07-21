@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/wooyang2018/posv-blockchain/core"
+	"github.com/wooyang2018/posv-blockchain/logger"
 )
 
 // VoteStrategy vote strategy for validator
@@ -52,7 +53,7 @@ func (w *window) update(qc, vote float64, height uint64) {
 
 		w.height = height
 	} else {
-		panic("must update window with higher height")
+		logger.I().Error("must update window with higher height")
 	}
 }
 

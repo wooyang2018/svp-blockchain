@@ -5,6 +5,8 @@ package consensus
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -40,6 +42,10 @@ func (d *driver) isLeader(pubKey *core.PublicKey) bool {
 	return d.status.getLeaderIndex() == uint32(d.resources.RoleStore.GetValidatorIndex(pubKey))
 }
 
+func (d *driver) qcRefHeight(qc *core.QuorumCert) uint64 {
+	return d.getBlockByHash(qc.BlockHash()).Height()
+}
+
 func (d *driver) getBlockByHash(hash []byte) *core.Block {
 	blk := d.state.getBlock(hash)
 	if blk != nil {
@@ -67,8 +73,28 @@ func (d *driver) getQCByBlockHash(blkHash []byte) *core.QuorumCert {
 	return qc
 }
 
-func (d *driver) qcRefHeight(qc *core.QuorumCert) uint64 {
-	return d.getBlockByHash(qc.BlockHash()).Height()
+func (d *driver) requestBlock(peer *core.PublicKey, hash []byte) (*core.Block, error) {
+	blk, err := d.resources.MsgSvc.RequestBlock(peer, hash)
+	if err != nil {
+		return nil, fmt.Errorf("request block failed, %w", err)
+	}
+	if err := blk.Validate(d.resources.RoleStore); err != nil {
+		return nil, fmt.Errorf("validate block failed, %w", err)
+	}
+	d.state.setBlock(blk)
+	return blk, nil
+}
+
+func (d *driver) requestBlockByHeight(peer *core.PublicKey, height uint64) (*core.Block, error) {
+	blk, err := d.resources.MsgSvc.RequestBlockByHeight(peer, height)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get block, height %d, %w", height, err)
+	}
+	if err := blk.Validate(d.resources.RoleStore); err != nil {
+		return nil, fmt.Errorf("validate block failed, %w", err)
+	}
+	d.state.setBlock(blk)
+	return blk, nil
 }
 
 // cmpBlockHeight compares two blocks by height
@@ -101,6 +127,101 @@ func (d *driver) cmpQCPriority(qc1, qc2 *core.QuorumCert) int {
 		}
 	}
 	return 0
+}
+
+func (d *driver) syncParentBlock(blk *core.Block) (*core.Block, error) {
+	if blk.Height() == 0 { // genesis block
+		return nil, nil
+	}
+	parent := d.getBlockByHash(blk.ParentHash())
+	if parent != nil {
+		return parent, nil
+	}
+	if err := d.syncMissingCommittedBlocks(blk); err != nil {
+		return nil, err
+	}
+	return d.syncMissingParentRecursive(blk.Proposer(), blk)
+}
+
+func (d *driver) syncMissingCommittedBlocks(blk *core.Block) error {
+	commitHeight := d.resources.Storage.GetBlockHeight()
+	if blk.ExecHeight() <= commitHeight {
+		return nil // already sync committed blocks
+	}
+	if blk.Height() == 0 {
+		return errors.New("missing genesis block")
+	}
+	qcRef := d.getBlockByHash(blk.ParentHash())
+	if qcRef == nil {
+		var err error
+		if qcRef, err = d.requestBlock(blk.Proposer(), blk.ParentHash()); err != nil {
+			return err
+		}
+	}
+	if qcRef.Height() < commitHeight {
+		return fmt.Errorf("old qc ref %d", qcRef.Height())
+	}
+	return d.syncForwardCommittedBlocks(blk.Proposer(), commitHeight+1, blk.ExecHeight())
+}
+
+func (d *driver) syncForwardCommittedBlocks(peer *core.PublicKey, start, end uint64) error {
+	for height := start; height < end; height++ { // end is exclusive
+		blk, err := d.requestBlockByHeight(peer, height)
+		if err != nil {
+			return err
+		}
+		parent := d.getBlockByHash(blk.ParentHash())
+		if parent == nil {
+			return errors.New("cannot connect chain, parent not found")
+		}
+		if err := d.verifyParentAndCommitRecursive(peer, blk, parent); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (d *driver) verifyParentAndCommitRecursive(peer *core.PublicKey, blk, parent *core.Block) error {
+	if blk.Height() != parent.Height()+1 {
+		return fmt.Errorf("invalid block, height %d, parent %d", blk.Height(), parent.Height())
+	}
+	if ExecuteTxFlag { // must sync transactions before updating block
+		if err := d.resources.TxPool.SyncTxs(peer, blk.Transactions()); err != nil {
+			return err
+		}
+	}
+
+	d.mtxUpdate.Lock()
+	defer d.mtxUpdate.Unlock()
+	d.commitRecursive(blk)
+
+	return nil
+}
+
+func (d *driver) syncMissingParentRecursive(peer *core.PublicKey, blk *core.Block) (*core.Block, error) {
+	var err error
+	parent := d.getBlockByHash(blk.ParentHash())
+	if parent == nil {
+		parent, err = d.requestBlock(peer, blk.ParentHash())
+		if err != nil {
+			return nil, err
+		}
+	}
+	if blk.Height() == d.resources.Storage.GetBlockHeight() {
+		return parent, nil
+	}
+	if blk.Height() != parent.Height()+1 {
+		return nil, fmt.Errorf("invalid block, height %d, parent %d", blk.Height(), parent.Height())
+	}
+	if ExecuteTxFlag { // must sync transactions before updating block
+		if err := d.resources.TxPool.SyncTxs(peer, parent.Transactions()); err != nil {
+			return nil, err
+		}
+	}
+	if _, err := d.syncMissingParentRecursive(peer, parent); err != nil {
+		return nil, err
+	}
+	return parent, nil
 }
 
 func (d *driver) createProposal(view uint32, parent *core.Block, qcHigh *core.QuorumCert) *core.Block {

@@ -148,7 +148,7 @@ func (cons *Consensus) setupWindow(qc *core.QuorumCert) {
 		voteLimit:  cons.resources.RoleStore.GetValidatorQuota(cons.resources.Signer.PublicKey()),
 		voteQuotas: make([]float64, size),
 		strategy:   cons.config.VoteStrategy,
-		height:     cons.driver.getBlockByHash(qc.BlockHash()).Height(),
+		height:     cons.driver.qcRefHeight(qc),
 		size:       size,
 	}
 	for i := size - 1; i >= 0 && qc != nil; i-- {
@@ -175,13 +175,13 @@ func (cons *Consensus) setupValidator() {
 
 func (cons *Consensus) setupPacemaker() {
 	cons.pacemaker = &pacemaker{
-		resources: cons.resources,
-		config:    cons.config,
-		state:     cons.state,
-		status:    cons.status,
-		driver:    cons.driver,
+		resources:  cons.resources,
+		config:     cons.config,
+		state:      cons.state,
+		status:     cons.status,
+		driver:     cons.driver,
+		checkDelay: 100 * time.Millisecond,
 	}
-	cons.pacemaker.checkDelay = 100 * time.Millisecond
 }
 
 func (cons *Consensus) setupRotator() {
@@ -191,6 +191,7 @@ func (cons *Consensus) setupRotator() {
 		state:     cons.state,
 		status:    cons.status,
 		driver:    cons.driver,
+		newViewCh: make(chan struct{}),
 	}
 }
 

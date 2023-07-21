@@ -64,6 +64,7 @@ func New(storage Storage, execution Execution, msgSvc MsgService, broadcastTx bo
 		go pool.broadcaster.run() //运行交易广播器
 		go pool.subscribeTxs()
 	}
+	logger.I().Infow("setup txpool", "broadcast tx", broadcastTx)
 	return pool
 }
 
