@@ -6,13 +6,12 @@ package consensus
 import (
 	"bytes"
 	"errors"
-	"math/big"
 	"math/rand"
-	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/shopspring/decimal"
 	"github.com/wooyang2018/posv-blockchain/core"
 	"github.com/wooyang2018/posv-blockchain/logger"
 )
@@ -57,22 +56,28 @@ func (w *window) update(qc, vote float64, height uint64) {
 	}
 }
 
-func (w *window) vote() (quota float64) {
+func (w *window) vote() float64 {
 	switch w.strategy {
 	case AverageVote:
 		return w.voteLimit / float64(w.size)
 	case RandomVote:
+		if w.height > 50 {
+			max := decimal.NewFromFloat(w.voteLimit)
+			max = max.Sub(decimal.NewFromFloat(w.voteAcc))
+			max = max.Add(decimal.NewFromFloat(w.voteQuotas[0]))
+			quota, _ := max.Round(2).Float64()
+			return quota
+		}
 		pre := w.voteAcc - w.voteQuotas[0]
 		max := w.voteLimit - pre
 		min := 1/2*w.voteLimit - pre + 0.01
 		if min < 0 {
 			min = 0
 		}
-		tmp := big.NewFloat(float64(int(rand.Float64() * (max - min) * 100)))
-		tmp.Mul(tmp, big.NewFloat(0.01))
-		tmp.Add(tmp, big.NewFloat(min))
-		quota, _ = strconv.ParseFloat(tmp.String(), 64)
-		return
+		tmp := decimal.NewFromFloat(rand.Float64() * (max - min))
+		tmp = tmp.Add(decimal.NewFromFloat(min))
+		quota, _ := tmp.Round(2).Float64()
+		return quota
 	default:
 		panic("no support vote strategy")
 	}
