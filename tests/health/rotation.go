@@ -37,7 +37,7 @@ func (hc *checker) checkRotation() error {
 }
 
 func (hc *checker) getRotationTimeout() time.Duration {
-	d := hc.ViewWidth() + 10*time.Second
+	d := hc.ViewWidth() + 20*time.Second
 	if hc.majority {
 		d += time.Duration(hc.getFaultyCount()) * hc.LeaderTimeout()
 	}

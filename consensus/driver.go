@@ -166,7 +166,7 @@ func (d *driver) updateQCHigh(qc *core.QuorumCert) {
 		d.state.setQC(qc)
 		d.status.setQCHigh(qc)
 		d.status.setBLeaf(blk1)
-		d.status.updateWindow(qc.SumQuota(), blk1.Height())
+		d.status.updateWindow(qc.SumQuota(), qc.FindVote(d.resources.Signer), blk1.Height())
 
 		d.resources.Storage.StoreQC(qc)
 		d.resources.Storage.StoreBlock(blk1)
@@ -178,8 +178,9 @@ func (d *driver) updateQCHigh(qc *core.QuorumCert) {
 		logger.I().Infow("updated high qc",
 			"view", qc.View(),
 			"qc", blk1.Height(),
+			"votes", len(qc.Quotas()),
 			"quota", qc.SumQuota(),
-			"window", d.status.getWindow())
+			"window", d.status.getQCWindow())
 	}
 }
 

@@ -60,6 +60,6 @@ var DefaultConfig = Config{
 	TxWaitTime:    500 * time.Millisecond,
 	ViewWidth:     60 * time.Second,
 	LeaderTimeout: 15 * time.Second,
-	VoteStrategy:  AverageVote,
+	VoteStrategy:  RandomVote,
 	BenchmarkPath: "",
 }

@@ -6,6 +6,9 @@ package consensus
 import (
 	"bytes"
 	"errors"
+	"math/big"
+	"math/rand"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -22,38 +25,53 @@ const (
 	RandomVote
 )
 
-type Window struct {
+type window struct {
 	qcQuotas []float64
 	qcAcc    float64
-	size     int
-	height   uint64
 
-	voteLimit float64
-	strategy  VoteStrategy
+	voteLimit  float64
+	voteQuotas []float64
+	voteAcc    float64
+	strategy   VoteStrategy
+
+	height uint64
+	size   int
 }
 
-func (w *Window) update(val float64, height uint64) {
+func (w *window) update(qc, vote float64, height uint64) {
 	if height > w.height {
 		w.qcAcc -= w.qcQuotas[0]
 		w.qcQuotas = w.qcQuotas[1:]
-		w.qcQuotas = append(w.qcQuotas, val)
-		w.qcAcc += val
+		w.qcQuotas = append(w.qcQuotas, qc)
+		w.qcAcc += qc
+
+		w.voteAcc -= w.voteQuotas[0]
+		w.voteQuotas = w.voteQuotas[1:]
+		w.voteQuotas = append(w.voteQuotas, vote)
+		w.voteAcc += vote
+
 		w.height = height
 	} else {
-		panic("cannot update window with lower height")
+		panic("must update window with higher height")
 	}
 }
 
-func (w *Window) sum() float64 {
-	return w.qcAcc - w.qcQuotas[0]
-}
-
-func (w *Window) vote() float64 {
+func (w *window) vote() (quota float64) {
 	switch w.strategy {
 	case AverageVote:
 		return w.voteLimit / float64(w.size)
 	case RandomVote:
-		panic("no support vote strategy")
+		pre := w.voteAcc - w.voteQuotas[0]
+		max := w.voteLimit - pre
+		min := 1/2*w.voteLimit - pre + 0.01
+		if min < 0 {
+			min = 0
+		}
+		tmp := big.NewFloat(float64(int(rand.Float64() * (max - min) * 100)))
+		tmp.Mul(tmp, big.NewFloat(0.01))
+		tmp.Add(tmp, big.NewFloat(min))
+		quota, _ = strconv.ParseFloat(tmp.String(), 64)
+		return
 	default:
 		panic("no support vote strategy")
 	}
@@ -93,7 +111,7 @@ type status struct {
 	proposal   *core.Block
 	votes      map[string]*core.Vote
 	quotaCount float64
-	window     *Window
+	window     *window
 	mtx        sync.RWMutex
 }
 
@@ -113,34 +131,32 @@ func (s *status) getLeaderIndex() uint32      { return atomic.LoadUint32(&s.lead
 func (s *status) getViewStart() int64         { return atomic.LoadInt64(&s.viewStart) }
 func (s *status) getViewChange() int32        { return atomic.LoadInt32(&s.viewChange) }
 
-func (s *status) setupWindow(quotas []float64, height uint64, limit float64, strategy VoteStrategy) {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
-
-	s.window = &Window{
-		qcQuotas:  quotas,
-		size:      len(quotas),
-		height:    height,
-		voteLimit: limit,
-		strategy:  strategy,
-	}
-	for _, v := range quotas {
-		s.window.qcAcc += v
-	}
-}
-
-func (s *status) getWindow() []float64 {
+func (s *status) getQCWindow() []float64 {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
 	return s.window.qcQuotas
 }
 
-func (s *status) updateWindow(quota float64, height uint64) {
+func (s *status) getVoteWindow() []float64 {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	s.window.update(quota, height)
+	return s.window.voteQuotas
+}
+
+func (s *status) updateWindow(qc, vote float64, height uint64) {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
+	s.window.update(qc, vote, height)
+}
+
+func (s *status) getQuotaCount() float64 {
+	s.mtx.RLock()
+	defer s.mtx.RUnlock()
+
+	return s.quotaCount + s.window.qcAcc - s.window.qcQuotas[0]
 }
 
 func (s *status) startProposal(blk *core.Block) {
@@ -195,13 +211,6 @@ func (s *status) getVoteCount() int {
 	defer s.mtx.RUnlock()
 
 	return len(s.votes)
-}
-
-func (s *status) getQuotaCount() float64 {
-	s.mtx.RLock()
-	defer s.mtx.RUnlock()
-
-	return s.quotaCount + s.window.sum()
 }
 
 func (s *status) getVotes() []*core.Vote {

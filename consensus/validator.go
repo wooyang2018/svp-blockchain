@@ -263,14 +263,20 @@ func (vld *validator) updateQCHighAndVote(blk *core.Block) error {
 	if err := vld.verifyBlockToVote(blk); err != nil {
 		return err
 	}
-	quota := vld.voteBlock(blk)
+	vote := blk.Vote(vld.resources.Signer, vld.status.getVoteQuota())
+	if !PreserveTxFlag {
+		vld.resources.TxPool.SetTxsPending(blk.Transactions())
+	}
+	if err := vld.resources.MsgSvc.SendVote(blk.Proposer(), vote); err != nil {
+		logger.I().Errorf("send vote failed, %+v", err)
+	}
 
 	logger.I().Infow("voted proposal",
 		"view", blk.View(),
-		"proposer", proposer,
 		"height", blk.Height(),
 		"qc", vld.driver.qcRefHeight(blk.QuorumCert()),
-		"quota", quota,
+		"quota", vote.Quota(),
+		"window", vld.status.getVoteWindow(),
 	)
 	return nil
 }
@@ -322,17 +328,6 @@ func (vld *validator) verifyBlockTxs(blk *core.Block) error {
 		}
 	}
 	return nil
-}
-
-func (vld *validator) voteBlock(blk *core.Block) float64 {
-	vote := blk.Vote(vld.resources.Signer, vld.status.getVoteQuota())
-	if !PreserveTxFlag {
-		vld.resources.TxPool.SetTxsPending(blk.Transactions())
-	}
-	if err := vld.resources.MsgSvc.SendVote(blk.Proposer(), vote); err != nil {
-		logger.I().Errorf("send vote failed, %+v", err)
-	}
-	return vote.Quota()
 }
 
 func (vld *validator) onReceiveVote(vote *core.Vote) error {

@@ -7,6 +7,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"math"
+	"math/big"
+	"strconv"
 
 	"github.com/wooyang2018/posv-blockchain/pb"
 	"google.golang.org/protobuf/proto"
@@ -72,9 +74,11 @@ func (qc *QuorumCert) Validate(rs RoleStore) error {
 
 func (qc *QuorumCert) setData(data *pb.QuorumCert) error {
 	qc.data = data
+	sum := big.NewFloat(0)
 	for _, v := range qc.data.Quotas {
-		qc.quota += v
+		sum.Add(sum, big.NewFloat(v))
 	}
+	qc.quota, _ = strconv.ParseFloat(sum.String(), 64)
 	sigs, err := newSigList(qc.data.Signatures)
 	if err != nil {
 		return err
@@ -92,12 +96,13 @@ func (qc *QuorumCert) Build(signer Signer, votes []*Vote) *QuorumCert {
 	qc.data.Quotas = make([]float64, len(votes))
 	qc.data.Signatures = make([]*pb.Signature, len(votes))
 	qc.sigs = make(sigList, len(votes))
+	sum := big.NewFloat(0)
 	for i, vote := range votes {
 		if qc.data.BlockHash == nil {
 			qc.data.View = vote.data.View
 			qc.data.BlockHash = vote.data.BlockHash
 		}
-		qc.quota += vote.data.Quota
+		sum.Add(sum, big.NewFloat(vote.data.Quota))
 		qc.data.Quotas[i] = vote.data.Quota
 		qc.data.Signatures[i] = vote.data.Signature
 		qc.sigs[i] = &Signature{
@@ -105,9 +110,20 @@ func (qc *QuorumCert) Build(signer Signer, votes []*Vote) *QuorumCert {
 			pubKey: vote.voter.pubKey,
 		}
 	}
+	qc.quota, _ = strconv.ParseFloat(sum.String(), 64)
 	qc.signature = signer.Sign(appendUint32(qc.data.BlockHash, qc.data.View))
 	qc.data.Signature = qc.signature.data
 	return qc
+}
+
+func (qc *QuorumCert) FindVote(signer Signer) float64 {
+	dst := signer.PublicKey().String()
+	for i, v := range qc.sigs {
+		if v.PublicKey().String() == dst {
+			return qc.data.Quotas[i]
+		}
+	}
+	return 0
 }
 
 func (qc *QuorumCert) View() uint32             { return qc.data.View }

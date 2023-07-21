@@ -142,21 +142,25 @@ func (cons *Consensus) setupDriver() {
 }
 
 func (cons *Consensus) setupWindow(qc *core.QuorumCert) {
-	quotas := make([]float64, cons.resources.RoleStore.GetWindowSize())
-	height := cons.driver.getBlockByHash(qc.BlockHash()).Height()
-	for i := len(quotas) - 1; i >= 0; i-- {
-		if qc != nil {
-			quotas[i] = qc.SumQuota()
-			qc = cons.driver.getBlockByHash(qc.BlockHash()).QuorumCert()
-		} else {
-			// ensure satisfaction of propose rule when height < window size
-			quotas[i] = cons.resources.RoleStore.MajorityQuotaCount()
-			break
-		}
+	size := cons.resources.RoleStore.GetWindowSize()
+	w := &window{
+		qcQuotas:   make([]float64, size),
+		voteLimit:  cons.resources.RoleStore.GetValidatorQuota(cons.resources.Signer.PublicKey()),
+		voteQuotas: make([]float64, size),
+		strategy:   cons.config.VoteStrategy,
+		height:     cons.driver.getBlockByHash(qc.BlockHash()).Height(),
+		size:       size,
 	}
-	limit := cons.resources.RoleStore.GetValidatorQuota(cons.resources.Signer.PublicKey())
-	cons.status.setupWindow(quotas, height, limit, cons.config.VoteStrategy)
-	logger.I().Infow("setup stake window", "quotas", quotas, "height", height)
+	for i := size - 1; i >= 0 && qc != nil; i-- {
+		w.qcQuotas[i] = qc.SumQuota()
+		w.qcAcc += w.qcQuotas[i]
+		w.voteQuotas[i] = qc.FindVote(cons.resources.Signer)
+		w.voteAcc += w.voteQuotas[i]
+		qc = cons.driver.getBlockByHash(qc.BlockHash()).QuorumCert()
+	}
+	cons.status.window = w
+	logger.I().Infow("setup qc stake window", "quotas", w.qcQuotas, "height", w.height)
+	logger.I().Infow("setup vote stake window", "quotas", w.voteQuotas, "limit", w.voteLimit)
 }
 
 func (cons *Consensus) setupValidator() {
