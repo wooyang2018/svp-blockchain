@@ -21,8 +21,8 @@ func (hc *checker) checkRotation() error {
 		if err := hc.updateViewChangeStatus(lastView, changedView); err != nil {
 			return err
 		}
-		if len(changedView) >= len(lastView) {
-			return hc.shouldEqualLeader(changedView)
+		if len(changedView) >= len(lastView) && hc.shouldEqualLeader(changedView) == nil {
+			return nil
 		}
 		select {
 		case <-hc.interrupt:
@@ -31,7 +31,7 @@ func (hc *checker) checkRotation() error {
 		case <-timeout.C:
 			return errors.New("cluster failed to rotate leader")
 
-		case <-time.After(1 * time.Second):
+		case <-time.After(2 * time.Second):
 		}
 	}
 }

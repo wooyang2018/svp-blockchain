@@ -61,7 +61,7 @@ func (w *window) vote() float64 {
 	case AverageVote:
 		return w.voteLimit / float64(w.size)
 	case RandomVote:
-		if w.height > 50 {
+		if !PreserveTxFlag && w.height > 50 {
 			max := decimal.NewFromFloat(w.voteLimit)
 			max = max.Sub(decimal.NewFromFloat(w.voteAcc))
 			max = max.Add(decimal.NewFromFloat(w.voteQuotas[0]))

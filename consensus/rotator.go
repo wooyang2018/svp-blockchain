@@ -227,7 +227,7 @@ func (rot *rotator) changeView() {
 	rot.driver.mtxUpdate.Lock()
 	defer rot.driver.mtxUpdate.Unlock()
 
-	if rot.status.getViewChange() == 1 && view == rot.status.getView() {
+	if view == rot.status.getView() {
 		rot.status.setView(rot.status.getView() + 1)
 		leaderIdx := rot.status.getView() % uint32(rot.resources.RoleStore.ValidatorCount())
 		rot.status.setLeaderIndex(leaderIdx)
