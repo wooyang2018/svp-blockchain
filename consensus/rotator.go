@@ -5,6 +5,7 @@ package consensus
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/wooyang2018/posv-blockchain/core"
@@ -22,8 +23,10 @@ type rotator struct {
 	viewTimer    *time.Timer
 	timeoutCount int
 	highQCCount  int
-	newViewCh    chan struct{}
-	stopCh       chan struct{}
+
+	newViewCh chan struct{}
+	stopCh    chan struct{}
+	mtx       sync.Mutex
 }
 
 func (rot *rotator) start() {
@@ -137,6 +140,8 @@ func (rot *rotator) isNormalApproval(view uint32, proposer uint32) bool {
 }
 
 func (rot *rotator) isNewViewApproval(view uint32, proposer uint32) bool {
+	rot.mtx.Lock()
+	defer rot.mtx.Unlock()
 	curView := rot.status.getView()
 	if view > curView {
 		return true
@@ -215,14 +220,19 @@ func (rot *rotator) onViewTimeout() {
 }
 
 func (rot *rotator) changeView() {
+	rot.mtx.Lock()
 	rot.status.setViewChange(1)
 	view := rot.status.getView()
 	if err := rot.resources.MsgSvc.BroadcastQC(rot.status.getQCHigh()); err != nil {
 		logger.I().Errorf("broadcast qc failed, %+v", err)
 	}
 	rot.highQCCount++
-	<-rot.newViewCh //wait to receive n-f qcs
-	time.Sleep(1 * time.Second)
+	select {
+	case <-rot.newViewCh: //wait to receive n-f qcs
+		time.Sleep(1 * time.Second)
+	case <-time.After(2 * time.Second):
+	}
+	rot.mtx.Unlock()
 
 	rot.driver.mtxUpdate.Lock()
 	defer rot.driver.mtxUpdate.Unlock()

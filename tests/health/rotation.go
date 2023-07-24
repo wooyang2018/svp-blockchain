@@ -18,11 +18,14 @@ func (hc *checker) checkRotation() error {
 	lastView := make(map[int]*consensus.Status)
 	changedView := make(map[int]*consensus.Status)
 	for {
-		if err := hc.updateViewChangeStatus(lastView, changedView); err != nil {
+		var err error
+		if err = hc.updateViewChangeStatus(lastView, changedView); err != nil {
 			return err
 		}
-		if len(changedView) >= len(lastView) && hc.shouldEqualLeader(changedView) == nil {
-			return nil
+		if len(changedView) >= len(lastView) {
+			if err = hc.shouldEqualLeader(changedView); err == nil {
+				return nil
+			}
 		}
 		select {
 		case <-hc.interrupt:
@@ -85,6 +88,5 @@ func (hc *checker) shouldEqualLeader(changedView map[int]*consensus.Status) erro
 			return nil
 		}
 	}
-	fmt.Printf("View status map[leader]count: %v\n", equalCount)
-	return errors.New("inconsistent view change")
+	return fmt.Errorf("View status map[leader]count: %v\n", equalCount)
 }

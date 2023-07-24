@@ -23,6 +23,7 @@ type driver struct {
 	tester    *tester
 
 	isCommitting bool
+	isExisted    bool
 	proposeCh    chan struct{}
 	receiveCh    chan *core.Block
 
@@ -31,8 +32,10 @@ type driver struct {
 
 func (d *driver) waitCommit() {
 	for d.isCommitting {
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(20 * time.Millisecond)
 	}
+	d.isExisted = true
+	logger.I().Info("stopped driver")
 }
 
 func (d *driver) isLeader(pubKey *core.PublicKey) bool {
@@ -354,8 +357,10 @@ func (d *driver) commit(blk *core.Block) {
 		}
 	}
 	d.isCommitting = true
-	if err := d.resources.Storage.Commit(data); err != nil {
-		logger.I().Fatalf("commit storage error, %+v", err)
+	if !d.isExisted {
+		if err := d.resources.Storage.Commit(data); err != nil {
+			logger.I().Fatalf("commit storage error, %+v", err)
+		}
 	}
 	d.isCommitting = false
 	d.state.addCommittedTxCount(txCount)
