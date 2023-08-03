@@ -16,7 +16,7 @@ import (
 	"github.com/wooyang2018/posv-blockchain/logger"
 )
 
-// VoteStrategy vote strategy for validator
+// VoteStrategy voting strategy adopted by validator
 type VoteStrategy byte
 
 const (
@@ -79,7 +79,7 @@ func (w *window) vote() float64 {
 		quota, _ := tmp.Round(2).Float64()
 		return quota
 	default:
-		panic("no support vote strategy")
+		panic("no support voting strategy")
 	}
 }
 

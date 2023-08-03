@@ -169,7 +169,7 @@ func (ftry *RemoteFactory) setupRemoteServerOne(i int) error {
 		"sudo", "tc", "qdisc", "del", "dev", ftry.netDevices[i], "root", ";",
 		"sudo", "killall", "chain", ";",
 		"sudo", "killall", "dstat", ";",
-		"mkdir", ftry.workDirs[i], ";",
+		"mkdir", "-p", ftry.workDirs[i], ";",
 		"cd", ftry.workDirs[i], ";",
 		"rm", "-r", "template",
 	)

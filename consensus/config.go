@@ -48,7 +48,7 @@ type Config struct {
 	// leader must create next qc within this duration
 	LeaderTimeout time.Duration
 
-	// vote strategy for validator
+	// voting strategy adopted by validator
 	VoteStrategy VoteStrategy
 
 	// path to save the benchmark log of the consensus algorithm (it will not be saved if blank)
