@@ -11,7 +11,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/shopspring/decimal"
 	"github.com/wooyang2018/posv-blockchain/core"
 	"github.com/wooyang2018/posv-blockchain/logger"
 )
@@ -26,19 +25,19 @@ const (
 )
 
 type window struct {
-	qcQuotas []float64
-	qcAcc    float64
+	qcQuotas []uint32
+	qcAcc    uint32
 
-	voteLimit  float64
-	voteQuotas []float64
-	voteAcc    float64
+	voteLimit  uint32
+	voteQuotas []uint32
+	voteAcc    uint32
 	strategy   VoteStrategy
 
 	height uint64
 	size   int
 }
 
-func (w *window) update(qc, vote float64, height uint64) {
+func (w *window) update(qc, vote uint32, height uint64) {
 	if height > w.height {
 		w.qcAcc -= w.qcQuotas[0]
 		w.qcQuotas = w.qcQuotas[1:]
@@ -56,27 +55,21 @@ func (w *window) update(qc, vote float64, height uint64) {
 	}
 }
 
-func (w *window) vote() float64 {
+func (w *window) vote() uint32 {
 	switch w.strategy {
 	case AverageVote:
-		return w.voteLimit / float64(w.size)
+		return w.voteLimit / uint32(w.size)
 	case RandomVote:
 		if !PreserveTxFlag && w.height > 50 {
-			max := decimal.NewFromFloat(w.voteLimit)
-			max = max.Sub(decimal.NewFromFloat(w.voteAcc))
-			max = max.Add(decimal.NewFromFloat(w.voteQuotas[0]))
-			quota, _ := max.Round(2).Float64()
-			return quota
+			return w.voteLimit - w.voteAcc + w.voteQuotas[0]
 		}
 		pre := w.voteAcc - w.voteQuotas[0]
 		max := w.voteLimit - pre
-		min := 1/2*w.voteLimit - pre + 0.01
+		min := (w.voteLimit+1)/2 - pre
 		if min < 0 {
 			min = 0
 		}
-		tmp := decimal.NewFromFloat(rand.Float64() * (max - min))
-		tmp = tmp.Add(decimal.NewFromFloat(min))
-		quota, _ := tmp.Round(2).Float64()
+		quota := uint32(rand.Intn(int(max-min+1))) + min
 		return quota
 	default:
 		panic("no support voting strategy")
@@ -86,15 +79,11 @@ func (w *window) vote() float64 {
 type Status struct {
 	StartTime int64
 
-	// committed tx count since node is up
-	CommittedTxCount int
+	CommittedTxCount int // committed tx count since node is up
 	BlockPoolSize    int
 	QCPoolSize       int
 
-	// start timestamp of current view
-	ViewStart int64
-	// set to true when current view timeout
-	// set to false once the view leader created the first qc
+	ViewStart   int64 // start timestamp of current view
 	ViewChange  int32
 	LeaderIndex uint32
 
@@ -116,7 +105,7 @@ type status struct {
 
 	proposal   *core.Block
 	votes      map[string]*core.Vote
-	quotaCount float64
+	quotaCount uint32
 	window     *window
 	mtx        sync.RWMutex
 }
@@ -137,28 +126,28 @@ func (s *status) getLeaderIndex() uint32      { return atomic.LoadUint32(&s.lead
 func (s *status) getViewStart() int64         { return atomic.LoadInt64(&s.viewStart) }
 func (s *status) getViewChange() int32        { return atomic.LoadInt32(&s.viewChange) }
 
-func (s *status) getQCWindow() []float64 {
+func (s *status) getQCWindow() []uint32 {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
 	return s.window.qcQuotas
 }
 
-func (s *status) getVoteWindow() []float64 {
+func (s *status) getVoteWindow() []uint32 {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
 	return s.window.voteQuotas
 }
 
-func (s *status) updateWindow(qc, vote float64, height uint64) {
+func (s *status) updateWindow(qc, vote uint32, height uint64) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
 	s.window.update(qc, vote, height)
 }
 
-func (s *status) getQuotaCount() float64 {
+func (s *status) getQuotaCount() uint32 {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 
@@ -183,7 +172,7 @@ func (s *status) endProposal() {
 	s.quotaCount = 0
 }
 
-func (s *status) getVoteQuota() float64 {
+func (s *status) getVoteQuota() uint32 {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 

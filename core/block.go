@@ -83,9 +83,9 @@ func (blk *Block) Validate(rs RoleStore) error {
 }
 
 // Vote creates a vote for block
-func (blk *Block) Vote(signer Signer, quota float64) *Vote {
+func (blk *Block) Vote(signer Signer, quota uint32) *Vote {
 	vote := &pb.Vote{View: blk.data.View, Quota: quota, BlockHash: blk.Hash()}
-	hash := appendFloat64(appendUint32(vote.BlockHash, vote.View), vote.Quota)
+	hash := appendUint32(vote.BlockHash, vote.View, vote.Quota)
 	vote.Signature = signer.Sign(hash).data
 	res := NewVote()
 	res.setData(vote)

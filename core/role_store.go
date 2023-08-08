@@ -13,25 +13,25 @@ import (
 type RoleStore interface {
 	ValidatorCount() int
 	MajorityValidatorCount() int
-	MajorityQuotaCount() float64
+	MajorityQuotaCount() uint32
 	IsValidator(pubKey *PublicKey) bool
 	GetWindowSize() int
 	GetValidator(idx int) *PublicKey
 	GetValidatorIndex(pubKey *PublicKey) int
-	GetValidatorQuota(pubKey *PublicKey) float64
+	GetValidatorQuota(pubKey *PublicKey) uint32
 }
 
 type roleStore struct {
 	validatorMap map[string]int
 	validators   []*PublicKey
-	stakeQuotas  []float64
-	quotaCount   float64
+	stakeQuotas  []uint32
+	quotaCount   uint32
 	windowSize   int
 }
 
 var _ RoleStore = (*roleStore)(nil)
 
-func NewRoleStore(validators []string, quotas []float64, winSize int) RoleStore {
+func NewRoleStore(validators []string, quotas []uint32, winSize int) RoleStore {
 	store := &roleStore{
 		validatorMap: make(map[string]int, len(validators)),
 		validators:   make([]*PublicKey, len(validators)),
@@ -55,7 +55,7 @@ func (store *roleStore) MajorityValidatorCount() int {
 	return MajorityCount(len(store.validators))
 }
 
-func (store *roleStore) MajorityQuotaCount() float64 {
+func (store *roleStore) MajorityQuotaCount() uint32 {
 	return store.quotaCount / 2
 }
 
@@ -85,7 +85,7 @@ func (store *roleStore) GetValidatorIndex(pubKey *PublicKey) int {
 	return store.validatorMap[pubKey.String()]
 }
 
-func (store *roleStore) GetValidatorQuota(pubKey *PublicKey) float64 {
+func (store *roleStore) GetValidatorQuota(pubKey *PublicKey) uint32 {
 	if pubKey == nil {
 		return 0
 	}

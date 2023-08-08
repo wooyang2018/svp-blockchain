@@ -36,14 +36,14 @@ message Signature {
 message QuorumCert {
   uint32 view = 1;
   bytes blockHash = 2;
-  repeated double quotas = 3;
+  repeated uint32 quotas = 3;
   repeated Signature signatures = 4;
   Signature signature  = 5;
 }
 
 message Vote {
   uint32 view = 1;
-  double quota = 2;
+  uint32 quota = 2;
   bytes blockHash = 3;
   Signature signature = 4;
 }

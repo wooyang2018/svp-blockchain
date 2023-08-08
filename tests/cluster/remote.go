@@ -108,7 +108,7 @@ func (ftry *RemoteFactory) setup() error {
 	quotas := MakeRandomQuotas(ftry.params.NodeCount, ftry.params.StakeQuota)
 	genesis := &node.Genesis{
 		Validators: make([]string, len(keys)),
-		Quotas:     make([]float64, len(keys)),
+		Quotas:     make([]uint32, len(keys)),
 		WinSize:    ftry.params.WinSize,
 	}
 	for i, v := range keys {

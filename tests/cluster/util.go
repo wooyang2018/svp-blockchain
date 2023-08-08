@@ -63,13 +63,15 @@ func MakeRandomKeys(count int) []*core.PrivateKey {
 	return keys
 }
 
-func MakeRandomQuotas(count int, quota int) []float64 {
+func MakeRandomQuotas(count int, quota int) []uint32 {
 	r := rand.New(rand.NewSource(time.Now().Unix()))
-	quotas := make([]float64, count)
+	quotas := make([]uint32, count)
 	for i := 0; i < quota; i++ {
 		quotas[r.Intn(count)]++
 	}
-	sort.Float64s(quotas)
+	sort.SliceStable(quotas, func(i int, j int) bool {
+		return quotas[i] < quotas[j]
+	})
 	return quotas
 }
 

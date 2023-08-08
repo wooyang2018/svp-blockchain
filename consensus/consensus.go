@@ -144,9 +144,9 @@ func (cons *Consensus) setupDriver() {
 func (cons *Consensus) setupWindow(qc *core.QuorumCert) {
 	size := cons.resources.RoleStore.GetWindowSize()
 	w := &window{
-		qcQuotas:   make([]float64, size),
+		qcQuotas:   make([]uint32, size),
 		voteLimit:  cons.resources.RoleStore.GetValidatorQuota(cons.resources.Signer.PublicKey()),
-		voteQuotas: make([]float64, size),
+		voteQuotas: make([]uint32, size),
 		strategy:   cons.config.VoteStrategy,
 		height:     cons.driver.qcRefHeight(qc),
 		size:       size,

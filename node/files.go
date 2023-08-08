@@ -21,7 +21,7 @@ type Peer struct {
 
 type Genesis struct {
 	Validators []string
-	Quotas     []float64
+	Quotas     []uint32
 	WinSize    int
 }
 
