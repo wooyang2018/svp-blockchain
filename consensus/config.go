@@ -30,6 +30,7 @@ const (
 	FlagTxWaitTime    = "consensus-txWaitTime"
 	FlagViewWidth     = "consensus-viewWidth"
 	FlagLeaderTimeout = "consensus-leaderTimeout"
+	FlagVoteStrategy  = "consensus-voteStrategy"
 	FlagBenchmarkPath = "consensus-benchmarkPath"
 )
 
@@ -49,7 +50,7 @@ type Config struct {
 	LeaderTimeout time.Duration
 
 	// voting strategy adopted by validator
-	VoteStrategy VoteStrategy
+	VoteStrategy uint8
 
 	// path to save the benchmark log of the consensus algorithm (it will not be saved if blank)
 	BenchmarkPath string

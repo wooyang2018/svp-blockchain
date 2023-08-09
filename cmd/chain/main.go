@@ -78,6 +78,10 @@ func init() {
 		consensus.FlagLeaderTimeout, nodeConfig.ConsensusConfig.LeaderTimeout,
 		"leader must create next qc in this duration")
 
+	rootCmd.Flags().Uint8Var(&nodeConfig.ConsensusConfig.VoteStrategy,
+		consensus.FlagVoteStrategy, nodeConfig.ConsensusConfig.VoteStrategy,
+		"voting strategy adopted by validator")
+
 	rootCmd.Flags().StringVar(&nodeConfig.ConsensusConfig.BenchmarkPath,
 		consensus.FlagBenchmarkPath, nodeConfig.ConsensusConfig.BenchmarkPath,
 		"path to save the benchmark log of the consensus algorithm")

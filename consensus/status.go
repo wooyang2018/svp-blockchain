@@ -15,12 +15,8 @@ import (
 	"github.com/wooyang2018/posv-blockchain/logger"
 )
 
-// VoteStrategy voting strategy adopted by validator
-type VoteStrategy byte
-
 const (
-	_ VoteStrategy = iota
-	AverageVote
+	AverageVote uint8 = iota
 	RandomVote
 )
 
@@ -31,7 +27,7 @@ type window struct {
 	voteLimit  uint32
 	voteQuotas []uint32
 	voteAcc    uint32
-	strategy   VoteStrategy
+	strategy   uint8
 
 	height uint64
 	size   int
@@ -63,13 +59,14 @@ func (w *window) vote() uint32 {
 		if !PreserveTxFlag && w.height > 50 {
 			return w.voteLimit - w.voteAcc + w.voteQuotas[0]
 		}
-		pre := w.voteAcc - w.voteQuotas[0]
-		max := w.voteLimit - pre
-		min := (w.voteLimit+1)/2 - pre
+		var pre, min, max int
+		pre = int(w.voteAcc - w.voteQuotas[0])
+		max = int(w.voteLimit) - pre
+		min = int(w.voteLimit+1/2) - pre
 		if min < 0 {
 			min = 0
 		}
-		quota := uint32(rand.Intn(int(max-min+1))) + min
+		quota := uint32(rand.Intn(max-min+1) + min)
 		return quota
 	default:
 		panic("no support voting strategy")

@@ -272,7 +272,7 @@ func (d *driver) onReceiveVote(vote *core.Vote) error {
 		"height", blk.Height(),
 		"quota", vote.Quota())
 	if d.status.getVoteCount() >= d.resources.RoleStore.MajorityValidatorCount() &&
-		d.status.getQuotaCount() > d.resources.RoleStore.MajorityQuotaCount() {
+		d.status.getQuotaCount() >= d.resources.RoleStore.MajorityQuotaCount() {
 		qc := core.NewQuorumCert().Build(d.resources.Signer, d.status.getVotes())
 		d.status.endProposal()
 		d.updateQCHigh(qc)

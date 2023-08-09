@@ -56,7 +56,7 @@ func (store *roleStore) MajorityValidatorCount() int {
 }
 
 func (store *roleStore) MajorityQuotaCount() uint32 {
-	return store.quotaCount / 2
+	return (store.quotaCount + 1) / 2
 }
 
 func (store *roleStore) IsValidator(pubKey *PublicKey) bool {
