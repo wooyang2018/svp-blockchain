@@ -37,54 +37,63 @@ func newState() *state {
 func (state *state) getBlockPoolSize() int {
 	state.mtxBlocks.RLock()
 	defer state.mtxBlocks.RUnlock()
+
 	return len(state.blocks)
 }
 
 func (state *state) setBlock(blk *core.Block) {
 	state.mtxBlocks.Lock()
 	defer state.mtxBlocks.Unlock()
+
 	state.blocks[string(blk.Hash())] = blk
 }
 
 func (state *state) getBlock(hash []byte) *core.Block {
 	state.mtxBlocks.RLock()
 	defer state.mtxBlocks.RUnlock()
+
 	return state.blocks[string(hash)]
 }
 
 func (state *state) deleteBlock(hash []byte) {
 	state.mtxBlocks.Lock()
 	defer state.mtxBlocks.Unlock()
+
 	delete(state.blocks, string(hash))
 }
 
 func (state *state) getQCPoolSize() int {
 	state.mtxQCs.RLock()
 	defer state.mtxQCs.RUnlock()
+
 	return len(state.qcs)
 }
 
 func (state *state) setQC(qc *core.QuorumCert) {
 	state.mtxQCs.Lock()
 	defer state.mtxQCs.Unlock()
+
 	state.qcs[string(qc.BlockHash())] = qc
 }
 
 func (state *state) getQC(blkHash []byte) *core.QuorumCert {
 	state.mtxQCs.RLock()
 	defer state.mtxQCs.RUnlock()
+
 	return state.qcs[string(blkHash)]
 }
 
 func (state *state) deleteQC(blkHash []byte) {
 	state.mtxQCs.Lock()
 	defer state.mtxQCs.Unlock()
+
 	delete(state.qcs, string(blkHash))
 }
 
 func (state *state) setCommittedBlock(blk *core.Block) {
 	state.mtxCommitted.Lock()
 	defer state.mtxCommitted.Unlock()
+
 	state.committed[string(blk.Hash())] = struct{}{}
 	atomic.StoreUint64(&state.committedHeight, blk.Height())
 }
@@ -92,12 +101,14 @@ func (state *state) setCommittedBlock(blk *core.Block) {
 func (state *state) deleteCommitted(blkHash []byte) {
 	state.mtxCommitted.Lock()
 	defer state.mtxCommitted.Unlock()
+
 	delete(state.committed, string(blkHash))
 }
 
 func (state *state) getOlderBlocks(height uint64) []*core.Block {
 	state.mtxBlocks.RLock()
 	defer state.mtxBlocks.RUnlock()
+
 	ret := make([]*core.Block, 0)
 	for _, b := range state.blocks {
 		if b.Height() < height {

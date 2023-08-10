@@ -23,10 +23,10 @@ type rotator struct {
 	viewTimer    *time.Timer
 	timeoutCount int
 	highQCCount  int
+	mtxView      sync.Mutex
 
 	newViewCh chan struct{}
 	stopCh    chan struct{}
-	mtx       sync.Mutex
 }
 
 func (rot *rotator) start() {
@@ -56,13 +56,16 @@ func (rot *rotator) stop() {
 }
 
 func (rot *rotator) proposalLoop() {
+	sub := rot.driver.proposalEm.Subscribe(0)
+	defer sub.Unsubscribe()
+
 	for {
 		select {
 		case <-rot.stopCh:
 			return
 
-		case blk := <-rot.driver.receiveCh:
-			rot.onReceiveProposal(blk)
+		case e := <-sub.Events():
+			rot.onReceiveProposal(e.(*core.Block))
 		}
 	}
 }
@@ -109,19 +112,23 @@ func (rot *rotator) onReceiveProposal(blk *core.Block) {
 	rot.driver.mtxUpdate.Lock()
 	defer rot.driver.mtxUpdate.Unlock()
 
-	proposer := uint32(rot.resources.RoleStore.GetValidatorIndex(blk.Proposer()))
 	var ltreset, vtreset bool
+	proposer := uint32(rot.resources.RoleStore.GetValidatorIndex(blk.Proposer()))
 	if rot.isNormalApproval(blk.View(), proposer) {
 		ltreset = true
 		logger.I().Debugw("refreshed leader",
 			"view", blk.View(),
 			"leader", proposer)
 	}
+
+	rot.mtxView.Lock()
 	if rot.isNewViewApproval(blk.View(), proposer) {
 		ltreset = true
 		vtreset = true
 		rot.approveViewLeader(blk.View(), proposer)
 	}
+	rot.mtxView.Unlock()
+
 	if ltreset {
 		drainStopTimer(rot.leaderTimer)
 		rot.leaderTimer.Reset(rot.config.LeaderTimeout)
@@ -140,8 +147,6 @@ func (rot *rotator) isNormalApproval(view uint32, proposer uint32) bool {
 }
 
 func (rot *rotator) isNewViewApproval(view uint32, proposer uint32) bool {
-	rot.mtx.Lock()
-	defer rot.mtx.Unlock()
 	curView := rot.status.getView()
 	if view > curView {
 		return true
@@ -189,8 +194,13 @@ func (rot *rotator) onReceiveQC(qc *core.QuorumCert) error {
 	rot.driver.mtxUpdate.Lock()
 	defer rot.driver.mtxUpdate.Unlock()
 
-	rot.driver.updateQCHigh(qc)
 	rot.highQCCount++
+	logger.I().Debugw("received qc",
+		"view", qc.View(),
+		"height", blk.Height(),
+		"count", rot.highQCCount)
+
+	rot.driver.updateQCHigh(qc)
 	if rot.highQCCount >= rot.resources.RoleStore.MajorityValidatorCount() {
 		rot.newViewCh <- struct{}{}
 		rot.highQCCount = 0
@@ -199,10 +209,10 @@ func (rot *rotator) onReceiveQC(qc *core.QuorumCert) error {
 }
 
 func (rot *rotator) onLeaderTimeout() {
-	logger.I().Warnw("leader timeout", "view", rot.status.getView(), "leader", rot.status.getLeaderIndex())
 	rot.timeoutCount++
 	rot.changeView()
 	drainStopTimer(rot.leaderTimer)
+
 	faultyCount := rot.resources.RoleStore.ValidatorCount() - rot.resources.RoleStore.MajorityValidatorCount()
 	if rot.timeoutCount > faultyCount {
 		rot.leaderTimer.Stop()
@@ -213,34 +223,37 @@ func (rot *rotator) onLeaderTimeout() {
 }
 
 func (rot *rotator) onViewTimeout() {
-	logger.I().Warnw("view timeout", "view", rot.status.getView(), "leader", rot.status.getLeaderIndex())
 	rot.changeView()
 	drainStopTimer(rot.leaderTimer)
 	rot.leaderTimer.Reset(rot.config.LeaderTimeout)
 }
 
 func (rot *rotator) changeView() {
-	rot.mtx.Lock()
-	rot.status.setViewChange(1)
 	view := rot.status.getView()
-	if err := rot.resources.MsgSvc.BroadcastQC(rot.status.getQCHigh()); err != nil {
-		logger.I().Errorf("broadcast qc failed, %+v", err)
+	nextIdx := (view + 1) % uint32(rot.resources.RoleStore.ValidatorCount())
+
+	rot.mtxView.Lock()
+	if view == rot.status.getView() {
+		rot.status.setViewChange(1)
+		logger.I().Warnw("timer timeout", "view", view, "leader", rot.status.getLeaderIndex())
+
+		nextLeader := rot.resources.RoleStore.GetValidator(int(nextIdx))
+		rot.resources.MsgSvc.SendQC(nextLeader, rot.status.getQCHigh())
+		rot.highQCCount++
+
+		select {
+		case <-rot.newViewCh: //wait to receive n-f qcs
+		case <-time.After(2 * time.Second):
+		}
 	}
-	rot.highQCCount++
-	select {
-	case <-rot.newViewCh: //wait to receive n-f qcs
-		time.Sleep(1 * time.Second)
-	case <-time.After(2 * time.Second):
-	}
-	rot.mtx.Unlock()
+	rot.mtxView.Unlock()
 
 	rot.driver.mtxUpdate.Lock()
 	defer rot.driver.mtxUpdate.Unlock()
 
 	if rot.status.getViewChange() == 1 && view == rot.status.getView() {
-		rot.status.setView(rot.status.getView() + 1)
-		leaderIdx := rot.status.getView() % uint32(rot.resources.RoleStore.ValidatorCount())
-		rot.status.setLeaderIndex(leaderIdx)
+		rot.status.setView(view + 1)
+		rot.status.setLeaderIndex(nextIdx)
 
 		logger.I().Infow("view changed",
 			"view", rot.status.getView(),
@@ -260,7 +273,12 @@ func (rot *rotator) newViewProposal() {
 	if err := rot.resources.MsgSvc.BroadcastProposal(blk); err != nil {
 		logger.I().Errorf("broadcast proposal failed, %+v", err)
 	}
-	vote := blk.Vote(rot.resources.Signer, rot.status.getVoteQuota())
+
+	var quota uint32 = 1
+	if !TwoPhaseBFTFlag {
+		quota = rot.status.getVoteQuota()
+	}
+	vote := blk.Vote(rot.resources.Signer, quota)
 	rot.driver.onReceiveVote(vote)
 	rot.driver.updateQCHigh(blk.QuorumCert())
 }

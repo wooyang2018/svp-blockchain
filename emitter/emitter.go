@@ -54,7 +54,7 @@ func New() *Emitter {
 func (e *Emitter) Subscribe(buffer int) *Subscription {
 	s := &Subscription{
 		e.delete,
-		make(chan Event, max(buffer, 5)),
+		make(chan Event, max(buffer, 0)),
 	}
 	e.add(s)
 	return s

@@ -54,6 +54,7 @@ func (w *window) update(qc, vote uint32, height uint64) {
 func (w *window) vote() uint32 {
 	switch w.strategy {
 	case AverageVote:
+		//several blocks starting with genesis block may not satisfy the rule for window voting
 		return w.voteLimit / uint32(w.size)
 	case RandomVote:
 		if !PreserveTxFlag && w.height > 50 {
@@ -62,8 +63,7 @@ func (w *window) vote() uint32 {
 		var pre, min, max int
 		pre = int(w.voteAcc - w.voteQuotas[0])
 		max = int(w.voteLimit) - pre
-		min = int(w.voteLimit+1/2) - pre
-		if min < 0 {
+		if min = int(w.voteLimit+1/2) - pre; min < 0 {
 			min = 0
 		}
 		quota := uint32(rand.Intn(max-min+1) + min)
@@ -170,9 +170,6 @@ func (s *status) endProposal() {
 }
 
 func (s *status) getVoteQuota() uint32 {
-	if TwoPhaseBFTFlag {
-		return 1
-	}
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
@@ -196,6 +193,7 @@ func (s *status) addVote(vote *core.Vote) error {
 	if _, found := s.votes[key]; found {
 		return errors.New("duplicate vote")
 	}
+
 	s.votes[key] = vote
 	s.quotaCount += vote.Quota()
 	return nil

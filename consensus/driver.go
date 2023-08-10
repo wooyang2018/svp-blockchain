@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/wooyang2018/posv-blockchain/core"
+	"github.com/wooyang2018/posv-blockchain/emitter"
 	"github.com/wooyang2018/posv-blockchain/logger"
 	"github.com/wooyang2018/posv-blockchain/storage"
 )
@@ -22,18 +23,17 @@ type driver struct {
 	status    *status
 	tester    *tester
 
-	isCommitting bool
-	isExisted    bool
-	proposeCh    chan struct{}
-	receiveCh    chan *core.Block
+	proposalEm *emitter.Emitter
+	proposeCh  chan struct{}
+	isExisted  bool
 
+	mtxCommit sync.Mutex // lock for committing block
 	mtxUpdate sync.Mutex // lock for update call
 }
 
 func (d *driver) waitCommit() {
-	for d.isCommitting {
-		time.Sleep(20 * time.Millisecond)
-	}
+	d.mtxCommit.Lock()
+	defer d.mtxCommit.Unlock()
 	d.isExisted = true
 	logger.I().Info("stopped driver")
 }
@@ -49,13 +49,11 @@ func (d *driver) qcRefHeight(qc *core.QuorumCert) uint64 {
 	return d.getBlockByHash(qc.BlockHash()).Height()
 }
 
-func (d *driver) getBlockByHash(hash []byte) *core.Block {
-	blk := d.state.getBlock(hash)
-	if blk != nil {
+func (d *driver) getBlockByHash(hash []byte) (blk *core.Block) {
+	if blk = d.state.getBlock(hash); blk != nil {
 		return blk
 	}
-	blk, _ = d.resources.Storage.GetBlock(hash)
-	if blk == nil {
+	if blk, _ = d.resources.Storage.GetBlock(hash); blk == nil {
 		return nil
 	}
 	d.state.setBlock(blk)
@@ -63,13 +61,11 @@ func (d *driver) getBlockByHash(hash []byte) *core.Block {
 }
 
 // Deprecated
-func (d *driver) getQCByBlockHash(blkHash []byte) *core.QuorumCert {
-	qc := d.state.getQC(blkHash)
-	if qc != nil {
+func (d *driver) getQCByBlockHash(blkHash []byte) (qc *core.QuorumCert) {
+	if qc = d.state.getQC(blkHash); qc != nil {
 		return qc
 	}
-	qc, _ = d.resources.Storage.GetQC(blkHash)
-	if qc == nil {
+	if qc, _ = d.resources.Storage.GetQC(blkHash); qc == nil {
 		return nil
 	}
 	d.state.setQC(qc)
@@ -195,8 +191,8 @@ func (d *driver) verifyParentAndCommitRecursive(peer *core.PublicKey, blk, paren
 
 	d.mtxUpdate.Lock()
 	defer d.mtxUpdate.Unlock()
-	d.commitRecursive(blk)
 
+	d.commitRecursive(blk)
 	return nil
 }
 
@@ -248,7 +244,7 @@ func (d *driver) createProposal(view uint32, parent *core.Block, qcHigh *core.Qu
 	d.state.setBlock(blk)
 	d.status.setBLeaf(blk)
 	d.status.startProposal(blk)
-	d.receiveCh <- blk
+	d.proposalEm.Emit(blk)
 
 	logger.I().Infow("proposed proposal",
 		"view", blk.View(),
@@ -256,7 +252,6 @@ func (d *driver) createProposal(view uint32, parent *core.Block, qcHigh *core.Qu
 		"exec", blk.ExecHeight(),
 		"qc", d.qcRefHeight(blk.QuorumCert()),
 		"txs", len(blk.Transactions()))
-
 	return blk
 }
 
@@ -270,6 +265,7 @@ func (d *driver) onReceiveVote(vote *core.Vote) error {
 		"view", vote.View(),
 		"height", blk.Height(),
 		"quota", vote.Quota())
+
 	isVoteEnough := false
 	if TwoPhaseBFTFlag {
 		isVoteEnough = d.status.getVoteCount() >= d.resources.RoleStore.MajorityValidatorCount()
@@ -298,9 +294,9 @@ func (d *driver) updateQCHigh(qc *core.QuorumCert) {
 		if !TwoPhaseBFTFlag {
 			d.status.updateWindow(qc.SumQuota(), qc.FindVote(d.resources.Signer), blk1.Height())
 		}
+
 		d.resources.Storage.StoreQC(qc)
 		d.resources.Storage.StoreBlock(blk1)
-
 		if d.cmpBlockHeight(blk0, d.status.getBExec()) == 1 && blk0.View() == blk1.View() {
 			d.commitRecursive(blk0)
 		}
@@ -338,47 +334,50 @@ func (d *driver) onCommit(blk *core.Block) {
 }
 
 func (d *driver) commit(blk *core.Block) {
-	start := time.Now()
-	rawTxs := blk.Transactions()
-	var txCount int
 	var data *storage.CommitData
-	if ExecuteTxFlag {
-		txs, old := d.resources.TxPool.GetTxsToExecute(rawTxs)
-		txCount = len(txs)
-		logger.I().Debugw("executing block", "height", blk.Height(), "txs", txCount)
-		bcm, txcs := d.resources.Execution.Execute(blk, txs)
-		bcm.SetOldBlockTxs(old)
-		data = &storage.CommitData{
-			Block:        blk,
-			Transactions: txs,
-			BlockCommit:  bcm,
-			TxCommits:    txcs,
-		}
-	} else {
-		txCount = len(rawTxs)
-		logger.I().Debugw("executing block", "height", blk.Height(), "txs", txCount)
-		bcm, txcs := d.resources.Execution.MockExecute(blk)
-		bcm.SetOldBlockTxs(rawTxs)
-		data = &storage.CommitData{
-			Block:        blk,
-			Transactions: nil,
-			BlockCommit:  bcm,
-			TxCommits:    txcs,
-		}
-	}
-	d.isCommitting = true
+	rawTxs := blk.Transactions()
+	txCount := len(rawTxs)
+
+	d.mtxCommit.Lock()
 	if !d.isExisted {
+		start := time.Now()
+
+		if ExecuteTxFlag {
+			txs, old := d.resources.TxPool.GetTxsToExecute(rawTxs)
+			txCount = len(txs)
+			logger.I().Debugw("executing block", "height", blk.Height(), "txs", txCount)
+			bcm, txcs := d.resources.Execution.Execute(blk, txs)
+			bcm.SetOldBlockTxs(old)
+			data = &storage.CommitData{
+				Block:        blk,
+				Transactions: txs,
+				BlockCommit:  bcm,
+				TxCommits:    txcs,
+			}
+		} else {
+			logger.I().Debugw("executing block", "height", blk.Height(), "txs", txCount)
+			bcm, txcs := d.resources.Execution.MockExecute(blk)
+			bcm.SetOldBlockTxs(rawTxs)
+			data = &storage.CommitData{
+				Block:        blk,
+				Transactions: nil,
+				BlockCommit:  bcm,
+				TxCommits:    txcs,
+			}
+		}
+
 		if err := d.resources.Storage.Commit(data); err != nil {
 			logger.I().Fatalf("commit storage error, %+v", err)
 		}
+		logger.I().Infow("committed bock",
+			"height", blk.Height(),
+			"txs", txCount,
+			"elapsed", time.Since(start))
 	}
-	d.isCommitting = false
+	d.mtxCommit.Unlock()
+
 	d.state.addCommittedTxCount(txCount)
 	d.cleanStateOnCommitted(blk)
-	logger.I().Infow("committed bock",
-		"height", blk.Height(),
-		"txs", txCount,
-		"elapsed", time.Since(start))
 }
 
 func (d *driver) cleanStateOnCommitted(blk *core.Block) {
@@ -395,6 +394,7 @@ func (d *driver) cleanStateOnCommitted(blk *core.Block) {
 		d.state.deleteBlock(blk.Hash())
 		d.state.deleteQC(blk.Hash())
 	}
+
 	//delete committed older blocks
 	height := blk.Height()
 	if height < 20 {

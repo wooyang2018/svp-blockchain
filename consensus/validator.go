@@ -93,13 +93,13 @@ func (vld *validator) onReceiveProposal(blk *core.Block) error {
 			return fmt.Errorf("sync txs failed, %w", err)
 		}
 	}
-	vld.state.setBlock(blk)
-	vld.driver.receiveCh <- blk
 
-	pidx := vld.resources.RoleStore.GetValidatorIndex(blk.Proposer())
+	vld.state.setBlock(blk)
+	vld.driver.proposalEm.Emit(blk)
+
 	logger.I().Infow("received proposal",
 		"view", blk.View(),
-		"proposer", pidx,
+		"proposer", vld.resources.RoleStore.GetValidatorIndex(blk.Proposer()),
 		"height", blk.Height(),
 		"txs", len(blk.Transactions()))
 
@@ -118,15 +118,18 @@ func (vld *validator) onReceiveProposal(blk *core.Block) error {
 }
 
 func (vld *validator) voteProposal(blk *core.Block) error {
-	proposer := vld.resources.RoleStore.GetValidatorIndex(blk.Proposer())
 	if !vld.driver.isLeader(blk.Proposer()) {
+		proposer := vld.resources.RoleStore.GetValidatorIndex(blk.Proposer())
 		return fmt.Errorf("proposer %d is not leader", proposer)
 	}
-
 	if err := vld.verifyBlockToVote(blk); err != nil {
 		return err
 	}
-	vote := blk.Vote(vld.resources.Signer, vld.status.getVoteQuota())
+	var quota uint32 = 1
+	if !TwoPhaseBFTFlag {
+		quota = vld.status.getVoteQuota()
+	}
+	vote := blk.Vote(vld.resources.Signer, quota)
 	if !PreserveTxFlag {
 		vld.resources.TxPool.SetTxsPending(blk.Transactions())
 	}

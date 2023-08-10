@@ -52,7 +52,6 @@ type MsgService interface {
 	RequestBlockByHeight(pubKey *core.PublicKey, height uint64) (*core.Block, error)
 	RequestQC(pubKey *core.PublicKey, blkHash []byte) (*core.QuorumCert, error)
 	SendQC(pubKey *core.PublicKey, qc *core.QuorumCert) error
-
 	SubscribeProposal(buffer int) *emitter.Subscription
 	SubscribeVote(buffer int) *emitter.Subscription
 	SubscribeQC(buffer int) *emitter.Subscription

@@ -37,12 +37,10 @@ type genesis struct {
 
 func (gns *genesis) run() (*core.Block, *core.QuorumCert) {
 	gns.done = make(chan struct{})
-
 	go gns.proposalLoop()
 	go gns.voteLoop()
 	go gns.newViewLoop()
 	gns.propose()
-
 	<-gns.done
 	logger.I().Info("got genesis block and qc")
 	gns.commit()
@@ -64,21 +62,17 @@ func (gns *genesis) propose() {
 		return
 	}
 	gns.votes = make(map[string]*core.Vote, gns.resources.RoleStore.MajorityValidatorCount())
-	blk := gns.createGenesisProposal()
-	gns.setB0(blk)
-	logger.I().Info("created genesis block, broadcasting...")
-	go gns.broadcastProposalLoop()
-	quota := gns.resources.RoleStore.GetValidatorQuota(gns.resources.Signer.PublicKey())
-	gns.onReceiveVote(blk.Vote(gns.resources.Signer, (quota+1)/2))
-}
-
-func (gns *genesis) createGenesisProposal() *core.Block {
-	return core.NewBlock().
+	blk := core.NewBlock().
 		SetView(0).
 		SetHeight(0).
 		SetParentHash(hashChainID(gns.chainID)).
 		SetTimestamp(time.Now().UnixNano()).
 		Sign(gns.resources.Signer)
+	gns.setB0(blk)
+	logger.I().Info("created genesis block, broadcasting...")
+	go gns.broadcastProposalLoop()
+	quota := gns.resources.RoleStore.GetValidatorQuota(gns.resources.Signer.PublicKey())
+	gns.onReceiveVote(blk.Vote(gns.resources.Signer, (quota+1)/2))
 }
 
 func (gns *genesis) broadcastProposalLoop() {
@@ -88,6 +82,7 @@ func (gns *genesis) broadcastProposalLoop() {
 			return
 		default:
 		}
+
 		if gns.getQ0() == nil {
 			if err := gns.resources.MsgSvc.BroadcastProposal(gns.getB0()); err != nil {
 				logger.I().Errorf("broadcast proposal failed, %+v", err)
@@ -251,6 +246,7 @@ func (gns *genesis) broadcastQC() {
 			return
 		default:
 		}
+
 		if err := gns.resources.MsgSvc.BroadcastQC(gns.getQ0()); err != nil {
 			logger.I().Errorf("broadcast qc failed ,%+v", err)
 		}
@@ -279,6 +275,7 @@ func (gns *genesis) acceptQC(qc *core.QuorumCert) {
 		return
 	default:
 	}
+
 	gns.setQ0(qc)
 	if !gns.isLeader(gns.resources.Signer.PublicKey()) {
 		gns.resources.MsgSvc.SendQC(gns.getB0().Proposer(), qc)
@@ -289,24 +286,28 @@ func (gns *genesis) acceptQC(qc *core.QuorumCert) {
 func (gns *genesis) setB0(blk *core.Block) {
 	gns.mtxB0.Lock()
 	defer gns.mtxB0.Unlock()
+
 	gns.b0 = blk
 }
 
 func (gns *genesis) setQ0(qc *core.QuorumCert) {
 	gns.mtxQ0.Lock()
 	defer gns.mtxQ0.Unlock()
+
 	gns.q0 = qc
 }
 
 func (gns *genesis) getB0() *core.Block {
 	gns.mtxB0.RLock()
 	defer gns.mtxB0.RUnlock()
+
 	return gns.b0
 }
 
 func (gns *genesis) getQ0() *core.QuorumCert {
 	gns.mtxQ0.RLock()
 	defer gns.mtxQ0.RUnlock()
+
 	return gns.q0
 }
 

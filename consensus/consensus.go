@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/wooyang2018/posv-blockchain/core"
+	"github.com/wooyang2018/posv-blockchain/emitter"
 	"github.com/wooyang2018/posv-blockchain/logger"
 )
 
@@ -127,12 +128,12 @@ func (cons *Consensus) setupStatus(exec *core.Block, leaf *core.Block, qc *core.
 
 func (cons *Consensus) setupDriver() {
 	cons.driver = &driver{
-		resources: cons.resources,
-		config:    cons.config,
-		state:     cons.state,
-		status:    cons.status,
-		proposeCh: make(chan struct{}),
-		receiveCh: make(chan *core.Block),
+		resources:  cons.resources,
+		config:     cons.config,
+		state:      cons.state,
+		status:     cons.status,
+		proposeCh:  make(chan struct{}),
+		proposalEm: emitter.New(),
 	}
 	if cons.config.BenchmarkPath != "" {
 		var err error

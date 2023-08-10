@@ -146,7 +146,6 @@ func printAndCheckVars() {
 		os.Exit(1)
 	}
 	fmt.Println("NodeCount =", NodeCount)
-	fmt.Println("StakeQuota =", StakeQuota)
 	fmt.Println("WindowSize =", WindowSize)
 	fmt.Println("LoadJobPerTick =", LoadJobPerTick)
 	fmt.Println("LoadSubmitNodes =", LoadSubmitNodes)

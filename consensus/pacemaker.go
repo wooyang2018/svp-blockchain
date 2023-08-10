@@ -53,14 +53,13 @@ func (pm *pacemaker) run() {
 		case <-pm.stopCh:
 			return
 		case <-pm.driver.proposeCh:
+			pm.delayProposeWhenNoTxs()
 			pm.newProposal()
 		}
 	}
 }
 
 func (pm *pacemaker) newProposal() {
-	pm.delayProposeWhenNoTxs()
-
 	pm.driver.mtxUpdate.Lock()
 	defer pm.driver.mtxUpdate.Unlock()
 
@@ -78,7 +77,11 @@ func (pm *pacemaker) newProposal() {
 		logger.I().Errorf("broadcast proposal failed, %+v", err)
 	}
 
-	vote := blk.Vote(pm.resources.Signer, pm.status.getVoteQuota())
+	var quota uint32 = 1
+	if !TwoPhaseBFTFlag {
+		quota = pm.status.getVoteQuota()
+	}
+	vote := blk.Vote(pm.resources.Signer, quota)
 	pm.driver.onReceiveVote(vote)
 	pm.driver.updateQCHigh(blk.QuorumCert())
 }

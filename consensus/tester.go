@@ -43,6 +43,7 @@ func (t *tester) saveItem(height uint64, t0, t1, t2 int64, txs int) {
 	if t.preTime == 0 {
 		t.preTime = t0
 	}
+
 	t.elapsed = t.elapsed + t2 - t.preTime
 	t.txCount = t.txCount + txs
 	t.preTime = t2
@@ -51,9 +52,10 @@ func (t *tester) saveItem(height uint64, t0, t1, t2 int64, txs int) {
 		strconv.FormatInt(t0, 10),
 		strconv.FormatInt(t1, 10),
 		strconv.FormatInt(t2, 10),
-		strconv.FormatInt(time.Duration(t2-t0).Milliseconds(), 10),
+		strconv.FormatInt(time.Duration(t1-t0).Milliseconds(), 10),
 		strconv.Itoa(txs),
 	}
+
 	if height > 0 && height%10 == 0 {
 		t.writer.Flush()
 		tps := float64(t.txCount) / float64(t.elapsed) * 1e9
@@ -67,5 +69,6 @@ func (t *tester) saveItem(height uint64, t0, t1, t2 int64, txs int) {
 		t.txCount = 0
 		t.elapsed = 0
 	}
+
 	t.writer.Write(content)
 }
