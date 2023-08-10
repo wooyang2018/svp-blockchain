@@ -99,8 +99,6 @@ func main() {
 		}
 		if SetupClusterTemplate {
 			if cls, err := cfactory.SetupCluster("cluster_template"); err == nil {
-				cls.EmptyChainCode = EmptyChainCode
-				cls.CheckRotation = CheckRotation
 				fmt.Println("\nThe cluster startup command is as follows:")
 				for i := 0; i < cls.NodeCount(); i++ {
 					fmt.Println(cls.GetNode(i).PrintCmd())

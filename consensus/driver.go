@@ -136,8 +136,7 @@ func (d *driver) syncParentBlock(blk *core.Block) (*core.Block, error) {
 	if blk.Height() == 0 { // genesis block
 		return nil, nil
 	}
-	parent := d.getBlockByHash(blk.ParentHash())
-	if parent != nil {
+	if parent := d.getBlockByHash(blk.ParentHash()); parent != nil {
 		return parent, nil
 	}
 	if err := d.syncMissingCommittedBlocks(blk); err != nil {
