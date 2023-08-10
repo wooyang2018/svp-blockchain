@@ -31,12 +31,12 @@ type roleStore struct {
 
 var _ RoleStore = (*roleStore)(nil)
 
-func NewRoleStore(validators []string, quotas []uint32, winSize int) RoleStore {
+func NewRoleStore(validators []string, quotas []uint32, size int) RoleStore {
 	store := &roleStore{
 		validatorMap: make(map[string]int, len(validators)),
 		validators:   make([]*PublicKey, len(validators)),
 		stakeQuotas:  quotas,
-		windowSize:   winSize,
+		windowSize:   size,
 	}
 	//assert len(validators) == len(quotas)
 	for i, v := range validators {

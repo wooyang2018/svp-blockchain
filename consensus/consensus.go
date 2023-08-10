@@ -61,7 +61,9 @@ func (cons *Consensus) start() {
 	cons.state.setQC(qc)
 	cons.setupStatus(exec, leaf, qc)
 	cons.setupDriver()
-	cons.setupWindow(qc)
+	if !TwoPhaseBFTFlag {
+		cons.setupWindow(qc)
+	}
 	cons.setupValidator()
 	cons.setupPacemaker()
 	cons.setupRotator()

@@ -9,7 +9,7 @@ import (
 	"github.com/wooyang2018/posv-blockchain/storage"
 )
 
-const MaxProcs = -1 //set corresponding num of CPUs when benchmark test
+const MaxProcsNum = -1 //set corresponding num of CPUs when benchmark test
 
 type Config struct {
 	Debug       bool

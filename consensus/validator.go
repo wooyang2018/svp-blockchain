@@ -134,13 +134,16 @@ func (vld *validator) voteProposal(blk *core.Block) error {
 		logger.I().Errorf("send vote failed, %+v", err)
 	}
 
-	logger.I().Infow("voted proposal",
+	logKVs := []interface{}{
 		"view", blk.View(),
 		"height", blk.Height(),
 		"qc", vld.driver.qcRefHeight(blk.QuorumCert()),
-		"quota", vote.Quota(),
-		"window", vld.status.getVoteWindow(),
-	)
+	}
+	if !TwoPhaseBFTFlag {
+		logKVs = append(logKVs, "quota", vote.Quota(),
+			"window", vld.status.getVoteWindow())
+	}
+	logger.I().Infow("voted proposal", logKVs...)
 	return nil
 }
 

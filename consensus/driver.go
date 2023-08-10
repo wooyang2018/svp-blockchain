@@ -271,8 +271,14 @@ func (d *driver) onReceiveVote(vote *core.Vote) error {
 		"view", vote.View(),
 		"height", blk.Height(),
 		"quota", vote.Quota())
-	if d.status.getVoteCount() >= d.resources.RoleStore.MajorityValidatorCount() &&
-		d.status.getQuotaCount() >= d.resources.RoleStore.MajorityQuotaCount() {
+	isVoteEnough := false
+	if TwoPhaseBFTFlag {
+		isVoteEnough = d.status.getVoteCount() >= d.resources.RoleStore.MajorityValidatorCount()
+	} else {
+		isVoteEnough = d.status.getVoteCount() >= d.resources.RoleStore.MajorityValidatorCount() &&
+			d.status.getQuotaCount() >= d.resources.RoleStore.MajorityQuotaCount()
+	}
+	if isVoteEnough {
 		qc := core.NewQuorumCert().Build(d.resources.Signer, d.status.getVotes())
 		d.status.endProposal()
 		d.updateQCHigh(qc)
@@ -290,8 +296,9 @@ func (d *driver) updateQCHigh(qc *core.QuorumCert) {
 		d.state.setQC(qc)
 		d.status.setQCHigh(qc)
 		d.status.setBLeaf(blk1)
-		d.status.updateWindow(qc.SumQuota(), qc.FindVote(d.resources.Signer), blk1.Height())
-
+		if !TwoPhaseBFTFlag {
+			d.status.updateWindow(qc.SumQuota(), qc.FindVote(d.resources.Signer), blk1.Height())
+		}
 		d.resources.Storage.StoreQC(qc)
 		d.resources.Storage.StoreBlock(blk1)
 
@@ -299,12 +306,16 @@ func (d *driver) updateQCHigh(qc *core.QuorumCert) {
 			d.commitRecursive(blk0)
 		}
 
-		logger.I().Infow("updated high qc",
+		logKVs := []interface{}{
 			"view", qc.View(),
 			"qc", blk1.Height(),
 			"votes", len(qc.Quotas()),
-			"quota", qc.SumQuota(),
-			"window", d.status.getQCWindow())
+		}
+		if !TwoPhaseBFTFlag {
+			logKVs = append(logKVs, "quota", qc.SumQuota(),
+				"window", d.status.getQCWindow())
+		}
+		logger.I().Infow("updated high qc", logKVs...)
 	}
 }
 

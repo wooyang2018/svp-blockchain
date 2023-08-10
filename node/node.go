@@ -59,8 +59,8 @@ func Run(config Config) {
 }
 
 func (node *Node) LimitCPUs() {
-	runtime.GOMAXPROCS(MaxProcs)
-	logger.I().Debugf("set up the node to use %d out of %d CPUs",
+	runtime.GOMAXPROCS(MaxProcsNum)
+	logger.I().Debugf("setup node to use %d out of %d CPUs",
 		runtime.GOMAXPROCS(0), runtime.NumCPU())
 }
 
@@ -116,7 +116,8 @@ func (node *Node) setupComponents() {
 }
 
 func (node *Node) setupRoleStore() {
-	node.roleStore = core.NewRoleStore(node.genesis.Validators, node.genesis.Quotas, node.genesis.WinSize)
+	node.roleStore = core.NewRoleStore(node.genesis.Validators,
+		node.genesis.StakeQuotas, node.genesis.WindowSize)
 	logger.I().Infow("setup role store", "window size", node.roleStore.GetWindowSize())
 }
 

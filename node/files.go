@@ -20,9 +20,9 @@ type Peer struct {
 }
 
 type Genesis struct {
-	Validators []string
-	Quotas     []uint32
-	WinSize    int
+	Validators  []string
+	StakeQuotas []uint32
+	WindowSize  int
 }
 
 const (

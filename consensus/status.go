@@ -170,6 +170,9 @@ func (s *status) endProposal() {
 }
 
 func (s *status) getVoteQuota() uint32 {
+	if TwoPhaseBFTFlag {
+		return 1
+	}
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 

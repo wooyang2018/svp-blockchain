@@ -72,7 +72,7 @@ Modify the following global variables in the source code of `tests/main.go`.
 
 ```
 NodeCount = 7 //your expected number of nodes
-WinSize = 4 //your expected size of voting window 
+WindowSize = 4 //your expected size of voting window 
 RemoteLinuxCluster = true
 RemoteKeySSH = "~/.ssh/id_rsa"
 RemoteHostsPath = "hosts"

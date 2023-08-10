@@ -25,7 +25,7 @@ var (
 	WorkDir    = "./workdir"
 	NodeCount  = 7
 	StakeQuota = 10000
-	WinSize    = 4
+	WindowSize = 4
 
 	LoadTxPerSec    = 10  //tps for client to submit tx during functional testing
 	LoadJobPerTick  = 100 //num of tasks to be completed per tick
@@ -149,6 +149,7 @@ func printAndCheckVars() {
 	}
 	fmt.Println("NodeCount =", NodeCount)
 	fmt.Println("StakeQuota =", StakeQuota)
+	fmt.Println("WindowSize =", WindowSize)
 	fmt.Println("LoadJobPerTick =", LoadJobPerTick)
 	fmt.Println("LoadSubmitNodes =", LoadSubmitNodes)
 	fmt.Println("LoadBatchSubmit =", LoadBatchSubmit)
@@ -162,8 +163,13 @@ func printAndCheckVars() {
 	fmt.Println("BenchLoads =", BenchLoads)
 	fmt.Println("ExecuteTxFlag =", consensus.ExecuteTxFlag)
 	fmt.Println("PreserveTxFlag =", consensus.PreserveTxFlag)
+	fmt.Println("TwoPhaseBFTFlag =", consensus.TwoPhaseBFTFlag)
 	fmt.Println()
 	pass := true
+	if consensus.TwoPhaseBFTFlag && WindowSize != 1 {
+		fmt.Println("consensus.TwoPhaseBFTFlag ===> WindowSize=1")
+		pass = false
+	}
 	if !BroadcastTx && len(LoadSubmitNodes) != 1 {
 		fmt.Println("!BroadcastTx ===> len(LoadSubmitNodes)=1")
 		pass = false
@@ -274,7 +280,7 @@ func makeLocalClusterFactory() *cluster.LocalFactory {
 		WorkDir:    path.Join(WorkDir, "local-clusters"),
 		NodeCount:  NodeCount,
 		StakeQuota: StakeQuota,
-		WinSize:    WinSize,
+		WindowSize: WindowSize,
 		NodeConfig: getNodeConfig(),
 	})
 	check(err)
@@ -287,7 +293,7 @@ func makeRemoteClusterFactory() *cluster.RemoteFactory {
 		WorkDir:         path.Join(WorkDir, "remote-clusters"),
 		NodeCount:       NodeCount,
 		StakeQuota:      StakeQuota,
-		WinSize:         WinSize,
+		WindowSize:      WindowSize,
 		NodeConfig:      getNodeConfig(),
 		KeySSH:          RemoteKeySSH,
 		HostsPath:       RemoteHostsPath,

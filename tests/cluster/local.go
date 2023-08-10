@@ -23,7 +23,7 @@ type LocalFactoryParams struct {
 	WorkDir    string
 	NodeCount  int
 	StakeQuota int
-	WinSize    int
+	WindowSize int
 
 	NodeConfig node.Config
 }
@@ -55,13 +55,13 @@ func (ftry *LocalFactory) setup() error {
 	keys := MakeRandomKeys(ftry.params.NodeCount)
 	quotas := MakeRandomQuotas(ftry.params.NodeCount, ftry.params.StakeQuota)
 	genesis := &node.Genesis{
-		Validators: make([]string, len(keys)),
-		Quotas:     make([]uint32, len(keys)),
-		WinSize:    ftry.params.WinSize,
+		Validators:  make([]string, len(keys)),
+		StakeQuotas: make([]uint32, len(keys)),
+		WindowSize:  ftry.params.WindowSize,
 	}
 	for i, v := range keys {
 		genesis.Validators[i] = v.PublicKey().String()
-		genesis.Quotas[i] = quotas[i]
+		genesis.StakeQuotas[i] = quotas[i]
 	}
 	peers := MakePeers(keys, addrs)
 	return SetupTemplateDir(ftry.templateDir, keys, genesis, peers)

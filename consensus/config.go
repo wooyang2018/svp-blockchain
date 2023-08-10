@@ -5,8 +5,9 @@ package consensus
 
 import "time"
 
-const ExecuteTxFlag = true   //set to false when benchmark test
-const PreserveTxFlag = false //set to true when benchmark test
+const ExecuteTxFlag = true    //set to false when benchmark test
+const PreserveTxFlag = false  //set to true when benchmark test
+const TwoPhaseBFTFlag = false //set to true to execute two-phase BFT protocol
 
 const (
 	FlagDebug   = "debug"
