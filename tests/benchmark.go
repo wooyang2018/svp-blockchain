@@ -197,7 +197,7 @@ func (bm *Benchmark) stopDstat() {
 
 func (bm *Benchmark) downloadFiles() {
 	var wg sync.WaitGroup
-	for i := 0; i < bm.cluster.NodeCount() && i < 7; i++ {
+	for i := 0; i < bm.cluster.NodeCount() && i < 4; i++ {
 		node := bm.cluster.GetNode(i).(*cluster.RemoteNode)
 		wg.Add(3)
 

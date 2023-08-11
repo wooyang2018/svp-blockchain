@@ -23,23 +23,23 @@ import (
 
 var (
 	WorkDir    = "./workdir"
-	NodeCount  = 7
+	NodeCount  = 4
 	StakeQuota = 10000
 	WindowSize = 4
 
 	LoadTxPerSec    = 10  //tps for client to submit tx during functional testing
 	LoadJobPerTick  = 100 //num of tasks to be completed per tick
-	LoadSubmitNodes = []int{}
+	LoadSubmitNodes = []int{0}
 	LoadBatchSubmit = true //whether to enable batch transaction submission
 
 	//chaincode priority: empty > pcoin bincc > pcoin
-	EmptyChainCode = false // deploy empty chaincode instead of pcoin
-	PCoinBinCC     = true  // deploy pcoin chaincode as bincc type (not embeded in node)
-	CheckRotation  = true
-	BroadcastTx    = true
+	EmptyChainCode = true  // deploy empty chaincode instead of pcoin
+	PCoinBinCC     = false // deploy pcoin chaincode as bincc type (not embeded in node)
+	CheckRotation  = false
+	BroadcastTx    = false
 
 	// run tests in remote linux cluster
-	RemoteLinuxCluster    = false // if false it'll use local cluster (running multiple nodes on single local machine)
+	RemoteLinuxCluster    = true // if false it'll use local cluster (running multiple nodes on single local machine)
 	RemoteSetupRequired   = true
 	RemoteInstallRequired = false // if false it will not try to install dstat on remote machine
 	RemoteKeySSH          = "~/.ssh/id_rsa"
@@ -48,7 +48,7 @@ var (
 	RemoteNetworkLoss     = 15.0
 
 	// run benchmark, otherwise run experiments
-	RunBenchmark  = false
+	RunBenchmark  = true
 	BenchDuration = 5 * time.Minute
 	BenchLoads    = []int{5000}
 

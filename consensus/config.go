@@ -5,8 +5,8 @@ package consensus
 
 import "time"
 
-const ExecuteTxFlag = true    //set to false when benchmark test
-const PreserveTxFlag = false  //set to true when benchmark test
+const ExecuteTxFlag = false   //set to false when benchmark test
+const PreserveTxFlag = true   //set to true when benchmark test
 const TwoPhaseBFTFlag = false //set to true to execute two-phase BFT protocol
 
 const (
@@ -62,6 +62,6 @@ var DefaultConfig = Config{
 	TxWaitTime:    500 * time.Millisecond,
 	ViewWidth:     60 * time.Second,
 	LeaderTimeout: 15 * time.Second,
-	VoteStrategy:  RandomVote,
+	VoteStrategy:  AverageVote,
 	BenchmarkPath: "",
 }

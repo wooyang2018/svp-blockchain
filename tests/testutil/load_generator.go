@@ -79,7 +79,7 @@ func (lg *LoadGenerator) BatchRun(ctx context.Context) {
 	delay := time.Second / time.Duration(lg.txPerSec/lg.jobPerTick)
 	ticker := time.NewTicker(delay)
 	defer ticker.Stop()
-	timer := time.NewTimer(15 * time.Second) //ExecuteTxFlag为false时的函数退出时间
+	timer := time.NewTimer(10 * time.Second) //ExecuteTxFlag为false时的函数退出时间
 	defer timer.Stop()
 	for {
 		select {
