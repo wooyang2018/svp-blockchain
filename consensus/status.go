@@ -57,17 +57,26 @@ func (w *window) vote() uint32 {
 		//several blocks starting with genesis block may not satisfy the rule for window voting
 		return w.voteLimit / uint32(w.size)
 	case RandomVote:
+		if w.height < 20 {
+			return w.voteLimit / uint32(w.size)
+		}
 		if !PreserveTxFlag && w.height > 50 {
 			return w.voteLimit - w.voteAcc + w.voteQuotas[0]
 		}
-		var pre, min, max int
+		var pre, min, max, quota int
 		pre = int(w.voteAcc - w.voteQuotas[0])
-		max = int(w.voteLimit) - pre
-		if min = int(w.voteLimit+1/2) - pre; min < 0 {
+		if max = int(3*w.voteLimit+3)/4 - pre; max < 0 {
+			max = 0
+		}
+		if min = int(w.voteLimit+1)/2 - pre; min < 0 {
 			min = 0
 		}
-		quota := uint32(rand.Intn(max-min+1) + min)
-		return quota
+		if rand.Intn(w.size) < 2 {
+			quota = rand.Intn(max-min+1) + min
+		} else {
+			quota = min
+		}
+		return uint32(quota)
 	default:
 		panic("no support voting strategy")
 	}

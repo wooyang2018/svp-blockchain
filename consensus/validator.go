@@ -48,7 +48,7 @@ func (vld *validator) stop() {
 }
 
 func (vld *validator) proposalLoop() {
-	sub := vld.resources.MsgSvc.SubscribeProposal(1)
+	sub := vld.resources.MsgSvc.SubscribeProposal(10)
 	defer sub.Unsubscribe()
 
 	for {
@@ -65,7 +65,7 @@ func (vld *validator) proposalLoop() {
 }
 
 func (vld *validator) voteLoop() {
-	sub := vld.resources.MsgSvc.SubscribeVote(10)
+	sub := vld.resources.MsgSvc.SubscribeVote(100)
 	defer sub.Unsubscribe()
 
 	for {

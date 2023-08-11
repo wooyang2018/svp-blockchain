@@ -56,7 +56,7 @@ func (rot *rotator) stop() {
 }
 
 func (rot *rotator) proposalLoop() {
-	sub := rot.driver.proposalEm.Subscribe(0)
+	sub := rot.driver.proposalEm.Subscribe(10)
 	defer sub.Unsubscribe()
 
 	for {
@@ -71,7 +71,7 @@ func (rot *rotator) proposalLoop() {
 }
 
 func (rot *rotator) newViewLoop() {
-	sub := rot.resources.MsgSvc.SubscribeQC(10)
+	sub := rot.resources.MsgSvc.SubscribeQC(100)
 	defer sub.Unsubscribe()
 
 	for {

@@ -39,10 +39,11 @@ var (
 	BroadcastTx    = false
 
 	// run tests in remote linux cluster
-	RemoteLinuxCluster    = true // if false it'll use local cluster (running multiple nodes on single local machine)
+	RemoteLinuxCluster    = true // if false it will use local cluster (running multiple nodes on single local machine)
 	RemoteSetupRequired   = true
 	RemoteInstallRequired = false // if false it will not try to install dstat on remote machine
-	RemoteKeySSH          = "~/.ssh/id_rsa"
+	RemoteRunRequired     = false // if false it will not run dstat on remote machine
+	RemoteSSHKey          = "~/.ssh/id_rsa"
 	RemoteHostsPath       = "hosts"
 	RemoteNetworkDelay    = 500 * time.Millisecond
 	RemoteNetworkLoss     = 15.0
@@ -292,7 +293,7 @@ func makeRemoteClusterFactory() *cluster.RemoteFactory {
 		StakeQuota:      StakeQuota,
 		WindowSize:      WindowSize,
 		NodeConfig:      getNodeConfig(),
-		KeySSH:          RemoteKeySSH,
+		KeySSH:          RemoteSSHKey,
 		HostsPath:       RemoteHostsPath,
 		SetupRequired:   RemoteSetupRequired,
 		InstallRequired: RemoteInstallRequired,

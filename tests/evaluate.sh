@@ -3,6 +3,7 @@
 ########## Change to the Path where the Script Is Located ##########
 script_path="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 cd "$script_path"
+rm -rf ./workdir/benchmarks/
 
 ########## Some Functions for Modifying Global Variables ##########
 #consensus/config.go#TwoPhaseBFTFlag
@@ -26,30 +27,61 @@ function set_window_size() {
   sed -E -i 's/\tWindowSize\s*=\s*[0-9]+/\tWindowSize='$1'/' ./main.go
 }
 
-########## Preparation for All Experiments ##########
-mkdir -p ./workdir
-rm -rf ./workdir/benchmarks/
->./workdir/experiment-posv.log
->./workdir/experiment-bft.log
-
 ########## Experiment 1: Basic Performance ##########
-set_two_phase_bft_flag false
-set_vote_strategy "AverageVote"
-set_window_size 4
-echo "> starting experiment 1: PoSV"
-for i in {4..8..4}; do
-  set_node_count "$i"
-  go run . >>./workdir/experiment-posv.log 2>&1
-done
-mv ./workdir/benchmarks/ ./workdir/experiment-posv/
-echo -e "> finished experiment 1: PoSV\n"
+function run_experiment_basic() {
+  mkdir -p ./workdir/experiment-posv/
+  mkdir -p ./workdir/experiment-bft/
+  >./workdir/experiment-posv.log
+  >./workdir/experiment-bft.log
 
-set_two_phase_bft_flag true
-set_window_size 1
-echo "> starting experiment 1: Two Phase BFT"
-for i in {4..8..4}; do
-  set_node_count "$i"
-  go run . >>./workdir/experiment-bft.log 2>&1
-done
-mv ./workdir/benchmarks/ ./workdir/experiment-bft/
-echo -e "> finished experiment 1: Two Phase BFT\n"
+  set_two_phase_bft_flag false
+  set_vote_strategy "AverageVote"
+  set_window_size 4
+  echo "> starting experiment 1: PoSV"
+  for i in {4..28..4}; do
+    set_node_count "$i"
+    go run . >>./workdir/experiment-posv.log 2>&1
+  done
+  mv ./workdir/benchmarks/* ./workdir/experiment-posv/
+  echo -e "> finished experiment 1: PoSV\n"
+
+  set_two_phase_bft_flag true
+  set_window_size 1
+  echo "> starting experiment 1: Two Phase BFT"
+  for i in {4..28..4}; do
+    set_node_count "$i"
+    go run . >>./workdir/experiment-bft.log 2>&1
+  done
+  mv ./workdir/benchmarks/* ./workdir/experiment-bft/
+  echo -e "> finished experiment 1: Two Phase BFT\n"
+}
+run_experiment_basic
+
+########## Experiment 2: Impact of Voting Window ##########
+function run_experiment_window() {
+  mkdir -p ./workdir/experiment-average/
+  mkdir -p ./workdir/experiment-random/
+  >./workdir/experiment-average.log
+  >./workdir/experiment-random.log
+  set_two_phase_bft_flag false
+  set_node_count 28
+
+  set_vote_strategy "AverageVote"
+  echo "> starting experiment 2: AverageVote"
+  for i in {4..19..3}; do
+    set_window_size "$i"
+    go run . >>./workdir/experiment-average.log 2>&1
+  done
+  mv ./workdir/benchmarks/* ./workdir/experiment-average/
+  echo -e "> finished experiment 2: AverageVote\n"
+
+  set_vote_strategy "RandomVote"
+  echo "> starting experiment 2: RandomVote"
+  for i in {4..19..3}; do
+    set_window_size "$i"
+    go run . >>./workdir/experiment-random.log 2>&1
+  done
+  mv ./workdir/benchmarks/* ./workdir/experiment-random/
+  echo -e "> finished experiment 2: RandomVote\n"
+}
+run_experiment_window
