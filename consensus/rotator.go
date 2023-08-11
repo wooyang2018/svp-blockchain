@@ -209,8 +209,10 @@ func (rot *rotator) onReceiveQC(qc *core.QuorumCert) error {
 }
 
 func (rot *rotator) onLeaderTimeout() {
+	view := rot.status.getView()
+	logger.I().Warnw("leader timeout", "view", view, "leader", rot.status.getLeaderIndex())
 	rot.timeoutCount++
-	rot.changeView()
+	rot.changeView(view)
 	drainStopTimer(rot.leaderTimer)
 
 	faultyCount := rot.resources.RoleStore.ValidatorCount() - rot.resources.RoleStore.MajorityValidatorCount()
@@ -223,19 +225,18 @@ func (rot *rotator) onLeaderTimeout() {
 }
 
 func (rot *rotator) onViewTimeout() {
-	rot.changeView()
+	view := rot.status.getView()
+	logger.I().Warnw("view timeout", "view", view, "leader", rot.status.getLeaderIndex())
+	rot.changeView(view)
 	drainStopTimer(rot.leaderTimer)
 	rot.leaderTimer.Reset(rot.config.LeaderTimeout)
 }
 
-func (rot *rotator) changeView() {
-	view := rot.status.getView()
+func (rot *rotator) changeView(view uint32) {
 	nextIdx := (view + 1) % uint32(rot.resources.RoleStore.ValidatorCount())
-
 	rot.mtxView.Lock()
 	if view == rot.status.getView() {
 		rot.status.setViewChange(1)
-		logger.I().Warnw("timer timeout", "view", view, "leader", rot.status.getLeaderIndex())
 
 		nextLeader := rot.resources.RoleStore.GetValidator(int(nextIdx))
 		rot.resources.MsgSvc.SendQC(nextLeader, rot.status.getQCHigh())

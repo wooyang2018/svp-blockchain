@@ -78,8 +78,8 @@ func (bm *Benchmark) Run() {
 
 func (bm *Benchmark) runWithLoad(tps int) error {
 	bm.loadGen = testutil.NewLoadGenerator(bm.loadClient, tps, LoadJobPerTick)
-	bm.benchmarkName = fmt.Sprintf("bench_n_%d_load_%d",
-		bm.cfactory.GetParams().NodeCount, tps)
+	bm.benchmarkName = fmt.Sprintf("bench_n_%d_w_%d_load_%d",
+		bm.cfactory.GetParams().WindowSize, bm.cfactory.GetParams().NodeCount, tps)
 	if !EmptyChainCode && PCoinBinCC {
 		bm.benchmarkName += "_bincc"
 	}
@@ -113,7 +113,7 @@ func (bm *Benchmark) runWithLoad(tps int) error {
 
 		bm.saveResults()
 		bm.stopDstat()
-		bm.downloadDstat()
+		bm.downloadFiles()
 		fmt.Println("Downloaded dstat records")
 
 		bm.removeDB()
@@ -195,15 +195,28 @@ func (bm *Benchmark) stopDstat() {
 	wg.Wait()
 }
 
-func (bm *Benchmark) downloadDstat() {
+func (bm *Benchmark) downloadFiles() {
 	var wg sync.WaitGroup
-	for i := 0; i < bm.cluster.NodeCount(); i++ {
+	for i := 0; i < bm.cluster.NodeCount() && i < 7; i++ {
 		node := bm.cluster.GetNode(i).(*cluster.RemoteNode)
-		filePath := path.Join(bm.resultDir, fmt.Sprintf("dstat_%d.txt", i))
-		wg.Add(1)
+		wg.Add(3)
+
+		filePath1 := path.Join(bm.resultDir, fmt.Sprintf("dstat_%d.txt", i))
 		go func() {
 			defer wg.Done()
-			node.DownloadDstat(filePath)
+			node.DownloadFile(filePath1, "dstat.txt")
+		}()
+
+		filePath2 := path.Join(bm.resultDir, fmt.Sprintf("consensus_%d.csv", i))
+		go func() {
+			defer wg.Done()
+			node.DownloadFile(filePath2, "consensus.csv")
+		}()
+
+		filePath3 := path.Join(bm.resultDir, fmt.Sprintf("log_%d.txt", i))
+		go func() {
+			defer wg.Done()
+			node.DownloadFile(filePath3, "log.txt")
 		}()
 	}
 	wg.Wait()

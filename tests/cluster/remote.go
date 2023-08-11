@@ -360,12 +360,12 @@ func (node *RemoteNode) StopDstat() {
 	cmd.Run()
 }
 
-func (node *RemoteNode) DownloadDstat(filepath string) {
+func (node *RemoteNode) DownloadFile(localPath string, fileName string) {
 	cmd := exec.Command("scp",
 		"-i", node.keySSH,
 		fmt.Sprintf("%s@%s:%s", node.loginName, node.host,
-			path.Join(node.config.Datadir, "dstat.txt")),
-		filepath,
+			path.Join(node.config.Datadir, fileName)),
+		localPath,
 	)
 	cmd.Run()
 }
