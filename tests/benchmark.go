@@ -114,13 +114,11 @@ func (bm *Benchmark) runWithLoad(tps int) error {
 		bm.saveResults()
 		if RemoteRunRequired {
 			bm.stopDstat()
+			fmt.Println("Downloaded dstat records")
 		}
 		bm.downloadFiles()
-		fmt.Println("Downloaded dstat records")
-
 		bm.removeDB()
-		fmt.Println("Removed DB, Done", bm.benchmarkName)
-		fmt.Print("\n\n")
+		fmt.Println("Removed DB, Done\n", bm.benchmarkName)
 	}
 	return bm.err
 }

@@ -6,6 +6,7 @@ package consensus
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"math/rand"
 	"sync"
 	"sync/atomic"
@@ -18,19 +19,23 @@ import (
 const (
 	AverageVote uint8 = iota
 	RandomVote
+	OrdinaryVote
+	MonopolyVote
 )
 
 type window struct {
-	qcQuotas []uint32
-	qcAcc    uint32
-
-	voteLimit  uint32
+	qcQuotas   []uint32
+	qcAcc      uint32
 	voteQuotas []uint32
 	voteAcc    uint32
-	strategy   uint8
 
-	height uint64
-	size   int
+	majority uint32
+	limit    uint32
+	height   uint64
+	size     int
+
+	strategy uint8
+	recover  bool
 }
 
 func (w *window) update(qc, vote uint32, height uint64) {
@@ -51,32 +56,55 @@ func (w *window) update(qc, vote uint32, height uint64) {
 	}
 }
 
-func (w *window) vote() uint32 {
+func (w *window) vote() (uint32, bool) {
 	switch w.strategy {
 	case AverageVote:
 		//several blocks starting with genesis block may not satisfy the rule for window voting
-		return w.voteLimit / uint32(w.size)
+		return w.limit / uint32(w.size), true
 	case RandomVote:
 		if w.height < 20 {
-			return w.voteLimit / uint32(w.size)
+			return w.limit / uint32(w.size), true
 		}
 		if !PreserveTxFlag && w.height > 50 {
-			return w.voteLimit - w.voteAcc + w.voteQuotas[0]
+			return w.limit - w.voteAcc + w.voteQuotas[0], true
 		}
 		var pre, min, max, quota int
 		pre = int(w.voteAcc - w.voteQuotas[0])
-		if max = int(3*w.voteLimit+3)/4 - pre; max < 0 {
+		if max = int(3*w.limit+3)/4 - pre; max < 0 {
 			max = 0
 		}
-		if min = int(w.voteLimit+1)/2 - pre; min < 0 {
+		if min = int(w.limit+1)/2 - pre; min < 0 {
 			min = 0
 		}
-		if rand.Intn(w.size) < 2 {
-			quota = rand.Intn(max-min+1) + min
-		} else {
-			quota = min
+		quota = rand.Intn(max-min+1) + min
+		time.Sleep(time.Duration(w.size) * 10 * time.Millisecond)
+		return uint32(quota), true
+	case OrdinaryVote: //only for experiment 3: ordinary BFT validators over f
+		var isBFTBlock = false
+		if !w.recover && w.height >= 100 && w.height <= 99+uint64(w.size) {
+			if w.height == 99+uint64(w.size) {
+				w.recover = true
+			}
+			isBFTBlock = true
 		}
-		return uint32(quota)
+		if isBFTBlock && w.limit >= w.majority {
+			return 0, false
+		}
+		return w.limit / uint32(w.size), true
+	case MonopolyVote: //only for experiment 4: monopoly BFT validators with 1/2s stake
+		var isBFTBlock = false
+		if !w.recover && w.height == 100 {
+			w.recover = true
+			isBFTBlock = true
+		}
+		if isBFTBlock {
+			if w.limit >= w.majority {
+				return w.limit - w.voteAcc + w.voteQuotas[0], true
+			} else {
+				return 0, false
+			}
+		}
+		return w.limit / uint32(w.size), true
 	default:
 		panic("no support voting strategy")
 	}
@@ -178,11 +206,15 @@ func (s *status) endProposal() {
 	s.quotaCount = 0
 }
 
-func (s *status) getVoteQuota() uint32 {
+func (s *status) getVoteQuota() (uint32, error) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	return s.window.vote()
+	quota, ok := s.window.vote()
+	if !ok {
+		return 0, fmt.Errorf("can not vote because of strategy")
+	}
+	return quota, nil
 }
 
 func (s *status) addVote(vote *core.Vote) error {

@@ -85,3 +85,22 @@ function run_experiment_window() {
   echo -e "> finished experiment 2: RandomVote\n"
 }
 run_experiment_window
+
+########## Experiment 3 and 4: Security in Two Attack Scenarios ##########
+function run_experiment_security() {
+  mkdir -p ./workdir/experiment-ordinary/
+  mkdir -p ./workdir/experiment-monopoly/
+  >./workdir/experiment-security.log
+  set_two_phase_bft_flag false
+  set_node_count 28
+  set_window_size 4
+
+  set_vote_strategy "OrdinaryVote"
+  go run . >>./workdir/experiment-security.log 2>&1
+  mv ./workdir/benchmarks/* ./workdir/experiment-ordinary/
+
+  set_vote_strategy "MonopolyVote"
+  go run . >>./workdir/experiment-security.log 2>&1
+  mv ./workdir/benchmarks/* ./workdir/experiment-monopoly/
+}
+run_experiment_security

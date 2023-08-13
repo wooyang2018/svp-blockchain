@@ -94,8 +94,11 @@ func (vld *validator) onReceiveProposal(blk *core.Block) error {
 		}
 	}
 
+	vld.driver.mtxUpdate.Lock()
+	defer vld.driver.mtxUpdate.Unlock()
+
 	vld.state.setBlock(blk)
-	vld.driver.proposalEm.Emit(blk)
+	vld.driver.rotator.onReceiveProposal(blk)
 
 	logger.I().Infow("received proposal",
 		"view", blk.View(),
@@ -103,14 +106,11 @@ func (vld *validator) onReceiveProposal(blk *core.Block) error {
 		"height", blk.Height(),
 		"txs", len(blk.Transactions()))
 
-	vld.driver.mtxUpdate.Lock()
-	defer vld.driver.mtxUpdate.Unlock()
-
 	if vld.status.getView() > blk.View() {
 		return errors.New("not same view")
 	}
 	if vld.driver.cmpQCPriority(blk.QuorumCert(), vld.status.getQCHigh()) < 0 {
-		return fmt.Errorf("can not vote by lower qc, height %d", blk.Height())
+		return fmt.Errorf("can not vote by lower qc")
 	}
 
 	vld.driver.updateQCHigh(blk.QuorumCert())
@@ -127,7 +127,10 @@ func (vld *validator) voteProposal(blk *core.Block) error {
 	}
 	var quota uint32 = 1
 	if !TwoPhaseBFTFlag {
-		quota = vld.status.getVoteQuota()
+		var err error
+		if quota, err = vld.status.getVoteQuota(); err != nil {
+			return err
+		}
 	}
 	vote := blk.Vote(vld.resources.Signer, quota)
 	if !PreserveTxFlag {

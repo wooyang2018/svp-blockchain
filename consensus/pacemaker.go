@@ -77,13 +77,17 @@ func (pm *pacemaker) newProposal() {
 		logger.I().Errorf("broadcast proposal failed, %+v", err)
 	}
 
+	pm.driver.updateQCHigh(blk.QuorumCert())
+
 	var quota uint32 = 1
 	if !TwoPhaseBFTFlag {
-		quota = pm.status.getVoteQuota()
+		var err error
+		if quota, err = pm.status.getVoteQuota(); err != nil {
+			return
+		}
 	}
 	vote := blk.Vote(pm.resources.Signer, quota)
 	pm.driver.onReceiveVote(vote)
-	pm.driver.updateQCHigh(blk.QuorumCert())
 }
 
 func (pm *pacemaker) delayProposeWhenNoTxs() {

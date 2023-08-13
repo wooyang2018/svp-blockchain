@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/wooyang2018/posv-blockchain/core"
-	"github.com/wooyang2018/posv-blockchain/emitter"
 	"github.com/wooyang2018/posv-blockchain/logger"
 )
 
@@ -128,12 +127,11 @@ func (cons *Consensus) setupStatus(exec *core.Block, leaf *core.Block, qc *core.
 
 func (cons *Consensus) setupDriver() {
 	cons.driver = &driver{
-		resources:  cons.resources,
-		config:     cons.config,
-		state:      cons.state,
-		status:     cons.status,
-		proposeCh:  make(chan struct{}),
-		proposalEm: emitter.New(),
+		resources: cons.resources,
+		config:    cons.config,
+		state:     cons.state,
+		status:    cons.status,
+		proposeCh: make(chan struct{}),
 	}
 	if cons.config.BenchmarkPath != "" {
 		var err error
@@ -148,11 +146,12 @@ func (cons *Consensus) setupWindow(qc *core.QuorumCert) {
 	size := cons.resources.RoleStore.GetWindowSize()
 	w := &window{
 		qcQuotas:   make([]uint32, size),
-		voteLimit:  cons.resources.RoleStore.GetValidatorQuota(cons.resources.Signer.PublicKey()),
 		voteQuotas: make([]uint32, size),
-		strategy:   cons.config.VoteStrategy,
+		majority:   cons.resources.RoleStore.MajorityQuotaCount(),
+		limit:      cons.resources.RoleStore.GetValidatorQuota(cons.resources.Signer.PublicKey()),
 		height:     cons.driver.qcRefHeight(qc),
 		size:       size,
+		strategy:   cons.config.VoteStrategy,
 	}
 	for i := size - 1; i >= 0 && qc != nil; i-- {
 		w.qcQuotas[i] = qc.SumQuota()
@@ -163,7 +162,7 @@ func (cons *Consensus) setupWindow(qc *core.QuorumCert) {
 	}
 	cons.status.window = w
 	logger.I().Infow("setup qc stake window", "quotas", w.qcQuotas, "height", w.height)
-	logger.I().Infow("setup vote stake window", "quotas", w.voteQuotas, "limit", w.voteLimit)
+	logger.I().Infow("setup vote stake window", "quotas", w.voteQuotas, "limit", w.limit)
 }
 
 func (cons *Consensus) setupValidator() {
@@ -196,6 +195,7 @@ func (cons *Consensus) setupRotator() {
 		driver:    cons.driver,
 		newViewCh: make(chan struct{}),
 	}
+	cons.driver.rotator = cons.rotator
 }
 
 func (cons *Consensus) getStatus() (status Status) {

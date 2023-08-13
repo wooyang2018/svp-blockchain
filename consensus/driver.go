@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/wooyang2018/posv-blockchain/core"
-	"github.com/wooyang2018/posv-blockchain/emitter"
 	"github.com/wooyang2018/posv-blockchain/logger"
 	"github.com/wooyang2018/posv-blockchain/storage"
 )
@@ -23,9 +22,9 @@ type driver struct {
 	status    *status
 	tester    *tester
 
-	proposalEm *emitter.Emitter
-	proposeCh  chan struct{}
-	isExisted  bool
+	rotator   *rotator
+	proposeCh chan struct{}
+	isExisted bool
 
 	mtxCommit sync.Mutex // lock for committing block
 	mtxUpdate sync.Mutex // lock for update call
@@ -244,7 +243,7 @@ func (d *driver) createProposal(view uint32, parent *core.Block, qcHigh *core.Qu
 	d.state.setBlock(blk)
 	d.status.setBLeaf(blk)
 	d.status.startProposal(blk)
-	d.proposalEm.Emit(blk)
+	d.rotator.onReceiveProposal(blk)
 
 	logger.I().Infow("proposed proposal",
 		"view", blk.View(),

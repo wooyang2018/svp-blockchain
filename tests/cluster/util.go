@@ -72,8 +72,10 @@ func MakeRandomQuotas(count int, quota int) []uint32 {
 		return quotas
 	}
 	r := rand.New(rand.NewSource(time.Now().Unix()))
-	for i := 0; i < quota; i++ {
-		quotas[r.Intn(count)]++
+	quotas[count-1] = uint32(quota+1) / 2
+	remain := quota - int(quotas[count-1])
+	for i := 0; i < remain; i++ {
+		quotas[r.Intn(count-1)]++
 	}
 	sort.SliceStable(quotas, func(i int, j int) bool {
 		return quotas[i] < quotas[j]

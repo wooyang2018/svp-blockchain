@@ -35,7 +35,6 @@ func (rot *rotator) start() {
 	}
 	rot.stopCh = make(chan struct{})
 	rot.status.setViewStart()
-	go rot.proposalLoop()
 	go rot.newViewLoop()
 	go rot.timerLoop()
 	logger.I().Info("started rotator")
@@ -53,21 +52,6 @@ func (rot *rotator) stop() {
 	close(rot.stopCh)
 	logger.I().Info("stopped rotator")
 	rot.stopCh = nil
-}
-
-func (rot *rotator) proposalLoop() {
-	sub := rot.driver.proposalEm.Subscribe(10)
-	defer sub.Unsubscribe()
-
-	for {
-		select {
-		case <-rot.stopCh:
-			return
-
-		case e := <-sub.Events():
-			rot.onReceiveProposal(e.(*core.Block))
-		}
-	}
 }
 
 func (rot *rotator) newViewLoop() {
@@ -109,9 +93,6 @@ func (rot *rotator) timerLoop() {
 }
 
 func (rot *rotator) onReceiveProposal(blk *core.Block) {
-	rot.driver.mtxUpdate.Lock()
-	defer rot.driver.mtxUpdate.Unlock()
-
 	var ltreset, vtreset bool
 	proposer := uint32(rot.resources.RoleStore.GetValidatorIndex(blk.Proposer()))
 	if rot.isNormalApproval(blk.View(), proposer) {
@@ -275,13 +256,17 @@ func (rot *rotator) newViewProposal() {
 		logger.I().Errorf("broadcast proposal failed, %+v", err)
 	}
 
+	rot.driver.updateQCHigh(blk.QuorumCert())
+
 	var quota uint32 = 1
 	if !TwoPhaseBFTFlag {
-		quota = rot.status.getVoteQuota()
+		var err error
+		if quota, err = rot.status.getVoteQuota(); err != nil {
+			return
+		}
 	}
 	vote := blk.Vote(rot.resources.Signer, quota)
 	rot.driver.onReceiveVote(vote)
-	rot.driver.updateQCHigh(blk.QuorumCert())
 }
 
 func drainStopTimer(timer *time.Timer) {
