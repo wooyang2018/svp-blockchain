@@ -80,24 +80,13 @@ func (w *window) vote() (uint32, bool) {
 		time.Sleep(time.Duration(w.size) * 10 * time.Millisecond)
 		return uint32(quota), true
 	case OrdinaryVote: //only for experiment 3: ordinary BFT validators over f
-		var isBFTBlock = false
-		if !w.recover && w.height >= 100 && w.height <= 99+uint64(w.size) {
-			if w.height == 99+uint64(w.size) {
-				w.recover = true
-			}
-			isBFTBlock = true
-		}
-		if isBFTBlock && w.limit >= w.majority {
+		if !w.recover && w.height >= 100 && w.height <= 99+uint64(w.size) &&
+			w.limit >= w.majority {
 			return 0, false
 		}
 		return w.limit / uint32(w.size), true
 	case MonopolyVote: //only for experiment 4: monopoly BFT validators with 1/2s stake
-		var isBFTBlock = false
 		if !w.recover && w.height == 100 {
-			w.recover = true
-			isBFTBlock = true
-		}
-		if isBFTBlock {
 			if w.limit >= w.majority {
 				return w.limit - w.voteAcc + w.voteQuotas[0], true
 			} else {
@@ -179,6 +168,13 @@ func (s *status) updateWindow(qc, vote uint32, height uint64) {
 	defer s.mtx.Unlock()
 
 	s.window.update(qc, vote, height)
+}
+
+func (s *status) recoverFlag() {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
+	s.window.recover = true
 }
 
 func (s *status) getQuotaCount() uint32 {

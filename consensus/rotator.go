@@ -145,6 +145,9 @@ func (rot *rotator) approveViewLeader(view uint32, proposer uint32) {
 	rot.status.setView(view)
 	rot.status.setLeaderIndex(proposer)
 	rot.status.setViewStart()
+	if !TwoPhaseBFTFlag && view == 2 {
+		rot.status.recoverFlag() //only for experiments to verify security
+	}
 	rot.timeoutCount = 0
 	rot.highQCCount = 0
 	logger.I().Infow("approved leader",

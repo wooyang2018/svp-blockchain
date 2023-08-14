@@ -26,6 +26,11 @@ function set_window_size() {
   echo "set_window_size $1"
   sed -E -i 's/\tWindowSize\s*=\s*[0-9]+/\tWindowSize='$1'/' ./main.go
 }
+#rename the first directory
+function rename_first_dir() {
+  old_folder_name=$(ls ./workdir/benchmarks/ | head -n 1 | cut -f1 -d'/')
+  mv "./workdir/benchmarks/$old_folder_name" "./workdir/benchmarks/$1"
+}
 
 ########## Experiment 1: Basic Performance ##########
 function run_experiment_basic() {
@@ -88,8 +93,7 @@ run_experiment_window
 
 ########## Experiment 3 and 4: Security in Two Attack Scenarios ##########
 function run_experiment_security() {
-  mkdir -p ./workdir/experiment-ordinary/
-  mkdir -p ./workdir/experiment-monopoly/
+  mkdir -p ./workdir/experiment-security/
   >./workdir/experiment-security.log
   set_two_phase_bft_flag false
   set_node_count 28
@@ -97,10 +101,18 @@ function run_experiment_security() {
 
   set_vote_strategy "OrdinaryVote"
   go run . >>./workdir/experiment-security.log 2>&1
-  mv ./workdir/benchmarks/* ./workdir/experiment-ordinary/
+  rename_first_dir "experiment-ordinary"
 
   set_vote_strategy "MonopolyVote"
   go run . >>./workdir/experiment-security.log 2>&1
-  mv ./workdir/benchmarks/* ./workdir/experiment-monopoly/
+  rename_first_dir "experiment-monopoly"
+
+  set_two_phase_bft_flag true
+  set_node_count 28
+  set_window_size 1
+  go run . >>./workdir/experiment-security.log 2>&1
+  rename_first_dir "experiment-normal"
+
+  mv ./workdir/benchmarks/* ./workdir/experiment-security/
 }
 run_experiment_security

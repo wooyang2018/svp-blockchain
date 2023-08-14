@@ -28,7 +28,7 @@ var (
 	WindowSize = 4
 
 	LoadTxPerSec    = 10  //tps for client to submit tx during functional testing
-	LoadJobPerTick  = 100 //num of tasks to be completed per tick
+	LoadJobPerTick  = 500 //num of tasks to be completed per tick
 	LoadSubmitNodes = []int{}
 	LoadBatchSubmit = true //whether to enable batch transaction submission
 
@@ -50,8 +50,8 @@ var (
 
 	// run benchmark, otherwise run experiments
 	RunBenchmark  = true
-	BenchDuration = 5 * time.Minute
-	BenchLoads    = []int{5000}
+	BenchDuration = 1 * time.Minute
+	BenchLoads    = []int{2500}
 
 	SetupClusterTemplate = false
 )

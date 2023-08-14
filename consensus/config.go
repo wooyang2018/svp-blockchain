@@ -58,10 +58,10 @@ type Config struct {
 }
 
 var DefaultConfig = Config{
-	BlockTxLimit:  10000,
+	BlockTxLimit:  500,
 	TxWaitTime:    500 * time.Millisecond,
 	ViewWidth:     60 * time.Second,
-	LeaderTimeout: 15 * time.Second,
+	LeaderTimeout: 5 * time.Second,
 	VoteStrategy:  AverageVote,
 	BenchmarkPath: "",
 }

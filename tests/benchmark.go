@@ -199,7 +199,10 @@ func (bm *Benchmark) stopDstat() {
 
 func (bm *Benchmark) downloadFiles() {
 	var wg sync.WaitGroup
-	for i := 0; i < bm.cluster.NodeCount() && i < 4; i++ {
+	for i := 0; i < bm.cluster.NodeCount(); i++ {
+		if i >= 4 && i < bm.cluster.NodeCount()-1 {
+			continue
+		}
 		node := bm.cluster.GetNode(i).(*cluster.RemoteNode)
 		wg.Add(2)
 
@@ -331,8 +334,10 @@ func (bm *Benchmark) saveResults() error {
 		return err
 	}
 	for i := 0; i < bm.cluster.NodeCount(); i++ {
-		if err := bm.saveStatusOneNode(i); err != nil {
-			return err
+		if i < 4 || i == bm.cluster.NodeCount()-1 {
+			if err := bm.saveStatusOneNode(i); err != nil {
+				return err
+			}
 		}
 	}
 	fmt.Printf("\nSaved Results in %s\n", bm.resultDir)
