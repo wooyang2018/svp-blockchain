@@ -30,7 +30,7 @@ func newTester(file *os.File) *tester {
 			"EndTime",
 			"Latency",
 			"TxCount",
-			"Throughout",
+			"Throughput",
 		})
 	}
 	return t

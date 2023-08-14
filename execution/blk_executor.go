@@ -31,7 +31,7 @@ type blkExecutor struct {
 /*
 Transactions of a block are executed concurrently.
 
-The state changes for the block is tracked throughout the execution.
+The state changes for the block is tracked throughput the execution.
 
 For each tx, both state changes and state dependencies are tracked separately when it's executed.
 Later tx's state changes are merged with the block's state changes.

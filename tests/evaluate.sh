@@ -33,6 +33,15 @@ function rename_first_dir() {
 }
 
 ########## Experiment 1: Basic Performance ##########
+#ExecuteTxFlag = false
+#PreserveTxFlag = true
+#BlockTxLimit = 10000
+#LoadJobPerTick = 100
+#LoadSubmitNodes = []int{0}
+#CheckRotation = false
+#BroadcastTx = false
+#BenchDuration = 5 * time.Minute
+#BenchLoads = []int{5000}
 function run_experiment_basic() {
   mkdir -p ./workdir/experiment-posv/
   mkdir -p ./workdir/experiment-bft/
@@ -63,6 +72,7 @@ function run_experiment_basic() {
 run_experiment_basic
 
 ########## Experiment 2: Impact of Voting Window ##########
+#global parameter setting is the same as experiment 1
 function run_experiment_window() {
   mkdir -p ./workdir/experiment-average/
   mkdir -p ./workdir/experiment-random/
@@ -92,6 +102,13 @@ function run_experiment_window() {
 run_experiment_window
 
 ########## Experiment 3 and 4: Security in Two Attack Scenarios ##########
+#ExecuteTxFlag = true
+#PreserveTxFlag = false
+#BlockTxLimit = 500
+#LeaderTimeout = 5 * time.Second
+#LoadJobPerTick = 500
+#BenchDuration = 1 * time.Minute
+#BenchLoads = []int{2700}
 function run_experiment_security() {
   mkdir -p ./workdir/experiment-security/
   >./workdir/experiment-security.log

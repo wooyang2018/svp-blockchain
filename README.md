@@ -18,7 +18,7 @@ cd tests
 go run .
 ```
 
-The test script will compile `cmd/chain` and set up a cluster of 7 nodes with different ports on the local machine. Experiments from `tests/experiments` will be run and health checks will be performed throughout the tests.
+The test script will compile `cmd/chain` and set up a cluster of 7 nodes with different ports on the local machine. Experiments from `tests/experiments` will be run and health checks will be performed throughput the tests.
 
 ***NOTE**: Network simulation experiments are only run on the remote linux cluster.*
 
