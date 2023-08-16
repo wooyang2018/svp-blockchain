@@ -24,7 +24,7 @@ import (
 var (
 	WorkDir    = "./workdir"
 	NodeCount  = 4
-	StakeQuota = 999
+	StakeQuota = 9999
 	WindowSize = 4
 
 	LoadTxPerSec    = 10  //tps for client to submit tx during functional testing

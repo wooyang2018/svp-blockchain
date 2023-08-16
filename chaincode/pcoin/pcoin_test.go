@@ -20,7 +20,6 @@ func TestPCoin_Init(t *testing.T) {
 	ctx.MockState = state
 	ctx.MockSender = []byte{1, 1, 1}
 	err := jctx.Init(ctx)
-
 	asrt.NoError(err)
 
 	input := &Input{
@@ -32,10 +31,6 @@ func TestPCoin_Init(t *testing.T) {
 
 	asrt.NoError(err)
 	asrt.Equal(ctx.MockSender, minter, "deployer should be minter")
-
-	input = &Input{
-		Method: "balance",
-	}
 }
 
 func TestPCoin_SetMinter(t *testing.T) {
@@ -46,7 +41,8 @@ func TestPCoin_SetMinter(t *testing.T) {
 	ctx := new(chaincode.MockCallContext)
 	ctx.MockState = state
 	ctx.MockSender = []byte{1, 1, 1}
-	jctx.Init(ctx)
+	err := jctx.Init(ctx)
+	asrt.NoError(err)
 
 	input := &Input{
 		Method: "setMinter",
@@ -55,20 +51,19 @@ func TestPCoin_SetMinter(t *testing.T) {
 	b, _ := json.Marshal(input)
 	ctx.MockSender = []byte{3, 3, 3}
 	ctx.MockInput = b
-	err := jctx.Invoke(ctx)
+	err = jctx.Invoke(ctx)
 	asrt.Error(err, "sender not minter error")
 
 	ctx.MockSender = []byte{1, 1, 1}
 	err = jctx.Invoke(ctx)
-
 	asrt.NoError(err)
+
 	input = &Input{
 		Method: "minter",
 	}
 	b, _ = json.Marshal(input)
 	ctx.MockInput = b
 	minter, err := jctx.Query(ctx)
-
 	asrt.NoError(err)
 	asrt.Equal([]byte{2, 2, 2}, minter)
 }
@@ -81,7 +76,8 @@ func TestPCoin_Mint(t *testing.T) {
 	ctx := new(chaincode.MockCallContext)
 	ctx.MockState = state
 	ctx.MockSender = []byte{1, 1, 1}
-	jctx.Init(ctx)
+	err := jctx.Init(ctx)
+	asrt.NoError(err)
 
 	input := &Input{
 		Method: "mint",
@@ -91,12 +87,11 @@ func TestPCoin_Mint(t *testing.T) {
 	b, _ := json.Marshal(input)
 	ctx.MockSender = []byte{3, 3, 3}
 	ctx.MockInput = b
-	err := jctx.Invoke(ctx)
+	err = jctx.Invoke(ctx)
 	asrt.Error(err, "sender not minter error")
 
 	ctx.MockSender = []byte{1, 1, 1}
 	err = jctx.Invoke(ctx)
-
 	asrt.NoError(err)
 
 	input = &Input{
@@ -105,12 +100,10 @@ func TestPCoin_Mint(t *testing.T) {
 	b, _ = json.Marshal(input)
 	ctx.MockInput = b
 	b, err = jctx.Query(ctx)
-
 	asrt.NoError(err)
 
 	var balance int64
 	json.Unmarshal(b, &balance)
-
 	asrt.EqualValues(100, balance)
 
 	input = &Input{
@@ -120,12 +113,10 @@ func TestPCoin_Mint(t *testing.T) {
 	b, _ = json.Marshal(input)
 	ctx.MockInput = b
 	b, err = jctx.Query(ctx)
-
 	asrt.NoError(err)
 
 	balance = 0
 	json.Unmarshal(b, &balance)
-
 	asrt.EqualValues(100, balance)
 }
 
@@ -137,7 +128,8 @@ func TestPCoin_Transfer(t *testing.T) {
 	ctx := new(chaincode.MockCallContext)
 	ctx.MockState = state
 	ctx.MockSender = []byte{1, 1, 1}
-	jctx.Init(ctx)
+	err := jctx.Init(ctx)
+	asrt.NoError(err)
 
 	input := &Input{
 		Method: "mint",
@@ -157,8 +149,7 @@ func TestPCoin_Transfer(t *testing.T) {
 	b, _ = json.Marshal(input)
 	ctx.MockSender = []byte{2, 2, 2}
 	ctx.MockInput = b
-	err := jctx.Invoke(ctx)
-
+	err = jctx.Invoke(ctx)
 	asrt.Error(err, "not enough pcoin error")
 
 	// transfer 222 -> 333, value = 100
@@ -166,7 +157,6 @@ func TestPCoin_Transfer(t *testing.T) {
 	b, _ = json.Marshal(input)
 	ctx.MockInput = b
 	err = jctx.Invoke(ctx)
-
 	asrt.NoError(err)
 
 	input.Method = "total"
@@ -175,7 +165,6 @@ func TestPCoin_Transfer(t *testing.T) {
 	b, _ = jctx.Query(ctx)
 	var balance int64
 	json.Unmarshal(b, &balance)
-
 	asrt.EqualValues(100, balance, "total should not change")
 
 	input.Method = "balance"
@@ -185,7 +174,6 @@ func TestPCoin_Transfer(t *testing.T) {
 	b, _ = jctx.Query(ctx)
 	balance = 0
 	json.Unmarshal(b, &balance)
-
 	asrt.EqualValues(0, balance)
 
 	input.Dest = []byte{3, 3, 3}
@@ -194,6 +182,5 @@ func TestPCoin_Transfer(t *testing.T) {
 	b, _ = jctx.Query(ctx)
 	balance = 0
 	json.Unmarshal(b, &balance)
-
 	asrt.EqualValues(100, balance)
 }

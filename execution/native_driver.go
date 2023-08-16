@@ -8,6 +8,7 @@ import (
 	"errors"
 
 	"github.com/wooyang2018/posv-blockchain/chaincode/empty"
+	"github.com/wooyang2018/posv-blockchain/chaincode/kvdb"
 	"github.com/wooyang2018/posv-blockchain/chaincode/pcoin"
 	"github.com/wooyang2018/posv-blockchain/execution/chaincode"
 )
@@ -15,6 +16,7 @@ import (
 var (
 	NativeCodeEmpty = bytes.Repeat([]byte{1}, 32)
 	NativeCodePCoin = bytes.Repeat([]byte{2}, 32)
+	NativeCodeKVDB  = bytes.Repeat([]byte{3}, 32)
 )
 
 type nativeCodeDriver struct{}
@@ -36,6 +38,8 @@ func (drv *nativeCodeDriver) GetInstance(codeID []byte) (chaincode.Chaincode, er
 		return new(empty.Empty), nil
 	case string(NativeCodePCoin):
 		return new(pcoin.PCoin), nil
+	case string(NativeCodeKVDB):
+		return new(kvdb.KVDB), nil
 	default:
 		return nil, errors.New("unknown native chaincode id")
 	}

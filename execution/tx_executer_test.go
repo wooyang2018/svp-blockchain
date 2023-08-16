@@ -20,7 +20,7 @@ func TestTxExecutor(t *testing.T) {
 	depInput := &DeploymentInput{
 		CodeInfo: CodeInfo{
 			DriverType: DriverTypeNative,
-			CodeID:     []byte(NativeCodePCoin),
+			CodeID:     NativeCodePCoin,
 		},
 	}
 	b, _ := json.Marshal(depInput)

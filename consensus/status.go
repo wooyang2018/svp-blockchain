@@ -62,9 +62,6 @@ func (w *window) vote() (uint32, bool) {
 		//several blocks starting with genesis block may not satisfy the rule for window voting
 		return w.limit / uint32(w.size), true
 	case RandomVote:
-		if w.height < 20 {
-			return w.limit / uint32(w.size), true
-		}
 		if !PreserveTxFlag && w.height > 50 {
 			return w.limit - w.voteAcc + w.voteQuotas[0], true
 		}
@@ -77,7 +74,7 @@ func (w *window) vote() (uint32, bool) {
 			min = 0
 		}
 		quota = rand.Intn(max-min+1) + min
-		time.Sleep(time.Duration(w.size) * 10 * time.Millisecond)
+		time.Sleep(time.Duration(w.size) * 30 * time.Millisecond)
 		return uint32(quota), true
 	case OrdinaryVote: //only for experiment 3: ordinary BFT validators over f
 		if !w.recover && w.height >= 100 && w.height <= 99+uint64(w.size) &&

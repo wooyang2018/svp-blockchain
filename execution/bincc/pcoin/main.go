@@ -8,7 +8,8 @@ import (
 	"github.com/wooyang2018/posv-blockchain/execution/bincc"
 )
 
-// bincc version of pcoin. User can compile and deploy it separately to the running posv network
+// bincc version of pcoin.
+// user can compile and deploy it separately to the running network
 
 func main() {
 	jcc := new(pcoin.PCoin)

@@ -13,12 +13,12 @@ func TestNativeCodeDriver(t *testing.T) {
 	asrt := assert.New(t)
 
 	drv := newNativeCodeDriver()
-	cc, err := drv.GetInstance([]byte(NativeCodePCoin))
+	cc, err := drv.GetInstance(NativeCodePCoin)
 
 	asrt.NoError(err)
 	asrt.NotNil(cc)
 
-	err = drv.Install([]byte(NativeCodePCoin), nil)
+	err = drv.Install(NativeCodePCoin, nil)
 
 	asrt.NoError(err)
 }
