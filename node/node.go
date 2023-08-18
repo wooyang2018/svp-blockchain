@@ -122,11 +122,7 @@ func (node *Node) setupRoleStore() {
 }
 
 func (node *Node) setupStorage() {
-	db, err := storage.NewLevelDB(path.Join(node.config.Datadir, "db"))
-	if err != nil {
-		logger.I().Fatalw("setup storage failed", "error", err)
-	}
-	node.storage = storage.New(db, node.config.StorageConfig)
+	node.storage = storage.New(path.Join(node.config.Datadir, "db"), node.config.StorageConfig)
 }
 
 func (node *Node) setupHost() {

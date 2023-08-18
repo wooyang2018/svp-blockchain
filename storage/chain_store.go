@@ -8,10 +8,11 @@ import (
 	"encoding/binary"
 
 	"github.com/wooyang2018/posv-blockchain/core"
+	"github.com/wooyang2018/posv-blockchain/storage/common"
 )
 
 type chainStore struct {
-	getter getter
+	getter common.Getter
 }
 
 func (cs *chainStore) getLastBlock() (*core.Block, error) {
@@ -23,7 +24,7 @@ func (cs *chainStore) getLastBlock() (*core.Block, error) {
 }
 
 func (cs *chainStore) getBlockHeight() (uint64, error) {
-	b, err := cs.getter.Get([]byte{colBlockHeight})
+	b, err := cs.getter.Get([]byte{byte(common.BLOCK_HEIGHT)})
 	if err != nil {
 		return 0, err
 	}
@@ -39,11 +40,11 @@ func (cs *chainStore) getBlockByHeight(height uint64) (*core.Block, error) {
 }
 
 func (cs *chainStore) getBlockHashByHeight(height uint64) ([]byte, error) {
-	return cs.getter.Get(concatBytes([]byte{colBlockHashByHeight}, uint64BEBytes(height)))
+	return cs.getter.Get(concatBytes([]byte{byte(common.BLOCK_HASH_BY_HEIGHT)}, uint64BEBytes(height)))
 }
 
 func (cs *chainStore) getBlock(hash []byte) (*core.Block, error) {
-	b, err := cs.getter.Get(concatBytes([]byte{colBlockByHash}, hash))
+	b, err := cs.getter.Get(concatBytes([]byte{byte(common.BLOCK_BY_HASH)}, hash))
 	if err != nil {
 		return nil, err
 	}
@@ -55,15 +56,15 @@ func (cs *chainStore) getBlock(hash []byte) (*core.Block, error) {
 }
 
 func (cs *chainStore) getLastQC() (*core.QuorumCert, error) {
-	blkHash, err := cs.getter.Get([]byte{colLastQCBlockHash})
+	hash, err := cs.getter.Get([]byte{byte(common.LAST_QC_BLOCK_HASH)})
 	if err != nil {
 		return nil, err
 	}
-	return cs.getQC(blkHash)
+	return cs.getQCByBlockHash(hash)
 }
 
-func (cs *chainStore) getQC(blkHash []byte) (*core.QuorumCert, error) {
-	data, err := cs.getter.Get(concatBytes([]byte{colQCByBlockHash}, blkHash))
+func (cs *chainStore) getQCByBlockHash(hash []byte) (*core.QuorumCert, error) {
+	data, err := cs.getter.Get(concatBytes([]byte{byte(common.QC_BY_BLOCK_HASH)}, hash))
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +76,7 @@ func (cs *chainStore) getQC(blkHash []byte) (*core.QuorumCert, error) {
 }
 
 func (cs *chainStore) getBlockCommit(hash []byte) (*core.BlockCommit, error) {
-	b, err := cs.getter.Get(concatBytes([]byte{colBlockCommitByHash}, hash))
+	b, err := cs.getter.Get(concatBytes([]byte{byte(common.BLOCK_COMMIT_BY_HASH)}, hash))
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +88,7 @@ func (cs *chainStore) getBlockCommit(hash []byte) (*core.BlockCommit, error) {
 }
 
 func (cs *chainStore) getTx(hash []byte) (*core.Transaction, error) {
-	b, err := cs.getter.Get(concatBytes([]byte{colTxByHash}, hash))
+	b, err := cs.getter.Get(concatBytes([]byte{byte(common.TX_BY_HASH)}, hash))
 	if err != nil {
 		return nil, err
 	}
@@ -98,12 +99,12 @@ func (cs *chainStore) getTx(hash []byte) (*core.Transaction, error) {
 	return tx, nil
 }
 
-func (cs *chainStore) hasTx(hash []byte) bool {
-	return cs.getter.HasKey(concatBytes([]byte{colTxByHash}, hash))
+func (cs *chainStore) hasTx(hash []byte) (bool, error) {
+	return cs.getter.Has(concatBytes([]byte{byte(common.TX_BY_HASH)}, hash))
 }
 
 func (cs *chainStore) getTxCommit(hash []byte) (*core.TxCommit, error) {
-	val, err := cs.getter.Get(concatBytes([]byte{colTxCommitByHash}, hash))
+	val, err := cs.getter.Get(concatBytes([]byte{byte(common.TX_COMMIT_BY_HASH)}, hash))
 	if err != nil {
 		return nil, err
 	}
@@ -115,8 +116,8 @@ func (cs *chainStore) getTxCommit(hash []byte) (*core.TxCommit, error) {
 }
 
 func (cs *chainStore) setBlockHeight(height uint64) updateFunc {
-	return func(setter setter) error {
-		return setter.Set([]byte{colBlockHeight}, uint64BEBytes(height))
+	return func(setter common.Setter) error {
+		return setter.Put([]byte{byte(common.BLOCK_HEIGHT)}, uint64BEBytes(height))
 	}
 }
 
@@ -135,47 +136,48 @@ func (cs *chainStore) setQC(qc *core.QuorumCert) []updateFunc {
 }
 
 func (cs *chainStore) setLastQCBlockHash(blkHash []byte) updateFunc {
-	return func(setter setter) error {
-		return setter.Set([]byte{colLastQCBlockHash}, blkHash)
+	return func(setter common.Setter) error {
+		return setter.Put([]byte{byte(common.LAST_QC_BLOCK_HASH)}, blkHash)
 	}
 }
 
 func (cs *chainStore) setBlockByHash(blk *core.Block) updateFunc {
-	return func(setter setter) error {
+	return func(setter common.Setter) error {
 		val, err := blk.Marshal()
 		if err != nil {
 			return err
 		}
-		return setter.Set(concatBytes([]byte{colBlockByHash}, blk.Hash()), val)
+		return setter.Put(concatBytes([]byte{byte(common.BLOCK_BY_HASH)}, blk.Hash()), val)
 	}
 }
 
 func (cs *chainStore) setBlockHashByHeight(blk *core.Block) updateFunc {
-	return func(setter setter) error {
-		return setter.Set(
-			concatBytes([]byte{colBlockHashByHeight}, uint64BEBytes(blk.Height())), blk.Hash(),
+	return func(setter common.Setter) error {
+		return setter.Put(
+			concatBytes([]byte{byte(common.BLOCK_HASH_BY_HEIGHT)}, uint64BEBytes(blk.Height())),
+			blk.Hash(),
 		)
 	}
 }
 
 func (cs *chainStore) setQCByBlockHash(qc *core.QuorumCert) updateFunc {
-	return func(setter setter) error {
+	return func(setter common.Setter) error {
 		val, err := qc.Marshal()
 		if err != nil {
 			return err
 		}
-		return setter.Set(concatBytes([]byte{colQCByBlockHash}, qc.BlockHash()), val)
+		return setter.Put(concatBytes([]byte{byte(common.QC_BY_BLOCK_HASH)}, qc.BlockHash()), val)
 	}
 }
 
 func (cs *chainStore) setBlockCommit(bcm *core.BlockCommit) updateFunc {
-	return func(setter setter) error {
+	return func(setter common.Setter) error {
 		val, err := bcm.Marshal()
 		if err != nil {
 			return err
 		}
-		return setter.Set(
-			concatBytes([]byte{colBlockCommitByHash}, bcm.Hash()), val,
+		return setter.Put(
+			concatBytes([]byte{byte(common.BLOCK_COMMIT_BY_HASH)}, bcm.Hash()), val,
 		)
 	}
 }
@@ -197,25 +199,25 @@ func (cs *chainStore) setTxCommits(txCommits []*core.TxCommit) []updateFunc {
 }
 
 func (cs *chainStore) setTx(tx *core.Transaction) updateFunc {
-	return func(setter setter) error {
+	return func(setter common.Setter) error {
 		val, err := tx.Marshal()
 		if err != nil {
 			return err
 		}
-		return setter.Set(
-			concatBytes([]byte{colTxByHash}, tx.Hash()), val,
+		return setter.Put(
+			concatBytes([]byte{byte(common.TX_BY_HASH)}, tx.Hash()), val,
 		)
 	}
 }
 
 func (cs *chainStore) setTxCommit(txc *core.TxCommit) updateFunc {
-	return func(setter setter) error {
+	return func(setter common.Setter) error {
 		val, err := txc.Marshal()
 		if err != nil {
 			return err
 		}
-		return setter.Set(
-			concatBytes([]byte{colTxCommitByHash}, txc.Hash()), val,
+		return setter.Put(
+			concatBytes([]byte{byte(common.TX_COMMIT_BY_HASH)}, txc.Hash()), val,
 		)
 	}
 }

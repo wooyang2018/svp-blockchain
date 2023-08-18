@@ -9,14 +9,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/wooyang2018/posv-blockchain/core"
+	"github.com/wooyang2018/posv-blockchain/storage/leveldbstore"
 )
 
 func TestChainStore(t *testing.T) {
 	asrt := assert.New(t)
 
 	dir, _ := os.MkdirTemp("", "db")
-	rawDB, _ := NewLevelDB(dir)
-	db := &levelDB{rawDB}
+	db, _ := leveldbstore.NewLevelDBStore(dir)
 	cs := &chainStore{db}
 
 	priv := core.GenerateKey(nil)

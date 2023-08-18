@@ -12,10 +12,11 @@ import (
 
 	"github.com/wooyang2018/posv-blockchain/core"
 	"github.com/wooyang2018/posv-blockchain/merkle"
+	"github.com/wooyang2018/posv-blockchain/storage/common"
 )
 
 type stateStore struct {
-	getter          getter
+	getter          common.Getter
 	hashFunc        crypto.Hash
 	concurrentLimit int
 }
@@ -127,25 +128,25 @@ func (ss *stateStore) getStateNotFoundNil(key []byte) []byte {
 }
 
 func (ss *stateStore) getState(key []byte) ([]byte, error) {
-	return ss.getter.Get(concatBytes([]byte{colStateValueByKey}, key))
+	return ss.getter.Get(concatBytes([]byte{byte(common.STATE_VALUE_BY_KEY)}, key))
 }
 
 func (ss *stateStore) getMerkleIndex(key []byte) ([]byte, error) {
-	return ss.getter.Get(concatBytes([]byte{colMerkleIndexByStateKey}, key))
+	return ss.getter.Get(concatBytes([]byte{byte(common.MERKLE_INDEX_BY_STATE_KEY)}, key))
 }
 
 func (ss *stateStore) setState(key, value []byte) updateFunc {
-	return func(setter setter) error {
-		return setter.Set(
-			concatBytes([]byte{colStateValueByKey}, key), value,
+	return func(setter common.Setter) error {
+		return setter.Put(
+			concatBytes([]byte{byte(common.STATE_VALUE_BY_KEY)}, key), value,
 		)
 	}
 }
 
 func (ss *stateStore) setTreeIndex(key, idx []byte) updateFunc {
-	return func(setter setter) error {
-		return setter.Set(
-			concatBytes([]byte{colMerkleIndexByStateKey}, key), idx,
+	return func(setter common.Setter) error {
+		return setter.Put(
+			concatBytes([]byte{byte(common.MERKLE_INDEX_BY_STATE_KEY)}, key), idx,
 		)
 	}
 }

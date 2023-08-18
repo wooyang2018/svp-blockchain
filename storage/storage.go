@@ -4,18 +4,22 @@
 package storage
 
 import (
+	"bytes"
 	"crypto"
 	"math/big"
 	"sync"
 	"time"
 
-	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/wooyang2018/posv-blockchain/storage/common"
+	"github.com/wooyang2018/posv-blockchain/storage/leveldbstore"
 	_ "golang.org/x/crypto/sha3"
 
 	"github.com/wooyang2018/posv-blockchain/core"
 	"github.com/wooyang2018/posv-blockchain/logger"
 	"github.com/wooyang2018/posv-blockchain/merkle"
 )
+
+type updateFunc func(setter common.Setter) error
 
 type CommitData struct {
 	Block        *core.Block
@@ -36,7 +40,7 @@ var DefaultConfig = Config{
 }
 
 type Storage struct {
-	db          *levelDB
+	db          common.PersistStore
 	chainStore  *chainStore
 	stateStore  *stateStore
 	merkleStore *merkleStore
@@ -46,9 +50,13 @@ type Storage struct {
 	mtxWriteState sync.RWMutex
 }
 
-func New(db *leveldb.DB, config Config) *Storage {
+func New(path string, config Config) *Storage {
 	strg := new(Storage)
-	strg.db = &levelDB{db}
+	db, err := leveldbstore.NewLevelDBStore(path)
+	if err != nil {
+		logger.I().Fatalw("setup storage failed", "error", err)
+	}
+	strg.db = db
 	strg.chainStore = &chainStore{strg.db}
 	strg.stateStore = &stateStore{strg.db, crypto.SHA3_256, config.ConcurrentLimit}
 	strg.merkleStore = &merkleStore{strg.db}
@@ -81,7 +89,7 @@ func (strg *Storage) StoreQC(qc *core.QuorumCert) error {
 }
 
 func (strg *Storage) GetQC(blkHash []byte) (*core.QuorumCert, error) {
-	return strg.chainStore.getQC(blkHash)
+	return strg.chainStore.getQCByBlockHash(blkHash)
 }
 
 func (strg *Storage) GetLastQC() (*core.QuorumCert, error) {
@@ -106,7 +114,8 @@ func (strg *Storage) GetTx(hash []byte) (*core.Transaction, error) {
 }
 
 func (strg *Storage) HasTx(hash []byte) bool {
-	return strg.chainStore.hasTx(hash)
+	has, _ := strg.chainStore.hasTx(hash)
+	return has
 }
 
 func (strg *Storage) GetTxCommit(hash []byte) (*core.TxCommit, error) {
@@ -222,4 +231,26 @@ func (strg *Storage) writeStateMerkleTree(data *CommitData) error {
 func (strg *Storage) setCommittedBlockHeight(height uint64) error {
 	updFn := strg.chainStore.setBlockHeight(height)
 	return updateLevelDB(strg.db, []updateFunc{updFn})
+}
+
+func concatBytes(srcs ...[]byte) []byte {
+	buf := bytes.NewBuffer(nil)
+	size := 0
+	for _, src := range srcs {
+		size += len(src)
+	}
+	buf.Grow(size)
+	for _, src := range srcs {
+		buf.Write(src)
+	}
+	return buf.Bytes()
+}
+
+func updateLevelDB(db common.PersistStore, fns []updateFunc) error {
+	for _, fn := range fns {
+		if err := fn(db); err != nil {
+			return err
+		}
+	}
+	return nil
 }
