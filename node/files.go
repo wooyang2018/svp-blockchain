@@ -10,8 +10,8 @@ import (
 	"path"
 
 	"github.com/multiformats/go-multiaddr"
-	"github.com/wooyang2018/posv-blockchain/core"
-	"github.com/wooyang2018/posv-blockchain/p2p"
+	"github.com/wooyang2018/svp-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/p2p"
 )
 
 type Peer struct {

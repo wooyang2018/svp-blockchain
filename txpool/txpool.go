@@ -8,9 +8,9 @@ import (
 	"encoding/base64"
 	"errors"
 
-	"github.com/wooyang2018/posv-blockchain/core"
-	"github.com/wooyang2018/posv-blockchain/emitter"
-	"github.com/wooyang2018/posv-blockchain/logger"
+	"github.com/wooyang2018/svp-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/emitter"
+	"github.com/wooyang2018/svp-blockchain/logger"
 )
 
 type Status struct {

@@ -6,8 +6,8 @@ package storage
 import (
 	"math/big"
 
-	"github.com/wooyang2018/posv-blockchain/merkle"
-	"github.com/wooyang2018/posv-blockchain/storage/common"
+	"github.com/wooyang2018/svp-blockchain/merkle"
+	"github.com/wooyang2018/svp-blockchain/storage/common"
 )
 
 type merkleStore struct {

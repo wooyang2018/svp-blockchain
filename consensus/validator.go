@@ -9,8 +9,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/wooyang2018/posv-blockchain/core"
-	"github.com/wooyang2018/posv-blockchain/logger"
+	"github.com/wooyang2018/svp-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/logger"
 )
 
 type validator struct {

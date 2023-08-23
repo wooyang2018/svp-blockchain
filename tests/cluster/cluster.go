@@ -6,7 +6,7 @@ package cluster
 import (
 	"time"
 
-	"github.com/wooyang2018/posv-blockchain/node"
+	"github.com/wooyang2018/svp-blockchain/node"
 )
 
 type Node interface {

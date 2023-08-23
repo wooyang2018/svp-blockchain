@@ -43,21 +43,21 @@ function rename_first_dir() {
 #BenchDuration = 5 * time.Minute
 #BenchLoads = []int{5000}
 function run_experiment_basic() {
-  mkdir -p ./workdir/experiment-posv/
+  mkdir -p ./workdir/experiment-svp/
   mkdir -p ./workdir/experiment-bft/
-  >./workdir/experiment-posv.log
+  >./workdir/experiment-svp.log
   >./workdir/experiment-bft.log
 
   set_two_phase_bft_flag false
   set_vote_strategy "AverageVote"
   set_window_size 4
-  echo "> starting experiment 1: PoSV"
+  echo "> starting experiment 1: SVP"
   for i in {4..28..4}; do
     set_node_count "$i"
-    go run . >>./workdir/experiment-posv.log 2>&1
+    go run . >>./workdir/experiment-svp.log 2>&1
   done
-  mv ./workdir/benchmarks/* ./workdir/experiment-posv/
-  echo -e "> finished experiment 1: PoSV\n"
+  mv ./workdir/benchmarks/* ./workdir/experiment-svp/
+  echo -e "> finished experiment 1: SVP\n"
 
   set_two_phase_bft_flag true
   set_window_size 1

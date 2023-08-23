@@ -9,7 +9,7 @@ import (
 
 	"github.com/multiformats/go-multiaddr"
 	"github.com/stretchr/testify/assert"
-	"github.com/wooyang2018/posv-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/core"
 )
 
 func TestHost(t *testing.T) {

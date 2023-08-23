@@ -20,9 +20,9 @@ package evm
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/holiman/uint256"
-	"github.com/wooyang2018/posv-blockchain/evm/common/errors"
-	"github.com/wooyang2018/posv-blockchain/evm/common/params"
-	"github.com/wooyang2018/posv-blockchain/evm/common/types"
+	"github.com/wooyang2018/svp-blockchain/evm/common/errors"
+	"github.com/wooyang2018/svp-blockchain/evm/common/params"
+	"github.com/wooyang2018/svp-blockchain/evm/common/types"
 	"golang.org/x/crypto/sha3"
 )
 

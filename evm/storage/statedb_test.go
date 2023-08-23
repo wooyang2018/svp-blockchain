@@ -9,9 +9,9 @@ import (
 	ethcomm "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/require"
-	"github.com/wooyang2018/posv-blockchain/evm/common"
-	"github.com/wooyang2018/posv-blockchain/evm/storage/overlaydb"
-	"github.com/wooyang2018/posv-blockchain/storage/leveldbstore"
+	"github.com/wooyang2018/svp-blockchain/evm/common"
+	"github.com/wooyang2018/svp-blockchain/evm/storage/overlaydb"
+	"github.com/wooyang2018/svp-blockchain/storage/leveldbstore"
 )
 
 type dummy struct{}

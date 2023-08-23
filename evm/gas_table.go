@@ -20,8 +20,8 @@ package evm
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/wooyang2018/posv-blockchain/evm/common/errors"
-	"github.com/wooyang2018/posv-blockchain/evm/common/params"
+	"github.com/wooyang2018/svp-blockchain/evm/common/errors"
+	"github.com/wooyang2018/svp-blockchain/evm/common/params"
 )
 
 // memoryGasCost calculates the quadratic gas for memory expansion. It does so

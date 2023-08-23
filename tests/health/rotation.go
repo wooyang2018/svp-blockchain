@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/wooyang2018/posv-blockchain/consensus"
+	"github.com/wooyang2018/svp-blockchain/consensus"
 )
 
 func (hc *checker) checkRotation() error {

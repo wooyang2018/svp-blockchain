@@ -21,7 +21,7 @@ import (
 	"fmt"
 
 	"github.com/holiman/uint256"
-	"github.com/wooyang2018/posv-blockchain/evm/common/params"
+	"github.com/wooyang2018/svp-blockchain/evm/common/params"
 )
 
 var activators = map[int]func(*JumpTable){

@@ -8,9 +8,9 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/wooyang2018/posv-blockchain/tests/cluster"
-	"github.com/wooyang2018/posv-blockchain/tests/health"
-	"github.com/wooyang2018/posv-blockchain/tests/testutil"
+	"github.com/wooyang2018/svp-blockchain/tests/cluster"
+	"github.com/wooyang2018/svp-blockchain/tests/health"
+	"github.com/wooyang2018/svp-blockchain/tests/testutil"
 )
 
 type NetworkDelay struct {

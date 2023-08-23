@@ -11,10 +11,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/wooyang2018/posv-blockchain/chaincode/pcoin"
-	"github.com/wooyang2018/posv-blockchain/core"
-	"github.com/wooyang2018/posv-blockchain/execution"
-	"github.com/wooyang2018/posv-blockchain/tests/cluster"
+	"github.com/wooyang2018/svp-blockchain/chaincode/pcoin"
+	"github.com/wooyang2018/svp-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/execution"
+	"github.com/wooyang2018/svp-blockchain/tests/cluster"
 )
 
 type PCoinClient struct {

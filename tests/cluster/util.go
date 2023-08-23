@@ -16,10 +16,10 @@ import (
 	"time"
 
 	"github.com/multiformats/go-multiaddr"
-	"github.com/wooyang2018/posv-blockchain/consensus"
+	"github.com/wooyang2018/svp-blockchain/consensus"
 
-	"github.com/wooyang2018/posv-blockchain/core"
-	"github.com/wooyang2018/posv-blockchain/node"
+	"github.com/wooyang2018/svp-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/node"
 )
 
 func WriteNodeKey(datadir string, key *core.PrivateKey) error {

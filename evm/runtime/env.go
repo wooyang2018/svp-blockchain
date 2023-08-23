@@ -21,7 +21,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/wooyang2018/posv-blockchain/evm"
+	"github.com/wooyang2018/svp-blockchain/evm"
 )
 
 func NewEnv(cfg *Config) *evm.EVM {

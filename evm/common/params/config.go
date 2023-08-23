@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/wooyang2018/posv-blockchain/evm/common/constants"
+	"github.com/wooyang2018/svp-blockchain/evm/common/constants"
 )
 
 func GetChainConfig(chainId uint32) *ChainConfig {

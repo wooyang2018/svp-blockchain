@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/wooyang2018/posv-blockchain/merkle"
-	"github.com/wooyang2018/posv-blockchain/storage/leveldbstore"
+	"github.com/wooyang2018/svp-blockchain/merkle"
+	"github.com/wooyang2018/svp-blockchain/storage/leveldbstore"
 )
 
 func TestMerkleStore(t *testing.T) {

@@ -15,7 +15,7 @@ import (
 
 	"github.com/multiformats/go-multiaddr"
 
-	"github.com/wooyang2018/posv-blockchain/node"
+	"github.com/wooyang2018/svp-blockchain/node"
 )
 
 type RemoteFactoryParams struct {

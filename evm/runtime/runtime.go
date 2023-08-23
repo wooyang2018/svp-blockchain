@@ -24,11 +24,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/holiman/uint256"
-	"github.com/wooyang2018/posv-blockchain/evm"
-	"github.com/wooyang2018/posv-blockchain/evm/common/params"
-	"github.com/wooyang2018/posv-blockchain/evm/storage"
-	"github.com/wooyang2018/posv-blockchain/evm/storage/overlaydb"
-	"github.com/wooyang2018/posv-blockchain/storage/leveldbstore"
+	"github.com/wooyang2018/svp-blockchain/evm"
+	"github.com/wooyang2018/svp-blockchain/evm/common/params"
+	"github.com/wooyang2018/svp-blockchain/evm/storage"
+	"github.com/wooyang2018/svp-blockchain/evm/storage/overlaydb"
+	"github.com/wooyang2018/svp-blockchain/storage/leveldbstore"
 )
 
 // Config is a basic type specifying certain configuration flags for running

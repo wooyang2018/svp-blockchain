@@ -10,8 +10,8 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/wooyang2018/posv-blockchain/execution/chaincode"
-	"github.com/wooyang2018/posv-blockchain/logger"
+	"github.com/wooyang2018/svp-blockchain/execution/chaincode"
+	"github.com/wooyang2018/svp-blockchain/logger"
 )
 
 const MessageSizeLimit = 100 * 1000 * 1000

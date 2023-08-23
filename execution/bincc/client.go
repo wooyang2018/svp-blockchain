@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/wooyang2018/posv-blockchain/execution/chaincode"
+	"github.com/wooyang2018/svp-blockchain/execution/chaincode"
 )
 
 const ChaincodeHardTimeout = 10 * time.Second

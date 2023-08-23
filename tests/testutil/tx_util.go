@@ -15,10 +15,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/wooyang2018/posv-blockchain/core"
-	"github.com/wooyang2018/posv-blockchain/execution"
-	"github.com/wooyang2018/posv-blockchain/tests/cluster"
-	"github.com/wooyang2018/posv-blockchain/txpool"
+	"github.com/wooyang2018/svp-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/execution"
+	"github.com/wooyang2018/svp-blockchain/tests/cluster"
+	"github.com/wooyang2018/svp-blockchain/txpool"
 )
 
 func SubmitTxAndWait(cls *cluster.Cluster, tx *core.Transaction) (int, error) {

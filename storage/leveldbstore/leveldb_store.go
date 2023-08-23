@@ -11,7 +11,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/syndtr/goleveldb/leveldb/storage"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"github.com/wooyang2018/posv-blockchain/storage/common"
+	"github.com/wooyang2018/svp-blockchain/storage/common"
 )
 
 // LevelDB store

@@ -25,8 +25,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/wooyang2018/posv-blockchain/evm/common"
-	"github.com/wooyang2018/posv-blockchain/evm/common/types"
+	"github.com/wooyang2018/svp-blockchain/evm/common"
+	"github.com/wooyang2018/svp-blockchain/evm/common/types"
 )
 
 func TestDeserialization(t *testing.T) {

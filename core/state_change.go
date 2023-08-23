@@ -4,7 +4,7 @@
 package core
 
 import (
-	"github.com/wooyang2018/posv-blockchain/pb"
+	"github.com/wooyang2018/svp-blockchain/pb"
 	"google.golang.org/protobuf/proto"
 )
 

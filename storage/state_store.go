@@ -10,9 +10,9 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/wooyang2018/posv-blockchain/core"
-	"github.com/wooyang2018/posv-blockchain/merkle"
-	"github.com/wooyang2018/posv-blockchain/storage/common"
+	"github.com/wooyang2018/svp-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/merkle"
+	"github.com/wooyang2018/svp-blockchain/storage/common"
 )
 
 type stateStore struct {

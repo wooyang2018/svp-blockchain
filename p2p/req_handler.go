@@ -6,8 +6,8 @@ package p2p
 import (
 	"encoding/binary"
 
-	"github.com/wooyang2018/posv-blockchain/core"
-	"github.com/wooyang2018/posv-blockchain/pb"
+	"github.com/wooyang2018/svp-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/pb"
 	"google.golang.org/protobuf/proto"
 )
 

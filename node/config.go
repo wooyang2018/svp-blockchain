@@ -4,9 +4,9 @@
 package node
 
 import (
-	"github.com/wooyang2018/posv-blockchain/consensus"
-	"github.com/wooyang2018/posv-blockchain/execution"
-	"github.com/wooyang2018/posv-blockchain/storage"
+	"github.com/wooyang2018/svp-blockchain/consensus"
+	"github.com/wooyang2018/svp-blockchain/execution"
+	"github.com/wooyang2018/svp-blockchain/storage"
 )
 
 const MaxProcsNum = 8 //set corresponding num of CPUs when benchmark test

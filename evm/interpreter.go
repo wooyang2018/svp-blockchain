@@ -24,7 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/wooyang2018/posv-blockchain/evm/common/errors"
+	"github.com/wooyang2018/svp-blockchain/evm/common/errors"
 )
 
 // Config are the configuration options for the Interpreter

@@ -22,9 +22,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/wooyang2018/posv-blockchain/evm/storage/overlaydb"
-	"github.com/wooyang2018/posv-blockchain/storage/common"
-	"github.com/wooyang2018/posv-blockchain/storage/leveldbstore"
+	"github.com/wooyang2018/svp-blockchain/evm/storage/overlaydb"
+	"github.com/wooyang2018/svp-blockchain/storage/common"
+	"github.com/wooyang2018/svp-blockchain/storage/leveldbstore"
 )
 
 func genRandKeyVal() (string, string) {

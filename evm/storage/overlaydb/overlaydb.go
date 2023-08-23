@@ -22,8 +22,8 @@ import (
 	"crypto/sha256"
 
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"github.com/wooyang2018/posv-blockchain/evm/common"
-	storecomm "github.com/wooyang2018/posv-blockchain/storage/common"
+	"github.com/wooyang2018/svp-blockchain/evm/common"
+	storecomm "github.com/wooyang2018/svp-blockchain/storage/common"
 )
 
 type OverlayDB struct {

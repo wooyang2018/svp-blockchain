@@ -6,8 +6,8 @@ package common
 import (
 	"errors"
 
-	"github.com/wooyang2018/posv-blockchain/evm/common"
-	"github.com/wooyang2018/posv-blockchain/evm/common/event"
+	"github.com/wooyang2018/svp-blockchain/evm/common"
+	"github.com/wooyang2018/svp-blockchain/evm/common/event"
 )
 
 var ErrNotFound = errors.New("not found")

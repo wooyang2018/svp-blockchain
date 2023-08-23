@@ -7,16 +7,16 @@ import (
 	"log"
 
 	"github.com/spf13/cobra"
-	"github.com/wooyang2018/posv-blockchain/consensus"
+	"github.com/wooyang2018/svp-blockchain/consensus"
 
-	"github.com/wooyang2018/posv-blockchain/node"
+	"github.com/wooyang2018/svp-blockchain/node"
 )
 
 var nodeConfig = node.DefaultConfig
 
 var rootCmd = &cobra.Command{
 	Use:   "chain",
-	Short: "posv blockchain",
+	Short: "svp blockchain",
 	Run: func(cmd *cobra.Command, args []string) {
 		node.Run(nodeConfig)
 	},

@@ -12,10 +12,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/wooyang2018/posv-blockchain/consensus"
-	"github.com/wooyang2018/posv-blockchain/core"
-	"github.com/wooyang2018/posv-blockchain/tests/cluster"
-	"github.com/wooyang2018/posv-blockchain/txpool"
+	"github.com/wooyang2018/svp-blockchain/consensus"
+	"github.com/wooyang2018/svp-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/tests/cluster"
+	"github.com/wooyang2018/svp-blockchain/txpool"
 )
 
 func checkResponse(resp *http.Response, err error) error {

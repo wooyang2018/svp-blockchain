@@ -21,7 +21,7 @@ import (
 	"math/big"
 
 	ethcomm "github.com/ethereum/go-ethereum/common"
-	"github.com/wooyang2018/posv-blockchain/evm/common"
+	"github.com/wooyang2018/svp-blockchain/evm/common"
 )
 
 //go:generate gencodec -type Log -field-override logMarshaling -out gen_log_json.go
