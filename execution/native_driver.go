@@ -7,10 +7,10 @@ import (
 	"bytes"
 	"errors"
 
-	"github.com/wooyang2018/posv-blockchain/chaincode/empty"
-	"github.com/wooyang2018/posv-blockchain/chaincode/kvdb"
-	"github.com/wooyang2018/posv-blockchain/chaincode/pcoin"
-	"github.com/wooyang2018/posv-blockchain/execution/chaincode"
+	"github.com/wooyang2018/svp-blockchain/chaincode/empty"
+	"github.com/wooyang2018/svp-blockchain/chaincode/kvdb"
+	"github.com/wooyang2018/svp-blockchain/chaincode/pcoin"
+	"github.com/wooyang2018/svp-blockchain/execution/chaincode"
 )
 
 var (

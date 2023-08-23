@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/wooyang2018/posv-blockchain/logger"
+	"github.com/wooyang2018/svp-blockchain/logger"
 )
 
 type tester struct {

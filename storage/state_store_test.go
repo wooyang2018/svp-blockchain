@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/wooyang2018/posv-blockchain/core"
-	"github.com/wooyang2018/posv-blockchain/merkle"
+	"github.com/wooyang2018/svp-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/merkle"
 	_ "golang.org/x/crypto/sha3"
 )
 

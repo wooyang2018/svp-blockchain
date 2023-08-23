@@ -5,10 +5,10 @@ package consensus
 
 import (
 	"github.com/stretchr/testify/mock"
-	"github.com/wooyang2018/posv-blockchain/core"
-	"github.com/wooyang2018/posv-blockchain/emitter"
-	"github.com/wooyang2018/posv-blockchain/storage"
-	"github.com/wooyang2018/posv-blockchain/txpool"
+	"github.com/wooyang2018/svp-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/emitter"
+	"github.com/wooyang2018/svp-blockchain/storage"
+	"github.com/wooyang2018/svp-blockchain/txpool"
 )
 
 type MockTxPool struct {

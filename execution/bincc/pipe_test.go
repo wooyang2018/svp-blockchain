@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/wooyang2018/posv-blockchain/execution/chaincode"
+	"github.com/wooyang2018/svp-blockchain/execution/chaincode"
 )
 
 func setupRunnerAndClient() (*Runner, *Client) {

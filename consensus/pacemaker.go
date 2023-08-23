@@ -6,7 +6,7 @@ package consensus
 import (
 	"time"
 
-	"github.com/wooyang2018/posv-blockchain/logger"
+	"github.com/wooyang2018/svp-blockchain/logger"
 )
 
 type pacemaker struct {

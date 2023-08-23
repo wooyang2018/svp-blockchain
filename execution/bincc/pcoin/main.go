@@ -4,8 +4,8 @@
 package main
 
 import (
-	"github.com/wooyang2018/posv-blockchain/chaincode/pcoin"
-	"github.com/wooyang2018/posv-blockchain/execution/bincc"
+	"github.com/wooyang2018/svp-blockchain/chaincode/pcoin"
+	"github.com/wooyang2018/svp-blockchain/execution/bincc"
 )
 
 // bincc version of pcoin.

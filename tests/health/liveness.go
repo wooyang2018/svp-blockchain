@@ -6,9 +6,9 @@ package health
 import (
 	"fmt"
 
-	"github.com/wooyang2018/posv-blockchain/consensus"
-	"github.com/wooyang2018/posv-blockchain/core"
-	"github.com/wooyang2018/posv-blockchain/tests/testutil"
+	"github.com/wooyang2018/svp-blockchain/consensus"
+	"github.com/wooyang2018/svp-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/tests/testutil"
 )
 
 func (hc *checker) checkSafety() error {

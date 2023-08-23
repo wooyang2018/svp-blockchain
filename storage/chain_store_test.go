@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/wooyang2018/posv-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/core"
 )
 
 func TestChainStore(t *testing.T) {

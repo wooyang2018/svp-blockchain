@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/wooyang2018/posv-blockchain/pb"
+	"github.com/wooyang2018/svp-blockchain/pb"
 )
 
 func TestVote(t *testing.T) {

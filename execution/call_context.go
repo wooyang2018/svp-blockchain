@@ -4,8 +4,8 @@
 package execution
 
 import (
-	"github.com/wooyang2018/posv-blockchain/core"
-	"github.com/wooyang2018/posv-blockchain/execution/chaincode"
+	"github.com/wooyang2018/svp-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/execution/chaincode"
 )
 
 type callContextTx struct {

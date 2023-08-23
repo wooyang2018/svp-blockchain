@@ -1,4 +1,4 @@
-module github.com/wooyang2018/posv-blockchain
+module github.com/wooyang2018/svp-blockchain
 
 go 1.20
 

@@ -14,13 +14,13 @@ import (
 	"syscall"
 
 	"github.com/multiformats/go-multiaddr"
-	"github.com/wooyang2018/posv-blockchain/consensus"
-	"github.com/wooyang2018/posv-blockchain/core"
-	"github.com/wooyang2018/posv-blockchain/execution"
-	"github.com/wooyang2018/posv-blockchain/logger"
-	"github.com/wooyang2018/posv-blockchain/p2p"
-	"github.com/wooyang2018/posv-blockchain/storage"
-	"github.com/wooyang2018/posv-blockchain/txpool"
+	"github.com/wooyang2018/svp-blockchain/consensus"
+	"github.com/wooyang2018/svp-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/execution"
+	"github.com/wooyang2018/svp-blockchain/logger"
+	"github.com/wooyang2018/svp-blockchain/p2p"
+	"github.com/wooyang2018/svp-blockchain/storage"
+	"github.com/wooyang2018/svp-blockchain/txpool"
 	"go.uber.org/zap"
 )
 

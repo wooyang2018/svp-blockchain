@@ -7,7 +7,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/wooyang2018/posv-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/core"
 )
 
 type state struct {

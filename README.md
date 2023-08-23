@@ -1,4 +1,4 @@
-# PoSV Blockchain
+# SVP Blockchain
 
 ## Getting Started
 

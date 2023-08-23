@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/wooyang2018/posv-blockchain/tests/cluster"
-	"github.com/wooyang2018/posv-blockchain/tests/testutil"
+	"github.com/wooyang2018/svp-blockchain/tests/cluster"
+	"github.com/wooyang2018/svp-blockchain/tests/testutil"
 )
 
 type RestartCluster struct{}
