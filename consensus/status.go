@@ -74,7 +74,7 @@ func (w *window) vote() (uint32, bool) {
 			min = 0
 		}
 		quota = rand.Intn(max-min+1) + min
-		time.Sleep(time.Duration(w.size) * 30 * time.Millisecond)
+		time.Sleep(time.Duration(w.size-4) * 15 * time.Millisecond)
 		return uint32(quota), true
 	case OrdinaryVote: //only for experiment 3: ordinary BFT validators over f
 		if !w.recover && w.height >= 100 && w.height <= 99+uint64(w.size) &&

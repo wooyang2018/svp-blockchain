@@ -13,10 +13,11 @@ import (
 )
 
 type tester struct {
-	writer  *csv.Writer
-	preTime int64
-	elapsed int64
-	txCount int
+	writer      *csv.Writer
+	preTime     int64
+	sysElapsed  int64
+	consElapsed int64
+	txCount     int
 }
 
 func newTester(file *os.File) *tester {
@@ -30,7 +31,8 @@ func newTester(file *os.File) *tester {
 			"EndTime",
 			"Latency",
 			"TxCount",
-			"Throughput",
+			"System Throughput",
+			"Consensus Throughput",
 		})
 	}
 	return t
@@ -44,7 +46,8 @@ func (t *tester) saveItem(height uint64, t0, t1, t2 int64, txs int) {
 		t.preTime = t0
 	}
 
-	t.elapsed = t.elapsed + t2 - t.preTime
+	t.sysElapsed = t.sysElapsed + t2 - t.preTime
+	t.consElapsed = t.consElapsed + t1 - t.preTime
 	t.txCount = t.txCount + txs
 	t.preTime = t2
 	content := []string{
@@ -58,16 +61,19 @@ func (t *tester) saveItem(height uint64, t0, t1, t2 int64, txs int) {
 
 	if height > 0 && height%10 == 0 {
 		t.writer.Flush()
-		tps := float64(t.txCount) / float64(t.elapsed) * 1e9
-		tpsStr := strconv.FormatFloat(tps, 'f', 2, 64)
+		sysTPS := float64(t.txCount) * 1e9 / float64(t.sysElapsed)
+		sysStr := strconv.FormatFloat(sysTPS, 'f', 2, 64)
+		consTPS := float64(t.txCount) * 1e9 / float64(t.consElapsed)
+		consStr := strconv.FormatFloat(consTPS, 'f', 2, 64)
 		logger.I().Debugw("benchmark test",
 			"height", height,
 			"txs", t.txCount,
-			"elapsed", time.Duration(t.elapsed),
-			"tps", tpsStr)
-		content = append(content, tpsStr)
+			"elapsed", time.Duration(t.sysElapsed),
+			"tps", sysStr)
+		content = append(append(content, sysStr), consStr)
 		t.txCount = 0
-		t.elapsed = 0
+		t.sysElapsed = 0
+		t.consElapsed = 0
 	}
 
 	t.writer.Write(content)
