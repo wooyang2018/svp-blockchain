@@ -270,10 +270,8 @@ func TestBlockhash(t *testing.T) {
 	// verify that it obtained the right hashes where it should
 
 	/*
-
 		pragma solidity ^0.5.3;
 		contract Hasher{
-
 			function test() public view returns (bytes32, bytes32, bytes32){
 				uint256 x = block.number;
 				bytes32 first;
@@ -290,7 +288,6 @@ func TestBlockhash(t *testing.T) {
 				return (zero, first, last);
 			}
 		}
-
 	*/
 	// The contract above
 	data := common.Hex2Bytes("6080604052348015600f57600080fd5b50600436106045576000357c010000000000000000000000000000000000000000000000000000000090048063f8a8fd6d14604a575b600080fd5b60506074565b60405180848152602001838152602001828152602001935050505060405180910390f35b600080600080439050600080600083409050600184034092506000600290505b61010481101560c35760008186034090506000816001900414151560b6578093505b5080806001019150506094565b508083839650965096505050505090919256fea165627a7a72305820462d71b510c1725ff35946c20b415b0d50b468ea157c8c77dff9466c9cb85f560029")
@@ -338,7 +335,7 @@ func (s *stepCounter) CaptureState(env *evm.EVM, pc uint64, op evm.OpCode, gas, 
 	contract *evm.Contract, depth int, err error) {
 	s.steps++
 	// Enable this for more output
-	//s.inner.CaptureState(env, pc, op, gas, cost, memory, stack, rStack, contract, depth, err)
+	// s.inner.CaptureState(env, pc, op, gas, cost, memory, stack, rStack, contract, depth, err)
 }
 
 func (s *stepCounter) CaptureFault(env *evm.EVM, pc uint64, op evm.OpCode, gas, cost uint64,
