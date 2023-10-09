@@ -1,5 +1,4 @@
-// Copyright (C) 2023 Wooyang2018
-// Copyright 2014 The go-ethereum Authors
+// Copyright 2016 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -18,7 +17,28 @@
 package evm
 
 import (
+	"errors"
 	"fmt"
+)
+
+// List evm execution errors
+var (
+	// ErrInvalidSubroutineEntry means that a BEGINSUB was reached via iteration,
+	// as opposed to from a JUMPSUB instruction
+	ErrInvalidSubroutineEntry   = errors.New("invalid subroutine entry")
+	ErrOutOfGas                 = errors.New("out of gas")
+	ErrCodeStoreOutOfGas        = errors.New("contract creation code storage out of gas")
+	ErrDepth                    = errors.New("max call depth exceeded")
+	ErrInsufficientBalance      = errors.New("insufficient balance for transfer")
+	ErrContractAddressCollision = errors.New("contract address collision")
+	ErrExecutionReverted        = errors.New("execution reverted")
+	ErrMaxCodeSizeExceeded      = errors.New("max code size exceeded")
+	ErrInvalidJump              = errors.New("invalid jump destination")
+	ErrWriteProtection          = errors.New("write protection")
+	ErrReturnDataOutOfBounds    = errors.New("return data out of bounds")
+	ErrGasUintOverflow          = errors.New("gas uint64 overflow")
+	ErrInvalidRetsub            = errors.New("invalid retsub")
+	ErrReturnStackExceeded      = errors.New("return stack limit reached")
 )
 
 // ErrStackUnderflow wraps an evm error when the items on the stack less

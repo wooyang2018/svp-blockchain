@@ -1,4 +1,3 @@
-// Copyright (C) 2023 Wooyang2018
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -19,7 +18,6 @@ package evm
 
 import (
 	"github.com/holiman/uint256"
-	"github.com/wooyang2018/svp-blockchain/evm/common/errors"
 )
 
 // Gas costs
@@ -48,7 +46,7 @@ func callGas(isEip150 bool, availableGas, base uint64, callCost *uint256.Int) (u
 		}
 	}
 	if !callCost.IsUint64() {
-		return 0, errors.ErrGasUintOverflow
+		return 0, ErrGasUintOverflow
 	}
 
 	return callCost.Uint64(), nil

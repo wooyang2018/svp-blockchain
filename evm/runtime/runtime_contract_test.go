@@ -1,3 +1,6 @@
+// Copyright (C) 2023 Wooyang2018
+// Licensed under the GNU General Public License v3.0
+
 package runtime
 
 import (
@@ -12,14 +15,14 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/wooyang2018/svp-blockchain/evm/storage"
 	"github.com/wooyang2018/svp-blockchain/evm/storage/overlaydb"
-	"github.com/wooyang2018/svp-blockchain/storage/leveldbstore"
+	"github.com/wooyang2018/svp-blockchain/storage/leveldb"
 )
 
 func makeConfig() *Config {
 	cfg := new(Config)
 	setDefaults(cfg)
 
-	memback := leveldbstore.NewMemLevelDBStore()
+	memback := leveldb.NewMemLevelDBStore()
 	overlay := overlaydb.NewOverlayDB(memback)
 
 	cache := storage.NewCacheDB(overlay)
@@ -41,7 +44,7 @@ func compileCode(path string) map[string][2]string {
 	fmt.Println(cmd.String())
 	output, err := cmd.Output()
 	if err != nil {
-		panic(err)
+		panic("compile code failed")
 	}
 
 	contracts := make(map[string][2]string)
@@ -195,4 +198,21 @@ func TestCreateOnDeletedAddress(t *testing.T) {
 	ret, _, err = c2.Call("retrieve")
 	a.Nil(err, "fail")
 	a.True((big.NewInt(0).SetBytes(ret).Cmp(big.NewInt(0)) == 0), "should not get previous value 0x1234")
+}
+
+func TestENS(t *testing.T) {
+	a := require.New(t)
+	cfg := makeConfig()
+	compiled := compileCode("../testdata/contract/ens/ENSRegistry.sol")
+
+	c := CreateContract(cfg, compiled["ENSRegistry"][1], compiled["ENSRegistry"][0])
+	a.NotNil(c, "fail")
+
+	_, _, err := c.Call("setRecord", [32]byte{}, common.HexToAddress("0x1"), common.HexToAddress("0x2"), uint64(10))
+	a.Nil(err, "fail")
+
+	// 继续测试合约的function
+	for _, log := range cfg.State.GetLogs() {
+		fmt.Println(log)
+	}
 }

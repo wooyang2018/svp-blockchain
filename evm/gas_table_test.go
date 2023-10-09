@@ -1,4 +1,3 @@
-// Copyright (C) 2023 Wooyang2018
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -24,11 +23,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/wooyang2018/svp-blockchain/evm/common/errors"
 	"github.com/wooyang2018/svp-blockchain/evm/common/params"
 	"github.com/wooyang2018/svp-blockchain/evm/storage"
 	"github.com/wooyang2018/svp-blockchain/evm/storage/overlaydb"
-	"github.com/wooyang2018/svp-blockchain/storage/leveldbstore"
+	"github.com/wooyang2018/svp-blockchain/storage/leveldb"
 )
 
 var handle = storage.NewDummy()
@@ -44,8 +42,8 @@ func TestMemoryGasCost(t *testing.T) {
 	}
 	for i, tt := range tests {
 		v, err := memoryGasCost(&Memory{}, tt.size)
-		if (err == errors.ErrGasUintOverflow) != tt.overflow {
-			t.Errorf("test %d: overflow mismatch: have %v, want %v", i, err == errors.ErrGasUintOverflow, tt.overflow)
+		if (err == ErrGasUintOverflow) != tt.overflow {
+			t.Errorf("test %d: overflow mismatch: have %v, want %v", i, err == ErrGasUintOverflow, tt.overflow)
 		}
 		if v != tt.cost {
 			t.Errorf("test %d: gas cost mismatch: have %v, want %v", i, v, tt.cost)
@@ -78,7 +76,7 @@ var eip2200Tests = []struct {
 	{1, math.MaxUint64, "0x60016000556001600055", 1612, 0, nil},                // 1 -> 1 -> 1
 	{0, math.MaxUint64, "0x600160005560006000556001600055", 40818, 19200, nil}, // 0 -> 1 -> 0 -> 1
 	{1, math.MaxUint64, "0x600060005560016000556000600055", 10818, 19200, nil}, // 1 -> 0 -> 1 -> 0
-	{1, 2306, "0x6001600055", 2306, 0, errors.ErrOutOfGas},                     // 1 -> 1 (2300 sentry + 2xPUSH)
+	{1, 2306, "0x6001600055", 2306, 0, ErrOutOfGas},                            // 1 -> 1 (2300 sentry + 2xPUSH)
 	{1, 2307, "0x6001600055", 806, 0, nil},                                     // 1 -> 1 (2301 sentry + 2xPUSH)
 }
 
@@ -86,7 +84,7 @@ func TestEIP2200(t *testing.T) {
 	for i, tt := range eip2200Tests {
 		address := common.BytesToAddress([]byte("contract"))
 
-		db := storage.NewCacheDB(overlaydb.NewOverlayDB(leveldbstore.NewMemLevelDBStore()))
+		db := storage.NewCacheDB(overlaydb.NewOverlayDB(leveldb.NewMemLevelDBStore()))
 		statedb := storage.NewStateDB(db, common.Hash{}, common.Hash{}, handle)
 		statedb.CreateAccount(address)
 		statedb.SetCode(address, hexutil.MustDecode(tt.input))

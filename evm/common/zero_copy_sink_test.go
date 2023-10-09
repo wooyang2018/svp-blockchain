@@ -1,28 +1,12 @@
-/*
- * Copyright (C) 2018 The ontology Authors
- * This file is part of The ontology library.
- *
- * The ontology is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * The ontology is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with The ontology.  If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (C) 2023 Wooyang2018
+// Licensed under the GNU General Public License v3.0
+
 package common
 
 import (
-	"bytes"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/wooyang2018/svp-blockchain/evm/common/serialization"
 )
 
 func TestSourceSink(t *testing.T) {
@@ -58,34 +42,6 @@ func TestSourceSink(t *testing.T) {
 	b9, _, _, _ := source.NextString()
 	assert.Equal(t, a9, b9)
 
-}
-
-func BenchmarkSerialize(ben *testing.B) {
-	N := 1000
-	a3 := uint8(100)
-	a4 := uint16(65535)
-	a5 := uint32(4294967295)
-	a6 := uint64(18446744073709551615)
-	a7 := uint64(18446744073709551615)
-	a8 := []byte{10, 11, 12}
-	a9 := "hello onchain."
-	b := new(bytes.Buffer)
-	for i := 0; i < ben.N; i++ {
-		b.Reset()
-		for j := 0; j < N; j++ {
-			serialization.WriteVarUint(b, uint64(a3))
-			serialization.WriteVarUint(b, uint64(a4))
-			serialization.WriteVarUint(b, uint64(a5))
-			serialization.WriteVarUint(b, uint64(a6))
-			serialization.WriteVarUint(b, uint64(a7))
-			serialization.WriteVarBytes(b, a8)
-			serialization.WriteString(b, a9)
-
-			b.WriteByte(20)
-			b.WriteByte(21)
-			b.WriteByte(22)
-		}
-	}
 }
 
 func BenchmarkZeroCopySink(ben *testing.B) {

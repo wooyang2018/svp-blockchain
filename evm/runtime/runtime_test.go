@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Wooyang2018
+// Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -34,7 +34,7 @@ import (
 	"github.com/wooyang2018/svp-blockchain/evm/common/params"
 	"github.com/wooyang2018/svp-blockchain/evm/storage"
 	"github.com/wooyang2018/svp-blockchain/evm/storage/overlaydb"
-	"github.com/wooyang2018/svp-blockchain/storage/leveldbstore"
+	"github.com/wooyang2018/svp-blockchain/storage/leveldb"
 )
 
 func TestDefaults(t *testing.T) {
@@ -103,7 +103,7 @@ func TestExecute(t *testing.T) {
 }
 
 func TestCall(t *testing.T) {
-	db := storage.NewCacheDB(overlaydb.NewOverlayDB(leveldbstore.NewMemLevelDBStore()))
+	db := storage.NewCacheDB(overlaydb.NewOverlayDB(leveldb.NewMemLevelDBStore()))
 	statedb := storage.NewStateDB(db, common.Hash{}, common.Hash{}, storage.NewDummy())
 	address := common.HexToAddress("0x0a")
 	statedb.SetCode(address, []byte{
@@ -161,7 +161,7 @@ func BenchmarkCall(b *testing.B) {
 
 func benchmarkEVM_Create(bench *testing.B, code string) {
 	var (
-		db       = storage.NewCacheDB(overlaydb.NewOverlayDB(leveldbstore.NewMemLevelDBStore()))
+		db       = storage.NewCacheDB(overlaydb.NewOverlayDB(leveldb.NewMemLevelDBStore()))
 		statedb  = storage.NewStateDB(db, common.Hash{}, common.Hash{}, storage.NewDummy())
 		sender   = common.BytesToAddress([]byte("sender"))
 		receiver = common.BytesToAddress([]byte("receiver"))
@@ -346,7 +346,7 @@ func (s *stepCounter) CaptureEnd(output []byte, gasUsed uint64, t time.Duration,
 }
 
 func TestJumpSub1024Limit(t *testing.T) {
-	db := storage.NewCacheDB(overlaydb.NewOverlayDB(leveldbstore.NewMemLevelDBStore()))
+	db := storage.NewCacheDB(overlaydb.NewOverlayDB(leveldb.NewMemLevelDBStore()))
 	statedb := storage.NewStateDB(db, common.Hash{}, common.Hash{}, storage.NewDummy())
 	address := common.HexToAddress("0x0a")
 	// Code is
@@ -384,7 +384,7 @@ func TestJumpSub1024Limit(t *testing.T) {
 }
 
 func TestReturnSubShallow(t *testing.T) {
-	db := storage.NewCacheDB(overlaydb.NewOverlayDB(leveldbstore.NewMemLevelDBStore()))
+	db := storage.NewCacheDB(overlaydb.NewOverlayDB(leveldb.NewMemLevelDBStore()))
 	statedb := storage.NewStateDB(db, common.Hash{}, common.Hash{}, storage.NewDummy())
 	address := common.HexToAddress("0x0a")
 	// The code does returnsub without having anything on the returnstack.
@@ -573,7 +573,7 @@ func DisabledTestEipExampleCases(t *testing.T) {
 func benchmarkNonModifyingCode(gas uint64, code []byte, name string, b *testing.B) {
 	cfg := new(Config)
 	setDefaults(cfg)
-	db := storage.NewCacheDB(overlaydb.NewOverlayDB(leveldbstore.NewMemLevelDBStore()))
+	db := storage.NewCacheDB(overlaydb.NewOverlayDB(leveldb.NewMemLevelDBStore()))
 	cfg.State = storage.NewStateDB(db, common.Hash{}, common.Hash{}, storage.NewDummy())
 	cfg.GasLimit = gas
 	var (

@@ -1,4 +1,3 @@
-// Copyright (C) 2023 Wooyang2018
 // Copyright 2014 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //

@@ -1,20 +1,6 @@
-/*
- * Copyright (C) 2018 The ontology Authors
- * This file is part of The ontology library.
- *
- * The ontology is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * The ontology is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with The ontology.  If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (C) 2023 Wooyang2018
+// Licensed under the GNU General Public License v3.0
+
 package overlaydb
 
 import (
@@ -24,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/wooyang2018/svp-blockchain/storage/leveldbstore"
+	"github.com/wooyang2018/svp-blockchain/storage/leveldb"
 )
 
 func makeKey(i int) []byte {
@@ -35,7 +21,7 @@ func makeKey(i int) []byte {
 }
 
 func TestNewOverlayDB(t *testing.T) {
-	store := leveldbstore.NewMemLevelDBStore()
+	store := leveldb.NewMemLevelDBStore()
 
 	N := 10000
 
@@ -68,7 +54,7 @@ func TestNewOverlayDB(t *testing.T) {
 }
 
 func BenchmarkOverlayDBSerialPut(b *testing.B) {
-	store := leveldbstore.NewMemLevelDBStore()
+	store := leveldb.NewMemLevelDBStore()
 
 	N := 100000
 	overlay := NewOverlayDB(store)
@@ -83,7 +69,7 @@ func BenchmarkOverlayDBSerialPut(b *testing.B) {
 }
 
 func BenchmarkOverlayDBRandomPut(b *testing.B) {
-	store := leveldbstore.NewMemLevelDBStore()
+	store := leveldb.NewMemLevelDBStore()
 
 	N := 100000
 	keys := make([]int, N)

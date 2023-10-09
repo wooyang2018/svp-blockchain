@@ -1,4 +1,3 @@
-// Copyright (C) 2023 Wooyang2018
 // Copyright 2014 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -20,6 +19,7 @@ package evm
 import (
 	"crypto/sha256"
 	"encoding/binary"
+	"errors"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -28,7 +28,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto/blake2b"
 	"github.com/ethereum/go-ethereum/crypto/bls12381"
 	"github.com/ethereum/go-ethereum/crypto/bn256"
-	"github.com/wooyang2018/svp-blockchain/evm/common/errors"
 	"github.com/wooyang2018/svp-blockchain/evm/common/params"
 	"golang.org/x/crypto/ripemd160"
 )
@@ -130,7 +129,7 @@ func init() {
 func RunPrecompiledContract(p PrecompiledContract, input []byte, suppliedGas uint64) (ret []byte, remainingGas uint64, err error) {
 	gasCost := p.RequiredGas(input)
 	if suppliedGas < gasCost {
-		return nil, 0, errors.ErrOutOfGas
+		return nil, 0, ErrOutOfGas
 	}
 	suppliedGas -= gasCost
 	output, err := p.Run(input)

@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Wooyang2018
+// Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -28,7 +28,7 @@ import (
 	"github.com/wooyang2018/svp-blockchain/evm/common/params"
 	"github.com/wooyang2018/svp-blockchain/evm/storage"
 	"github.com/wooyang2018/svp-blockchain/evm/storage/overlaydb"
-	"github.com/wooyang2018/svp-blockchain/storage/leveldbstore"
+	"github.com/wooyang2018/svp-blockchain/storage/leveldb"
 )
 
 // Config is a basic type specifying certain configuration flags for running
@@ -107,7 +107,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *storage.StateDB, error) 
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		db := storage.NewCacheDB(overlaydb.NewOverlayDB(leveldbstore.NewMemLevelDBStore()))
+		db := storage.NewCacheDB(overlaydb.NewOverlayDB(leveldb.NewMemLevelDBStore()))
 		cfg.State = storage.NewStateDB(db, common.Hash{}, common.Hash{}, storage.NewDummy())
 	}
 	var (
@@ -139,7 +139,7 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		db := storage.NewCacheDB(overlaydb.NewOverlayDB(leveldbstore.NewMemLevelDBStore()))
+		db := storage.NewCacheDB(overlaydb.NewOverlayDB(leveldb.NewMemLevelDBStore()))
 		cfg.State = storage.NewStateDB(db, common.Hash{}, common.Hash{}, storage.NewDummy())
 	}
 	var (
@@ -165,7 +165,7 @@ func Create2(input []byte, cfg *Config, salt *uint256.Int) ([]byte, common.Addre
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		db := storage.NewCacheDB(overlaydb.NewOverlayDB(leveldbstore.NewMemLevelDBStore()))
+		db := storage.NewCacheDB(overlaydb.NewOverlayDB(leveldb.NewMemLevelDBStore()))
 		cfg.State = storage.NewStateDB(db, common.Hash{}, common.Hash{}, storage.NewDummy())
 	}
 	var (

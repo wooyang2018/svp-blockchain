@@ -1,32 +1,16 @@
-/*
- * Copyright (C) 2018 The ontology Authors
- * This file is part of The ontology library.
- *
- * The ontology is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * The ontology is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with The ontology.  If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (C) 2023 Wooyang2018
+// Licensed under the GNU General Public License v3.0
 
 package storage
 
 import (
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"github.com/wooyang2018/svp-blockchain/evm/common"
-	"github.com/wooyang2018/svp-blockchain/evm/common/payload"
 	"github.com/wooyang2018/svp-blockchain/evm/storage/overlaydb"
 	storecomm "github.com/wooyang2018/svp-blockchain/storage/common"
 )
 
-// CacheDB is smart contract execute cache, it contain transaction cache and block cache
+// CacheDB is smart contract execute cache, it contains transaction cache and block cache
 // When smart contract execute finish, need to commit transaction cache to block cache
 type CacheDB struct {
 	memdb      *overlaydb.MemDB
@@ -97,7 +81,7 @@ func (self *CacheDB) put(prefix storecomm.DataEntryPrefix, key []byte, value []b
 	self.memdb.Put(self.keyScratch, value)
 }
 
-func (self *CacheDB) GetContract(addr common.Address) (*payload.DeployCode, bool, error) {
+func (self *CacheDB) GetContract(addr common.Address) (*DeployCode, bool, error) {
 	destroyed, err := self.IsContractDestroyed(addr)
 	if err != nil {
 		return nil, false, err
@@ -115,14 +99,14 @@ func (self *CacheDB) GetContract(addr common.Address) (*payload.DeployCode, bool
 		return nil, false, nil
 	}
 
-	contract := new(payload.DeployCode)
+	contract := new(DeployCode)
 	if err := contract.Deserialization(common.NewZeroCopySource(value)); err != nil {
 		return nil, false, err
 	}
 	return contract, false, nil
 }
 
-func (self *CacheDB) PutContract(contract *payload.DeployCode) {
+func (self *CacheDB) PutContract(contract *DeployCode) {
 	address := contract.Address()
 
 	sink := common.NewZeroCopySink(nil)

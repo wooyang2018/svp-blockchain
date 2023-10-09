@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/wooyang2018/svp-blockchain/storage/common"
-	"github.com/wooyang2018/svp-blockchain/storage/leveldbstore"
+	"github.com/wooyang2018/svp-blockchain/storage/leveldb"
 	_ "golang.org/x/crypto/sha3"
 
 	"github.com/wooyang2018/svp-blockchain/core"
@@ -52,7 +52,7 @@ type Storage struct {
 
 func New(path string, config Config) *Storage {
 	strg := new(Storage)
-	db, err := leveldbstore.NewLevelDBStore(path)
+	db, err := leveldb.NewLevelDBStore(path)
 	if err != nil {
 		logger.I().Fatalw("setup storage failed", "error", err)
 	}

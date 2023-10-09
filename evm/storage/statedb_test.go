@@ -1,4 +1,5 @@
 // Copyright (C) 2023 Wooyang2018
+// Licensed under the GNU General Public License v3.0
 
 package storage
 
@@ -11,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/wooyang2018/svp-blockchain/evm/common"
 	"github.com/wooyang2018/svp-blockchain/evm/storage/overlaydb"
-	"github.com/wooyang2018/svp-blockchain/storage/leveldbstore"
+	"github.com/wooyang2018/svp-blockchain/storage/leveldb"
 )
 
 type dummy struct{}
@@ -34,7 +35,7 @@ var _ OngBalanceHandle = dummy{}
 func TestEtherAccount(t *testing.T) {
 	a := require.New(t)
 
-	memback := leveldbstore.NewMemLevelDBStore()
+	memback := leveldb.NewMemLevelDBStore()
 	overlay := overlaydb.NewOverlayDB(memback)
 
 	cache := NewCacheDB(overlay)

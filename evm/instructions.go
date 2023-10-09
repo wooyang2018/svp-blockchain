@@ -1,4 +1,3 @@
-// Copyright (C) 2023 Wooyang2018
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -20,7 +19,6 @@ package evm
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/holiman/uint256"
-	"github.com/wooyang2018/svp-blockchain/evm/common/errors"
 	"github.com/wooyang2018/svp-blockchain/evm/common/params"
 	"github.com/wooyang2018/svp-blockchain/evm/common/types"
 	"golang.org/x/crypto/sha3"
@@ -328,14 +326,14 @@ func opReturnDataCopy(pc *uint64, interpreter *EVMInterpreter, callContext *call
 
 	offset64, overflow := dataOffset.Uint64WithOverflow()
 	if overflow {
-		return nil, errors.ErrReturnDataOutOfBounds
+		return nil, ErrReturnDataOutOfBounds
 	}
 	// we can reuse dataOffset now (aliasing it for clarity)
 	var end = dataOffset
 	end.Add(&dataOffset, &length)
 	end64, overflow := end.Uint64WithOverflow()
 	if overflow || uint64(len(interpreter.returnData)) < end64 {
-		return nil, errors.ErrReturnDataOutOfBounds
+		return nil, ErrReturnDataOutOfBounds
 	}
 	callContext.memory.Set(memOffset.Uint64(), length.Uint64(), interpreter.returnData[offset64:end64])
 	return nil, nil
@@ -533,7 +531,7 @@ func opSstore(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]
 func opJump(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]byte, error) {
 	pos := callContext.stack.pop()
 	if !callContext.contract.validJumpdest(&pos) {
-		return nil, errors.ErrInvalidJump
+		return nil, ErrInvalidJump
 	}
 	*pc = pos.Uint64()
 	return nil, nil
@@ -543,7 +541,7 @@ func opJumpi(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]b
 	pos, cond := callContext.stack.pop(), callContext.stack.pop()
 	if !cond.IsZero() {
 		if !callContext.contract.validJumpdest(&pos) {
-			return nil, errors.ErrInvalidJump
+			return nil, ErrInvalidJump
 		}
 		*pc = pos.Uint64()
 	} else {
@@ -557,20 +555,20 @@ func opJumpdest(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) (
 }
 
 func opBeginSub(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]byte, error) {
-	return nil, errors.ErrInvalidSubroutineEntry
+	return nil, ErrInvalidSubroutineEntry
 }
 
 func opJumpSub(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]byte, error) {
 	if len(callContext.rstack.data) >= 1023 {
-		return nil, errors.ErrReturnStackExceeded
+		return nil, ErrReturnStackExceeded
 	}
 	pos := callContext.stack.pop()
 	if !pos.IsUint64() {
-		return nil, errors.ErrInvalidJump
+		return nil, ErrInvalidJump
 	}
 	posU64 := pos.Uint64()
 	if !callContext.contract.validJumpSubdest(posU64) {
-		return nil, errors.ErrInvalidJump
+		return nil, ErrInvalidJump
 	}
 	callContext.rstack.push(uint32(*pc))
 	*pc = posU64 + 1
@@ -579,7 +577,7 @@ func opJumpSub(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([
 
 func opReturnSub(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]byte, error) {
 	if len(callContext.rstack.data) == 0 {
-		return nil, errors.ErrInvalidRetsub
+		return nil, ErrInvalidRetsub
 	}
 	// Other than the check that the return stack is not empty, there is no
 	// need to validate the pc from 'returns', since we only ever push valid
@@ -628,9 +626,9 @@ func opCreate(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]
 	// homestead we must check for CodeStoreOutOfGasError (homestead only
 	// rule) and treat as an error, if the ruleset is frontier we must
 	// ignore this error and pretend the operation was successful.
-	if interpreter.evm.chainRules.IsHomestead && suberr == errors.ErrCodeStoreOutOfGas {
+	if interpreter.evm.chainRules.IsHomestead && suberr == ErrCodeStoreOutOfGas {
 		stackvalue.Clear()
-	} else if suberr != nil && suberr != errors.ErrCodeStoreOutOfGas {
+	} else if suberr != nil && suberr != ErrCodeStoreOutOfGas {
 		stackvalue.Clear()
 	} else {
 		stackvalue.SetBytes(addr.Bytes())
@@ -638,7 +636,7 @@ func opCreate(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]
 	callContext.stack.push(&stackvalue)
 	callContext.contract.Gas += returnGas
 
-	if suberr == errors.ErrExecutionReverted {
+	if suberr == ErrExecutionReverted {
 		return res, nil
 	}
 	return nil, nil
@@ -674,7 +672,7 @@ func opCreate2(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([
 	callContext.stack.push(&stackvalue)
 	callContext.contract.Gas += returnGas
 
-	if suberr == errors.ErrExecutionReverted {
+	if suberr == ErrExecutionReverted {
 		return res, nil
 	}
 	return nil, nil
@@ -709,7 +707,7 @@ func opCall(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]by
 		temp.SetOne()
 	}
 	stack.push(&temp)
-	if err == nil || err == errors.ErrExecutionReverted {
+	if err == nil || err == ErrExecutionReverted {
 		ret = common.CopyBytes(ret)
 		callContext.memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
 	}
@@ -744,7 +742,7 @@ func opCallCode(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) (
 		temp.SetOne()
 	}
 	stack.push(&temp)
-	if err == nil || err == errors.ErrExecutionReverted {
+	if err == nil || err == ErrExecutionReverted {
 		ret = common.CopyBytes(ret)
 		callContext.memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
 	}
@@ -772,7 +770,7 @@ func opDelegateCall(pc *uint64, interpreter *EVMInterpreter, callContext *callCt
 		temp.SetOne()
 	}
 	stack.push(&temp)
-	if err == nil || err == errors.ErrExecutionReverted {
+	if err == nil || err == ErrExecutionReverted {
 		ret = common.CopyBytes(ret)
 		callContext.memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
 	}
@@ -800,7 +798,7 @@ func opStaticCall(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx)
 		temp.SetOne()
 	}
 	stack.push(&temp)
-	if err == nil || err == errors.ErrExecutionReverted {
+	if err == nil || err == ErrExecutionReverted {
 		ret = common.CopyBytes(ret)
 		callContext.memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
 	}
@@ -836,7 +834,7 @@ func opSuicide(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([
 	return nil, nil
 }
 
-// following functions are used by the instruction jump  table
+// following functions are used by the instruction jump table
 
 // make log instruction function
 func makeLog(size int) executionFunc {
