@@ -10,14 +10,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/wooyang2018/svp-blockchain/merkle"
+	"github.com/wooyang2018/svp-blockchain/storage/leveldb"
 )
 
 func TestMerkleStore(t *testing.T) {
 	asrt := assert.New(t)
 
 	dir, _ := os.MkdirTemp("", "db")
-	rawDB, _ := NewLevelDB(dir)
-	db := &levelDB{rawDB}
+	db, _ := leveldb.NewLevelDBStore(dir)
 	ms := &merkleStore{db}
 
 	asrt.Equal(uint8(0), ms.GetHeight())

@@ -14,8 +14,7 @@ import (
 
 func newTestStorage() *Storage {
 	dir, _ := os.MkdirTemp("", "db")
-	rawDB, _ := NewLevelDB(dir)
-	return New(rawDB, DefaultConfig)
+	return New(dir, DefaultConfig)
 }
 
 func TestStorage_StateZero(t *testing.T) {
