@@ -34,8 +34,6 @@ type PersistStore interface {
 	NewIterator(prefix []byte) StoreIterator //Return the iterator of store
 }
 
-var _ PersistStore = (*LevelDBStore)(nil)
-
 // EventStore save event notify
 type EventStore interface {
 	//SaveEventNotifyByTx save event notify gen by smart contract execution

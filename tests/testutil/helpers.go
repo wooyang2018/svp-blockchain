@@ -7,7 +7,17 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
+
+	"github.com/wooyang2018/svp-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/tests/cluster"
 )
+
+type LoadClient interface {
+	SetupOnCluster(cls *cluster.Cluster) error
+	SubmitTx() (int, *core.Transaction, error)
+	BatchSubmitTx(num int) (int, *core.TxList, error)
+	SubmitTxAndWait() (int, error)
+}
 
 // Sleep print duration and call time.Sleep
 func Sleep(d time.Duration) {

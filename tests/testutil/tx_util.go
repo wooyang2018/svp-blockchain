@@ -27,7 +27,7 @@ func SubmitTxAndWait(cls *cluster.Cluster, tx *core.Transaction) (int, error) {
 		return 0, err
 	}
 	for {
-		if err := WaitTxCommitted(cls.GetNode(idx), tx); err != nil {
+		if err = WaitTxCommitted(cls.GetNode(idx), tx); err != nil {
 			// maybe current leader doesn't receive tx
 			// resubmit tx again
 			time.Sleep(1 * time.Second)
@@ -129,8 +129,7 @@ func QueryState(node cluster.Node, query *execution.QueryData) ([]byte, error) {
 	}
 	resp, err := http.Post(node.GetEndpoint()+"/querystate",
 		"application/json", bytes.NewReader(b))
-	err = checkResponse(resp, err)
-	if err != nil {
+	if err = checkResponse(resp, err); err != nil {
 		return nil, fmt.Errorf("cannot query state %w", err)
 	}
 	defer resp.Body.Close()

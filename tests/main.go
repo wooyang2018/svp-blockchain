@@ -163,6 +163,7 @@ func printAndCheckVars() {
 	fmt.Println("PreserveTxFlag =", consensus.PreserveTxFlag)
 	fmt.Println("TwoPhaseBFTFlag =", consensus.TwoPhaseBFTFlag)
 	fmt.Println()
+
 	pass := true
 	if consensus.TwoPhaseBFTFlag && WindowSize != 1 {
 		fmt.Println("consensus.TwoPhaseBFTFlag ===> WindowSize=1")

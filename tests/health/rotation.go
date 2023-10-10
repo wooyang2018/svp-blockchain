@@ -14,7 +14,6 @@ import (
 func (hc *checker) checkRotation() error {
 	timeout := time.NewTimer(hc.getRotationTimeout())
 	defer timeout.Stop()
-
 	lastView := make(map[int]*consensus.Status)
 	changedView := make(map[int]*consensus.Status)
 	for {
@@ -27,13 +26,12 @@ func (hc *checker) checkRotation() error {
 				return nil
 			}
 		}
+
 		select {
 		case <-hc.interrupt:
 			return nil
-
 		case <-timeout.C:
 			return errors.New("cluster failed to rotate leader")
-
 		case <-time.After(2 * time.Second):
 		}
 	}

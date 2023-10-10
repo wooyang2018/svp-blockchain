@@ -29,8 +29,8 @@ func (expm *MajorityKeepRunning) Run(cls *cluster.Cluster) error {
 		cls.GetNode(i).Stop()
 	}
 	fmt.Printf("Stopped %d out of %d nodes: %v\n", len(faulty), cls.NodeCount(), faulty)
-
 	testutil.Sleep(20 * time.Second)
+
 	if err := health.CheckMajorityNodes(cls); err != nil {
 		return err
 	}

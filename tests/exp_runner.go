@@ -12,7 +12,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/fatih/color"
 	"github.com/wooyang2018/svp-blockchain/tests/cluster"
 	"github.com/wooyang2018/svp-blockchain/tests/health"
 	"github.com/wooyang2018/svp-blockchain/tests/testutil"
@@ -29,27 +28,23 @@ type ExperimentRunner struct {
 }
 
 func (r *ExperimentRunner) Run() (pass, fail int) {
-	bold := color.New(color.Bold)
-	boldGrean := color.New(color.Bold, color.FgGreen)
-	boldRed := color.New(color.Bold, color.FgRed)
-
 	fmt.Println("\nRunning Experiments")
 	for i, expm := range r.experiments {
-		bold.Printf("%3d. %s\n", i, expm.Name())
+		fmt.Printf("%3d. %s\n", i, expm.Name())
 	}
 
 	killed := make(chan os.Signal, 1)
 	signal.Notify(killed, os.Interrupt)
 
 	for i, expm := range r.experiments {
-		bold.Printf("\nExperiment %d. %s\n", i, expm.Name())
+		fmt.Printf("\nExperiment %d. %s\n", i, expm.Name())
 		if err := r.runSingleExperiment(expm); err != nil {
 			fail++
-			fmt.Printf("%s %s\n", boldRed.Sprint("FAIL"), bold.Sprint(expm.Name()))
+			fmt.Printf("FAIL %s\n", expm.Name())
 			fmt.Printf("error: %+v\n", err)
 		} else {
 			pass++
-			fmt.Printf("%s %s\n", boldGrean.Sprint("PASS"), bold.Sprint(expm.Name()))
+			fmt.Printf("PASS %s\n", expm.Name())
 		}
 		select {
 		case <-killed:
@@ -65,6 +60,7 @@ func (r *ExperimentRunner) runSingleExperiment(expm Experiment) error {
 	var err error
 	done := make(chan struct{})
 	loadCtx, stopLoad := context.WithCancel(context.Background())
+
 	go func() {
 		defer close(done)
 		fmt.Println("Setting up a new cluster")
@@ -107,7 +103,6 @@ func (r *ExperimentRunner) runSingleExperiment(expm Experiment) error {
 
 	killed := make(chan os.Signal, 1)
 	signal.Notify(killed, os.Interrupt, syscall.SIGTERM)
-
 	select {
 	case s := <-killed:
 		fmt.Println("\nGot signal:", s)
@@ -118,6 +113,7 @@ func (r *ExperimentRunner) runSingleExperiment(expm Experiment) error {
 		}
 	case <-done:
 	}
+
 	stopLoad()
 	if cls != nil {
 		fmt.Println("Stopping cluster")

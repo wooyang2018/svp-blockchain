@@ -123,8 +123,7 @@ func (client *PCoinClient) deploy() error {
 		client.binccUploadNode = i
 	}
 	depTx := client.MakeDeploymentTx(client.minter)
-	_, err := SubmitTxAndWait(client.cluster, depTx)
-	if err != nil {
+	if _, err := SubmitTxAndWait(client.cluster, depTx); err != nil {
 		return fmt.Errorf("cannot deploy pcoin %w", err)
 	}
 	client.codeAddr = depTx.Hash()
@@ -139,8 +138,7 @@ func (client *PCoinClient) mintAccounts() error {
 		}(acc.PublicKey())
 	}
 	for range client.accounts {
-		err := <-errCh
-		if err != nil {
+		if err := <-errCh; err != nil {
 			return err
 		}
 	}

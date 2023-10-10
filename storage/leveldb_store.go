@@ -19,6 +19,8 @@ type LevelDBStore struct {
 	batch *leveldb.Batch
 }
 
+var _ PersistStore = (*LevelDBStore)(nil)
+
 // used to compute the size of bloom filter bits array .
 // too small will lead to high false positive rate.
 const BITSPERKEY = 10

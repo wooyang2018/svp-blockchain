@@ -32,33 +32,11 @@ func CheckMajorityNodes(cls *cluster.Cluster) error {
 	return hc.run()
 }
 
-/*
-checker check cluster's health in three aspects
-
-Safety
-get status, select lowest bexec height
-get bexec block, all bexec.MerkleRoot must be equal
-
-Liveness
-get status, remember highest bexec and committedTxCount
-wait for 20s
-for majority check, wait more for ((total - majority) * leaderTimeout)
-get status again
-bexec must be higher than previous one
-should get txCommit with txHash from nodes
-
-Rotation
-make a timeout channel for (viewWidth + 5s)
-for majority check, add ((total - majority) * leaderTimeout) to timeout duration
-get status every 1s
-on each node leader change must occur before timeout
-after leader change, all leaderIdx should be equal
-*/
 type checker struct {
 	cluster   *cluster.Cluster
 	majority  bool // should (majority or all) nodes healthy
 	interrupt chan struct{}
-	mtxIntr   sync.Mutex
+	mtxInter  sync.Mutex
 	err       error
 }
 
@@ -79,17 +57,15 @@ func (hc *checker) run() error {
 
 func (hc *checker) runChecker(checker func() error, wg *sync.WaitGroup) {
 	defer wg.Done()
-	err := checker()
-	if err != nil {
+	if err := checker(); err != nil {
 		hc.err = err
 		hc.makeInterrupt()
 	}
 }
 
 func (hc *checker) makeInterrupt() {
-	hc.mtxIntr.Lock()
-	defer hc.mtxIntr.Unlock()
-
+	hc.mtxInter.Lock()
+	defer hc.mtxInter.Unlock()
 	select {
 	case <-hc.interrupt:
 		return

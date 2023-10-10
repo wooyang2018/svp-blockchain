@@ -52,6 +52,7 @@ func (ftry *LocalFactory) setup() error {
 	if err != nil {
 		return err
 	}
+
 	keys := MakeRandomKeys(ftry.params.NodeCount)
 	quotas := MakeRandomQuotas(ftry.params.NodeCount, ftry.params.StakeQuota)
 	genesis := &node.Genesis{
@@ -64,6 +65,7 @@ func (ftry *LocalFactory) setup() error {
 		genesis.StakeQuotas[i] = quotas[i]
 	}
 	peers := MakePeers(keys, addrs)
+
 	return SetupTemplateDir(ftry.templateDir, keys, genesis, peers)
 }
 
@@ -84,18 +86,16 @@ func (ftry *LocalFactory) makeAddrs() ([]multiaddr.Multiaddr, error) {
 func (ftry *LocalFactory) SetupCluster(name string) (*Cluster, error) {
 	clusterDir := path.Join(ftry.params.WorkDir, name)
 	if ftry.templateDir != clusterDir {
-		err := os.RemoveAll(clusterDir) // no error if path not exist
-		if err != nil {
+		if err := os.RemoveAll(clusterDir); err != nil {
 			return nil, err
 		}
-		err = exec.Command("cp", "-r", ftry.templateDir, clusterDir).Run()
-		if err != nil {
+		if err := exec.Command("cp", "-r", ftry.templateDir, clusterDir).Run(); err != nil {
 			return nil, err
 		}
 	}
 
-	nodes := make([]Node, ftry.params.NodeCount)
 	// create localNodes
+	nodes := make([]Node, ftry.params.NodeCount)
 	for i := 0; i < ftry.params.NodeCount; i++ {
 		node := &LocalNode{
 			binPath: ftry.params.BinPath,
@@ -107,6 +107,7 @@ func (ftry *LocalFactory) SetupCluster(name string) (*Cluster, error) {
 		node.config.APIPort = node.config.APIPort + i
 		nodes[i] = node
 	}
+
 	return &Cluster{
 		nodes:      nodes,
 		nodeConfig: ftry.params.NodeConfig,

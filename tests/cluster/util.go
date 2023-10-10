@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"github.com/multiformats/go-multiaddr"
-	"github.com/wooyang2018/svp-blockchain/consensus"
 
+	"github.com/wooyang2018/svp-blockchain/consensus"
 	"github.com/wooyang2018/svp-blockchain/core"
 	"github.com/wooyang2018/svp-blockchain/node"
 )
@@ -38,7 +38,6 @@ func WriteGenesisFile(datadir string, genesis *node.Genesis) error {
 		return err
 	}
 	defer f.Close()
-
 	e := json.NewEncoder(f)
 	e.SetIndent("", "  ")
 	return e.Encode(genesis)

@@ -38,29 +38,26 @@ type Measurement struct {
 }
 
 type Benchmark struct {
-	workDir  string
-	duration time.Duration
-	interval time.Duration
+	workDir       string
+	resultDir     string
+	benchmarkName string
+	duration      time.Duration
+	interval      time.Duration
 
 	cfactory   *cluster.RemoteFactory
 	loadClient testutil.LoadClient
-
-	loadGen *testutil.LoadGenerator
-	cluster *cluster.Cluster
-	err     error
+	loadGen    *testutil.LoadGenerator
+	cluster    *cluster.Cluster
+	err        error
 
 	measurements      []*Measurement
 	lastTxCommittedN0 int
 	lastMeasuredTime  time.Time
-
-	benchmarkName string
-	resultDir     string
 }
 
 func (bm *Benchmark) Run() {
 	killed := make(chan os.Signal, 1)
 	signal.Notify(killed, os.Interrupt, syscall.SIGTERM)
-
 	for _, tps := range BenchLoads {
 		if err := bm.runWithLoad(tps); err != nil {
 			fmt.Println(err)
@@ -83,13 +80,11 @@ func (bm *Benchmark) runWithLoad(tps int) error {
 	if !EmptyChainCode && PCoinBinCC {
 		bm.benchmarkName += "_bincc"
 	}
-
 	fmt.Printf("Running benchmark %s\n", bm.benchmarkName)
 
 	bm.resultDir = path.Join(bm.workDir, bm.benchmarkName)
 	os.Mkdir(bm.workDir, 0755)
 	os.Mkdir(bm.resultDir, 0755)
-
 	bm.measurements = make([]*Measurement, 0)
 
 	done := make(chan struct{})
@@ -98,13 +93,13 @@ func (bm *Benchmark) runWithLoad(tps int) error {
 
 	killed := make(chan os.Signal, 1)
 	signal.Notify(killed, os.Interrupt, syscall.SIGTERM)
-
 	select {
 	case s := <-killed:
 		fmt.Println("\nGot signal:", s)
 		bm.err = errors.New("interrupted")
 	case <-done:
 	}
+
 	stopLoad()
 	if bm.cluster != nil {
 		fmt.Println("Stopping cluster")
@@ -139,16 +134,14 @@ func (bm *Benchmark) runAsync(loadCtx context.Context, done chan struct{}) {
 	}
 
 	fmt.Println("Starting cluster")
-	bm.err = bm.cluster.Start()
-	if bm.err != nil {
+	if bm.err = bm.cluster.Start(); bm.err != nil {
 		return
 	}
 	fmt.Println("Started cluster")
 	testutil.Sleep(20 * time.Second)
 
 	fmt.Println("Setting up load generator")
-	bm.err = bm.loadGen.SetupOnCluster(bm.cluster)
-	if bm.err != nil {
+	if bm.err = bm.loadGen.SetupOnCluster(bm.cluster); bm.err != nil {
 		return
 	}
 	if LoadBatchSubmit {
@@ -158,15 +151,13 @@ func (bm *Benchmark) runAsync(loadCtx context.Context, done chan struct{}) {
 	}
 	testutil.Sleep(20 * time.Second)
 
-	bm.err = health.CheckAllNodes(bm.cluster)
-	if bm.err != nil {
+	if bm.err = health.CheckAllNodes(bm.cluster); bm.err != nil {
 		fmt.Printf("health check failed before benchmark, %+v\n", bm.err)
 		bm.cluster.Stop()
 		return
 	}
 
-	bm.err = bm.measure()
-	if bm.err != nil {
+	if bm.err = bm.measure(); bm.err != nil {
 		return
 	}
 }
@@ -247,11 +238,14 @@ func (bm *Benchmark) measure() error {
 	timer := time.NewTimer(bm.duration)
 	defer timer.Stop()
 
-	bm.onStartMeasure()
+	bm.loadGen.ResetTotalSubmitted()
+	consStatus := testutil.GetStatusAll(bm.cluster)
+	bm.lastTxCommittedN0 = consStatus[0].CommittedTxCount
+	bm.lastMeasuredTime = time.Now()
+	fmt.Printf("\nStarted performance measurements\n")
 
 	ticker := time.NewTicker(bm.interval)
 	defer ticker.Stop()
-
 	for range ticker.C {
 		if err := bm.onTick(); err != nil {
 			return err
@@ -265,17 +259,10 @@ func (bm *Benchmark) measure() error {
 	return nil
 }
 
-func (bm *Benchmark) onStartMeasure() {
-	bm.loadGen.ResetTotalSubmitted()
-	consStatus := testutil.GetStatusAll(bm.cluster)
-	bm.lastTxCommittedN0 = consStatus[0].CommittedTxCount
-	bm.lastMeasuredTime = time.Now()
-	fmt.Printf("\nStarted performance measurements\n")
-}
-
 func (bm *Benchmark) onTick() error {
 	meas := new(Measurement)
 	var wg sync.WaitGroup
+
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
@@ -293,9 +280,9 @@ func (bm *Benchmark) onTick() error {
 		}()
 	}
 	wg.Wait()
+
 	meas.Timestamp = time.Now().Unix()
 	meas.TxSubmitted = bm.loadGen.ResetTotalSubmitted()
-
 	if len(meas.ConsensusStatus) < bm.cluster.NodeCount() {
 		return fmt.Errorf("failed to get consensus status from %d nodes",
 			bm.cluster.NodeCount()-len(meas.ConsensusStatus))
@@ -304,18 +291,16 @@ func (bm *Benchmark) onTick() error {
 		return fmt.Errorf("failed to get txpool status from %d nodes",
 			bm.cluster.NodeCount()-len(meas.TxPoolStatus))
 	}
-
 	elapsed := time.Since(bm.lastMeasuredTime)
 	bm.lastMeasuredTime = time.Now()
 	meas.TxCommitted = meas.ConsensusStatus[0].CommittedTxCount - bm.lastTxCommittedN0
 	bm.lastTxCommittedN0 = meas.ConsensusStatus[0].CommittedTxCount
 	meas.Throughput = float32(meas.TxCommitted) / float32(elapsed.Seconds())
 	meas.Load = float32(meas.TxSubmitted) / float32(elapsed.Seconds())
-
 	bm.measurements = append(bm.measurements, meas)
+
 	log.Printf("  Load: %6.1f  |  Throughput: %6.1f  |  Latency: %s\n",
 		meas.Load, meas.Throughput, meas.Latency.String())
-
 	return nil
 }
 
@@ -350,6 +335,7 @@ func (bm *Benchmark) savePerformance() error {
 		return err
 	}
 	defer f.Close()
+
 	w := csv.NewWriter(f)
 	w.Write([]string{
 		"Timestamp",
@@ -379,7 +365,6 @@ func (bm *Benchmark) savePerformance() error {
 	loadAvg := loadTotal / float32(len(bm.measurements))
 	tpAvg := tpTotal / float32(len(bm.measurements))
 	ltAvg := ltTotal / time.Duration(len(bm.measurements))
-
 	fmt.Println("\nAverage:")
 	log.Printf("  Load: %6.1f  |  Throughput: %6.1f  |  Latency: %s\n",
 		loadAvg, tpAvg, ltAvg.String())
@@ -400,6 +385,7 @@ func (bm *Benchmark) saveStatusOneNode(i int) error {
 		return err
 	}
 	defer f.Close()
+
 	w := csv.NewWriter(f)
 	w.Write([]string{
 		"Timestamp",
@@ -420,7 +406,6 @@ func (bm *Benchmark) saveStatusOneNode(i int) error {
 			strconv.Itoa(int(m.ConsensusStatus[i].LeaderIndex)),
 			strconv.Itoa(int(m.ConsensusStatus[i].ViewStart)),
 			strconv.Itoa(int(m.ConsensusStatus[i].QCHigh)),
-
 			strconv.Itoa(m.TxPoolStatus[i].Total),
 			strconv.Itoa(m.TxPoolStatus[i].Pending),
 			strconv.Itoa(m.TxPoolStatus[i].Queue),

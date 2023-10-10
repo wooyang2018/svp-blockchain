@@ -27,9 +27,8 @@ type RemoteFactoryParams struct {
 
 	NodeConfig node.Config
 
-	KeySSH    string
-	HostsPath string // file path to host ip addresses
-
+	KeySSH          string
+	HostsPath       string // file path to host ip addresses
 	SetupRequired   bool
 	InstallRequired bool
 }
@@ -51,8 +50,7 @@ func NewRemoteFactory(params RemoteFactoryParams) (*RemoteFactory, error) {
 		params: params,
 	}
 	ftry.templateDir = path.Join(ftry.params.WorkDir, "cluster_template")
-	err := ftry.ReadHosts(ftry.params.HostsPath, ftry.params.NodeCount)
-	if err != nil {
+	if err := ftry.ReadHosts(ftry.params.HostsPath, ftry.params.NodeCount); err != nil {
 		return nil, err
 	}
 	if ftry.params.SetupRequired {
@@ -73,6 +71,7 @@ func (ftry *RemoteFactory) ReadHosts(hostsPath string, nodeCount int) error {
 	if len(lines) < nodeCount {
 		return fmt.Errorf("not enough hosts, expected %d, got %d", nodeCount, len(lines))
 	}
+
 	hosts := make([]string, nodeCount)
 	loginNames := make([]string, nodeCount)
 	netDevices := make([]string, nodeCount)
@@ -84,6 +83,7 @@ func (ftry *RemoteFactory) ReadHosts(hostsPath string, nodeCount int) error {
 		netDevices[i] = words[2]
 		workDirs[i] = words[3]
 	}
+
 	ftry.hosts = hosts
 	ftry.loginNames = loginNames
 	ftry.netDevices = netDevices
@@ -104,6 +104,7 @@ func (ftry *RemoteFactory) setup() error {
 	if err != nil {
 		return err
 	}
+
 	keys := MakeRandomKeys(ftry.params.NodeCount)
 	quotas := MakeRandomQuotas(ftry.params.NodeCount, ftry.params.StakeQuota)
 	genesis := &node.Genesis{
@@ -116,6 +117,7 @@ func (ftry *RemoteFactory) setup() error {
 		genesis.StakeQuotas[i] = quotas[i]
 	}
 	peers := MakePeers(keys, addrs)
+
 	if err := SetupTemplateDir(ftry.templateDir, keys, genesis, peers); err != nil {
 		return err
 	}
@@ -145,7 +147,9 @@ func (ftry *RemoteFactory) makeAddrs() ([]multiaddr.Multiaddr, error) {
 
 func (ftry *RemoteFactory) setupRemoteServers() error {
 	for i := 0; i < ftry.params.NodeCount; i++ {
-		ftry.setupRemoteServerOne(i)
+		if err := ftry.setupRemoteServerOne(i); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -162,6 +166,7 @@ func (ftry *RemoteFactory) setupRemoteServerOne(i int) error {
 			return err
 		}
 	}
+
 	// also kills remaining effect and nodes to make sure clean environment
 	cmd := exec.Command("ssh",
 		"-i", ftry.params.KeySSH,
@@ -178,8 +183,7 @@ func (ftry *RemoteFactory) setupRemoteServerOne(i int) error {
 
 func (ftry *RemoteFactory) sendChain() error {
 	for i := 0; i < ftry.params.NodeCount; i++ {
-		err := ftry.sendChainOne(i)
-		if err != nil {
+		if err := ftry.sendChainOne(i); err != nil {
 			return err
 		}
 	}
@@ -198,8 +202,7 @@ func (ftry *RemoteFactory) sendChainOne(i int) error {
 
 func (ftry *RemoteFactory) sendTemplate() error {
 	for i := 0; i < ftry.params.NodeCount; i++ {
-		err := ftry.sendTemplateOne(i)
-		if err != nil {
+		if err := ftry.sendTemplateOne(i); err != nil {
 			return err
 		}
 	}
@@ -217,7 +220,9 @@ func (ftry *RemoteFactory) sendTemplateOne(i int) error {
 }
 
 func (ftry *RemoteFactory) SetupCluster(name string) (*Cluster, error) {
-	ftry.setupClusterDir(name)
+	if err := ftry.setupClusterDir(name); err != nil {
+		return nil, err
+	}
 	cls := &Cluster{
 		nodes:      make([]Node, ftry.params.NodeCount),
 		nodeConfig: ftry.params.NodeConfig,
@@ -244,10 +249,13 @@ func (ftry *RemoteFactory) SetupCluster(name string) (*Cluster, error) {
 	return cls, nil
 }
 
-func (ftry *RemoteFactory) setupClusterDir(name string) {
+func (ftry *RemoteFactory) setupClusterDir(name string) error {
 	for i := 0; i < ftry.params.NodeCount; i++ {
-		ftry.setupClusterDirOne(i, name)
+		if err := ftry.setupClusterDirOne(i, name); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func (ftry *RemoteFactory) setupClusterDirOne(i int, name string) error {
@@ -265,14 +273,13 @@ type RemoteNode struct {
 	binPath string
 	config  node.Config
 
-	loginName string
-	keySSH    string
-	host      string
-
-	networkDevice string
-
 	running bool
 	mtxRun  sync.RWMutex
+
+	loginName     string
+	host          string
+	keySSH        string
+	networkDevice string
 }
 
 var _ Node = (*RemoteNode)(nil)

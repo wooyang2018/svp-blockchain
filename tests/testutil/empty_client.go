@@ -48,11 +48,11 @@ func (client *EmptyClient) SubmitTx() (int, *core.Transaction, error) {
 }
 
 func (client *EmptyClient) BatchSubmitTx(num int) (int, *core.TxList, error) {
-	//使用100个协程快速生成num个交易
 	jobCh := make(chan struct{}, num)
 	defer close(jobCh)
 	out := make(chan *core.Transaction, num)
 	defer close(out)
+
 	for i := 0; i < 100; i++ {
 		go func(jobCh <-chan struct{}, out chan<- *core.Transaction) {
 			for range jobCh {
@@ -67,6 +67,7 @@ func (client *EmptyClient) BatchSubmitTx(num int) (int, *core.TxList, error) {
 	for i := 0; i < num; i++ {
 		txs[i] = <-out
 	}
+
 	txList := core.TxList(txs)
 	nodeIdx, err := BatchSubmitTx(client.cluster, client.nodes, &txList)
 	return nodeIdx, &txList, err
@@ -84,8 +85,7 @@ func (client *EmptyClient) setupOnCluster(cls *cluster.Cluster) error {
 
 func (client *EmptyClient) deploy() error {
 	depTx := client.MakeDeploymentTx(client.signer)
-	_, err := SubmitTxAndWait(client.cluster, depTx)
-	if err != nil {
+	if _, err := SubmitTxAndWait(client.cluster, depTx); err != nil {
 		return fmt.Errorf("cannot deploy empty chaincode %w", err)
 	}
 	client.codeAddr = depTx.Hash()
@@ -111,12 +111,11 @@ func (client *EmptyClient) nativeDeploymentInput() *execution.DeploymentInput {
 }
 
 func (client *EmptyClient) MakeTx() *core.Transaction {
-	codeAddr := client.codeAddr
-	if codeAddr == nil {
-		codeAddr = execution.NativeCodeEmpty
+	if client.codeAddr == nil {
+		client.codeAddr = execution.NativeCodeEmpty
 	}
 	return core.NewTransaction().
-		SetCodeAddr(codeAddr).
+		SetCodeAddr(client.codeAddr).
 		SetNonce(time.Now().UnixNano()).
 		SetInput([]byte(strconv.Itoa(rand.Intn(math.MaxInt)))).
 		Sign(client.signer)

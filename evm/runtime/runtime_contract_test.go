@@ -13,6 +13,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
+
 	"github.com/wooyang2018/svp-blockchain/storage"
 	"github.com/wooyang2018/svp-blockchain/storage/statedb"
 )
