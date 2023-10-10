@@ -23,13 +23,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/wooyang2018/svp-blockchain/evm/common/params"
-	"github.com/wooyang2018/svp-blockchain/evm/storage"
-	"github.com/wooyang2018/svp-blockchain/evm/storage/overlaydb"
-	"github.com/wooyang2018/svp-blockchain/storage/leveldb"
+	"github.com/wooyang2018/svp-blockchain/evm/params"
+	"github.com/wooyang2018/svp-blockchain/storage"
+	"github.com/wooyang2018/svp-blockchain/storage/statedb"
 )
 
-var handle = storage.NewDummy()
+var handle = statedb.NewDummy()
 
 func TestMemoryGasCost(t *testing.T) {
 	tests := []struct {
@@ -84,8 +83,8 @@ func TestEIP2200(t *testing.T) {
 	for i, tt := range eip2200Tests {
 		address := common.BytesToAddress([]byte("contract"))
 
-		db := storage.NewCacheDB(overlaydb.NewOverlayDB(leveldb.NewMemLevelDBStore()))
-		statedb := storage.NewStateDB(db, common.Hash{}, common.Hash{}, handle)
+		db := statedb.NewCacheDB(statedb.NewOverlayDB(storage.NewMemLevelDBStore()))
+		statedb := statedb.NewStateDB(db, common.Hash{}, common.Hash{}, handle)
 		statedb.CreateAccount(address)
 		statedb.SetCode(address, hexutil.MustDecode(tt.input))
 		statedb.SetState(address, common.Hash{}, common.BytesToHash([]byte{tt.original}))

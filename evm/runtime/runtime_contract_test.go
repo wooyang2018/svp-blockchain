@@ -13,20 +13,19 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
-	"github.com/wooyang2018/svp-blockchain/evm/storage"
-	"github.com/wooyang2018/svp-blockchain/evm/storage/overlaydb"
-	"github.com/wooyang2018/svp-blockchain/storage/leveldb"
+	"github.com/wooyang2018/svp-blockchain/storage"
+	"github.com/wooyang2018/svp-blockchain/storage/statedb"
 )
 
 func makeConfig() *Config {
 	cfg := new(Config)
 	setDefaults(cfg)
 
-	memback := leveldb.NewMemLevelDBStore()
-	overlay := overlaydb.NewOverlayDB(memback)
+	memback := storage.NewMemLevelDBStore()
+	overlay := statedb.NewOverlayDB(memback)
 
-	cache := storage.NewCacheDB(overlay)
-	cfg.State = storage.NewStateDB(cache, common.Hash{}, common.Hash{}, storage.NewDummy())
+	cache := statedb.NewCacheDB(overlay)
+	cfg.State = statedb.NewStateDB(cache, common.Hash{}, common.Hash{}, statedb.NewDummy())
 
 	cfg.GasLimit = 10000000
 	cfg.Origin = common.HexToAddress("0x123456")
@@ -80,7 +79,7 @@ func TestCreate(t *testing.T) {
 func create(t *testing.T, is2 bool) {
 	a := require.New(t)
 	cfg := makeConfig()
-	compiled := compileCode("../testdata/contract/Storage.sol")
+	compiled := compileCode("../testdata/contracts/Storage.sol")
 
 	var contract *Contract
 	// create with value
@@ -132,8 +131,8 @@ func TestContractChainDelete(t *testing.T) {
 func contractChaindelete(t *testing.T, is2 bool) {
 	a := require.New(t)
 	cfg := makeConfig()
-	callee := compileCode("../testdata/contract/Callee.sol")
-	caller := compileCode("../testdata/contract/Caller.sol")
+	callee := compileCode("../testdata/contracts/Callee.sol")
+	caller := compileCode("../testdata/contracts/Caller.sol")
 
 	var lee *Contract
 	if is2 {
@@ -175,7 +174,7 @@ func contractChaindelete(t *testing.T, is2 bool) {
 func TestCreateOnDeletedAddress(t *testing.T) {
 	a := require.New(t)
 	cfg := makeConfig()
-	compiled := compileCode("../testdata/contract/Storage.sol")
+	compiled := compileCode("../testdata/contracts/Storage.sol")
 
 	c := Create2Contract(cfg, compiled["Storage"][1], compiled["Storage"][0], 0xffff)
 	a.NotNil(c, "fail")
@@ -203,7 +202,7 @@ func TestCreateOnDeletedAddress(t *testing.T) {
 func TestENS(t *testing.T) {
 	a := require.New(t)
 	cfg := makeConfig()
-	compiled := compileCode("../testdata/contract/ens/ENSRegistry.sol")
+	compiled := compileCode("../testdata/contracts/ens/ENSRegistry.sol")
 
 	c := CreateContract(cfg, compiled["ENSRegistry"][1], compiled["ENSRegistry"][0])
 	a.NotNil(c, "fail")

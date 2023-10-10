@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/wooyang2018/svp-blockchain/core"
 	"github.com/wooyang2018/svp-blockchain/merkle"
-	"github.com/wooyang2018/svp-blockchain/storage/leveldb"
 	_ "golang.org/x/crypto/sha3"
 )
 
@@ -22,7 +21,7 @@ func TestStateStore_loadPrevValuesAndTreeIndexes(t *testing.T) {
 	asrt := assert.New(t)
 
 	dir, _ := os.MkdirTemp("", "db")
-	db, _ := leveldb.NewLevelDBStore(dir)
+	db, _ := NewLevelDBStore(dir)
 	ss := &stateStore{db, hashFunc, 20}
 
 	updfns := make([]updateFunc, 3)
@@ -49,7 +48,7 @@ func TestStateStore_updateState(t *testing.T) {
 	asrt := assert.New(t)
 
 	dir, _ := os.MkdirTemp("", "db")
-	db, _ := leveldb.NewLevelDBStore(dir)
+	db, _ := NewLevelDBStore(dir)
 	ss := &stateStore{db, hashFunc, 20}
 
 	upd := core.NewStateChange().

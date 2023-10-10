@@ -31,10 +31,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/asm"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/wooyang2018/svp-blockchain/evm"
-	"github.com/wooyang2018/svp-blockchain/evm/common/params"
-	"github.com/wooyang2018/svp-blockchain/evm/storage"
-	"github.com/wooyang2018/svp-blockchain/evm/storage/overlaydb"
-	"github.com/wooyang2018/svp-blockchain/storage/leveldb"
+	"github.com/wooyang2018/svp-blockchain/evm/params"
+	"github.com/wooyang2018/svp-blockchain/storage"
+	"github.com/wooyang2018/svp-blockchain/storage/statedb"
 )
 
 func TestDefaults(t *testing.T) {
@@ -44,7 +43,6 @@ func TestDefaults(t *testing.T) {
 	if cfg.Difficulty == nil {
 		t.Error("expected difficulty to be non nil")
 	}
-
 	if cfg.Time == nil {
 		t.Error("expected time to be non nil")
 	}
@@ -103,8 +101,8 @@ func TestExecute(t *testing.T) {
 }
 
 func TestCall(t *testing.T) {
-	db := storage.NewCacheDB(overlaydb.NewOverlayDB(leveldb.NewMemLevelDBStore()))
-	statedb := storage.NewStateDB(db, common.Hash{}, common.Hash{}, storage.NewDummy())
+	db := statedb.NewCacheDB(statedb.NewOverlayDB(storage.NewMemLevelDBStore()))
+	statedb := statedb.NewStateDB(db, common.Hash{}, common.Hash{}, statedb.NewDummy())
 	address := common.HexToAddress("0x0a")
 	statedb.SetCode(address, []byte{
 		byte(evm.PUSH1), 10,
@@ -128,7 +126,6 @@ func TestCall(t *testing.T) {
 
 func BenchmarkCall(b *testing.B) {
 	var definition = `[{"constant":true,"inputs":[],"name":"seller","outputs":[{"name":"","type":"address"}],"type":"function"},{"constant":false,"inputs":[],"name":"abort","outputs":[],"type":"function"},{"constant":true,"inputs":[],"name":"value","outputs":[{"name":"","type":"uint256"}],"type":"function"},{"constant":false,"inputs":[],"name":"refund","outputs":[],"type":"function"},{"constant":true,"inputs":[],"name":"buyer","outputs":[{"name":"","type":"address"}],"type":"function"},{"constant":false,"inputs":[],"name":"confirmReceived","outputs":[],"type":"function"},{"constant":true,"inputs":[],"name":"state","outputs":[{"name":"","type":"uint8"}],"type":"function"},{"constant":false,"inputs":[],"name":"confirmPurchase","outputs":[],"type":"function"},{"inputs":[],"type":"constructor"},{"anonymous":false,"inputs":[],"name":"Aborted","type":"event"},{"anonymous":false,"inputs":[],"name":"PurchaseConfirmed","type":"event"},{"anonymous":false,"inputs":[],"name":"ItemReceived","type":"event"},{"anonymous":false,"inputs":[],"name":"Refunded","type":"event"}]`
-
 	var code = common.Hex2Bytes("6060604052361561006c5760e060020a600035046308551a53811461007457806335a063b4146100865780633fa4f245146100a6578063590e1ae3146100af5780637150d8ae146100cf57806373fac6f0146100e1578063c19d93fb146100fe578063d696069714610112575b610131610002565b610133600154600160a060020a031681565b610131600154600160a060020a0390811633919091161461015057610002565b61014660005481565b610131600154600160a060020a039081163391909116146102d557610002565b610133600254600160a060020a031681565b610131600254600160a060020a0333811691161461023757610002565b61014660025460ff60a060020a9091041681565b61013160025460009060ff60a060020a9091041681146101cc57610002565b005b600160a060020a03166060908152602090f35b6060908152602090f35b60025460009060a060020a900460ff16811461016b57610002565b600154600160a060020a03908116908290301631606082818181858883f150506002805460a060020a60ff02191660a160020a179055506040517f72c874aeff0b183a56e2b79c71b46e1aed4dee5e09862134b8821ba2fddbf8bf9250a150565b80546002023414806101dd57610002565b6002805460a060020a60ff021973ffffffffffffffffffffffffffffffffffffffff1990911633171660a060020a1790557fd5d55c8a68912e9a110618df8d5e2e83b8d83211c57a8ddd1203df92885dc881826060a15050565b60025460019060a060020a900460ff16811461025257610002565b60025460008054600160a060020a0390921691606082818181858883f150508354604051600160a060020a0391821694503090911631915082818181858883f150506002805460a060020a60ff02191660a160020a179055506040517fe89152acd703c9d8c7d28829d443260b411454d45394e7995815140c8cbcbcf79250a150565b60025460019060a060020a900460ff1681146102f057610002565b6002805460008054600160a060020a0390921692909102606082818181858883f150508354604051600160a060020a0391821694503090911631915082818181858883f150506002805460a060020a60ff02191660a160020a179055506040517f8616bbbbad963e4e65b1366f1d75dfb63f9e9704bbbf91fb01bec70849906cf79250a15056")
 
 	abi, err := abi.JSON(strings.NewReader(definition))
@@ -161,8 +158,8 @@ func BenchmarkCall(b *testing.B) {
 
 func benchmarkEVM_Create(bench *testing.B, code string) {
 	var (
-		db       = storage.NewCacheDB(overlaydb.NewOverlayDB(leveldb.NewMemLevelDBStore()))
-		statedb  = storage.NewStateDB(db, common.Hash{}, common.Hash{}, storage.NewDummy())
+		db       = statedb.NewCacheDB(statedb.NewOverlayDB(storage.NewMemLevelDBStore()))
+		statedb  = statedb.NewStateDB(db, common.Hash{}, common.Hash{}, statedb.NewDummy())
 		sender   = common.BytesToAddress([]byte("sender"))
 		receiver = common.BytesToAddress([]byte("receiver"))
 	)
@@ -346,8 +343,8 @@ func (s *stepCounter) CaptureEnd(output []byte, gasUsed uint64, t time.Duration,
 }
 
 func TestJumpSub1024Limit(t *testing.T) {
-	db := storage.NewCacheDB(overlaydb.NewOverlayDB(leveldb.NewMemLevelDBStore()))
-	statedb := storage.NewStateDB(db, common.Hash{}, common.Hash{}, storage.NewDummy())
+	db := statedb.NewCacheDB(statedb.NewOverlayDB(storage.NewMemLevelDBStore()))
+	statedb := statedb.NewStateDB(db, common.Hash{}, common.Hash{}, statedb.NewDummy())
 	address := common.HexToAddress("0x0a")
 	// Code is
 	// 0 beginsub
@@ -371,8 +368,7 @@ func TestJumpSub1024Limit(t *testing.T) {
 		EVMConfig: evm.Config{
 			ExtraEips: []int{2315},
 			Debug:     true,
-			//Tracer:    evm.NewJSONLogger(nil, os.Stdout),
-			Tracer: &tracer,
+			Tracer:    &tracer,
 		}})
 	exp := "return stack limit reached"
 	if err.Error() != exp {
@@ -384,8 +380,8 @@ func TestJumpSub1024Limit(t *testing.T) {
 }
 
 func TestReturnSubShallow(t *testing.T) {
-	db := storage.NewCacheDB(overlaydb.NewOverlayDB(leveldb.NewMemLevelDBStore()))
-	statedb := storage.NewStateDB(db, common.Hash{}, common.Hash{}, storage.NewDummy())
+	db := statedb.NewCacheDB(statedb.NewOverlayDB(storage.NewMemLevelDBStore()))
+	statedb := statedb.NewStateDB(db, common.Hash{}, common.Hash{}, statedb.NewDummy())
 	address := common.HexToAddress("0x0a")
 	// The code does returnsub without having anything on the returnstack.
 	// It should not panic, but just fail after one step
@@ -419,8 +415,7 @@ func TestReturnSubShallow(t *testing.T) {
 	}
 }
 
-// disabled -- only used for generating markdown
-func DisabledTestReturnCases(t *testing.T) {
+func TestReturnCases(t *testing.T) {
 	cfg := &Config{
 		EVMConfig: evm.Config{
 			Debug:     true,
@@ -462,8 +457,7 @@ func DisabledTestReturnCases(t *testing.T) {
 
 // DisabledTestEipExampleCases contains various testcases that are used for the
 // EIP examples
-// This test is disabled, as it's only used for generating markdown
-func DisabledTestEipExampleCases(t *testing.T) {
+func TestEipExampleCases(t *testing.T) {
 	cfg := &Config{
 		EVMConfig: evm.Config{
 			Debug:     true,
@@ -514,7 +508,7 @@ func DisabledTestEipExampleCases(t *testing.T) {
 		}
 		prettyPrint("This should execute fine, going into one two depths of subroutines", code)
 	}
-	// TODO(@holiman) move this test into an actual test, which not only prints
+	// TODO move this test into an actual test, which not only prints
 	// out the trace.
 	{
 		code := []byte{
@@ -573,8 +567,8 @@ func DisabledTestEipExampleCases(t *testing.T) {
 func benchmarkNonModifyingCode(gas uint64, code []byte, name string, b *testing.B) {
 	cfg := new(Config)
 	setDefaults(cfg)
-	db := storage.NewCacheDB(overlaydb.NewOverlayDB(leveldb.NewMemLevelDBStore()))
-	cfg.State = storage.NewStateDB(db, common.Hash{}, common.Hash{}, storage.NewDummy())
+	db := statedb.NewCacheDB(statedb.NewOverlayDB(storage.NewMemLevelDBStore()))
+	cfg.State = statedb.NewStateDB(db, common.Hash{}, common.Hash{}, statedb.NewDummy())
 	cfg.GasLimit = gas
 	var (
 		destination = common.BytesToAddress([]byte("contract"))
@@ -597,7 +591,7 @@ func benchmarkNonModifyingCode(gas uint64, code []byte, name string, b *testing.
 		})
 	}
 
-	//cfg.State.CreateAccount(cfg.Origin)
+	// cfg.State.CreateAccount(cfg.Origin)
 	// set the receiver's (the executing contract) code for execution.
 	cfg.State.SetCode(destination, code)
 	vmenv.Call(sender, destination, nil, gas, cfg.Value)
@@ -613,7 +607,6 @@ func benchmarkNonModifyingCode(gas uint64, code []byte, name string, b *testing.
 // BenchmarkSimpleLoop test a pretty simple loop which loops until OOG
 // 55 ms
 func BenchmarkSimpleLoop(b *testing.B) {
-
 	staticCallIdentity := []byte{
 		byte(evm.JUMPDEST), //  [ count ]
 		// push args for the call
@@ -708,12 +701,6 @@ func BenchmarkSimpleLoop(b *testing.B) {
 		byte(evm.JUMP),
 	}
 
-	//tracer := evm.NewJSONLogger(nil, os.Stdout)
-	//Execute(loopingCode, nil, &Config{
-	//	EVMConfig: evm.Config{
-	//		Debug:  true,
-	//		Tracer: tracer,
-	//	}})
 	//100M gas
 	benchmarkNonModifyingCode(100000000, staticCallIdentity, "staticcall-identity-100M", b)
 	benchmarkNonModifyingCode(100000000, callIdentity, "call-identity-100M", b)
@@ -721,9 +708,6 @@ func BenchmarkSimpleLoop(b *testing.B) {
 	benchmarkNonModifyingCode(100000000, callInexistant, "call-nonexist-100M", b)
 	benchmarkNonModifyingCode(100000000, callEOA, "call-EOA-100M", b)
 	benchmarkNonModifyingCode(100000000, calllRevertingContractWithInput, "call-reverting-100M", b)
-
-	//benchmarkNonModifyingCode(10000000, staticCallIdentity, "staticcall-identity-10M", b)
-	//benchmarkNonModifyingCode(10000000, loopingCode, "loop-10M", b)
 }
 
 // TestEip2929Cases contains various testcases that are used for

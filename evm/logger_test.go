@@ -22,8 +22,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/holiman/uint256"
-	"github.com/wooyang2018/svp-blockchain/evm/common/params"
-	"github.com/wooyang2018/svp-blockchain/evm/storage"
+	"github.com/wooyang2018/svp-blockchain/evm/params"
+	"github.com/wooyang2018/svp-blockchain/storage/statedb"
 )
 
 type dummyContractRef struct {
@@ -44,7 +44,7 @@ func (d *dummyContractRef) SetNonce(uint64)            {}
 func (d *dummyContractRef) Balance() *big.Int          { return new(big.Int) }
 
 type dummyStatedb struct {
-	storage.StateDB
+	statedb.StateDB
 }
 
 func (*dummyStatedb) GetRefund() uint64 { return 1337 }

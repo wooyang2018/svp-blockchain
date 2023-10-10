@@ -18,12 +18,6 @@ func TestHexAndBytesTransfer(t *testing.T) {
 	assert.Equal(t, testBytes, bytesAfterTrans)
 }
 
-func TestGetNonce(t *testing.T) {
-	nonce1 := GetNonce()
-	nonce2 := GetNonce()
-	assert.NotEqual(t, nonce1, nonce2)
-}
-
 func TestBase58(t *testing.T) {
 	addr := ADDRESS_EMPTY
 	fmt.Println("emtpy addr:", addr.ToBase58())

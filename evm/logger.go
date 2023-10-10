@@ -29,7 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/wooyang2018/svp-blockchain/evm/common/params"
+	"github.com/wooyang2018/svp-blockchain/evm/params"
 )
 
 var errTraceLimitReached = errors.New("the number of logs reached the specified limit")

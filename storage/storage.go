@@ -10,16 +10,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/wooyang2018/svp-blockchain/storage/common"
-	"github.com/wooyang2018/svp-blockchain/storage/leveldb"
-	_ "golang.org/x/crypto/sha3"
-
 	"github.com/wooyang2018/svp-blockchain/core"
 	"github.com/wooyang2018/svp-blockchain/logger"
 	"github.com/wooyang2018/svp-blockchain/merkle"
+	_ "golang.org/x/crypto/sha3"
 )
 
-type updateFunc func(setter common.Setter) error
+type updateFunc func(setter Setter) error
 
 type CommitData struct {
 	Block        *core.Block
@@ -40,7 +37,7 @@ var DefaultConfig = Config{
 }
 
 type Storage struct {
-	db          common.PersistStore
+	db          PersistStore
 	chainStore  *chainStore
 	stateStore  *stateStore
 	merkleStore *merkleStore
@@ -52,7 +49,7 @@ type Storage struct {
 
 func New(path string, config Config) *Storage {
 	strg := new(Storage)
-	db, err := leveldb.NewLevelDBStore(path)
+	db, err := NewLevelDBStore(path)
 	if err != nil {
 		logger.I().Fatalw("setup storage failed", "error", err)
 	}
@@ -246,7 +243,7 @@ func concatBytes(srcs ...[]byte) []byte {
 	return buf.Bytes()
 }
 
-func updateLevelDB(db common.PersistStore, fns []updateFunc) error {
+func updateLevelDB(db PersistStore, fns []updateFunc) error {
 	for _, fn := range fns {
 		if err := fn(db); err != nil {
 			return err

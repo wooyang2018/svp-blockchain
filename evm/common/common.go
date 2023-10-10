@@ -5,14 +5,24 @@ package common
 
 import (
 	"encoding/hex"
-	"math/rand"
+	"math"
 )
 
-// GetNonce returns random nonce
-func GetNonce() uint64 {
-	// Fixme replace with the real random number generator
-	nonce := uint64(rand.Uint32())<<32 + uint64(rand.Uint32())
-	return nonce
+const (
+	MAX_UINT64 = math.MaxUint64
+)
+
+type Serializable interface {
+	Serialization(sink *ZeroCopySink)
+}
+
+func SerializeToBytes(values ...Serializable) []byte {
+	sink := NewZeroCopySink(nil)
+	for _, val := range values {
+		val.Serialization(sink)
+	}
+
+	return sink.Bytes()
 }
 
 // ToHexString convert []byte to hex string
@@ -32,4 +42,19 @@ func ToArrayReverse(arr []byte) []byte {
 		x = append(x, arr[i])
 	}
 	return x
+}
+
+func SafeSub(x, y uint64) (uint64, bool) {
+	return x - y, x < y
+}
+
+func SafeAdd(x, y uint64) (uint64, bool) {
+	return x + y, y > MAX_UINT64-x
+}
+
+func SafeMul(x, y uint64) (uint64, bool) {
+	if x == 0 || y == 0 {
+		return 0, false
+	}
+	return x * y, y > MAX_UINT64/x
 }

@@ -7,11 +7,10 @@ import (
 	"math/big"
 
 	"github.com/wooyang2018/svp-blockchain/merkle"
-	"github.com/wooyang2018/svp-blockchain/storage/common"
 )
 
 type merkleStore struct {
-	getter common.Getter
+	getter Getter
 }
 
 var _ merkle.Store = (*merkleStore)(nil)
@@ -38,13 +37,13 @@ func (ms *merkleStore) commitUpdate(upd *merkle.UpdateResult) []updateFunc {
 }
 
 func (ms *merkleStore) getNode(p *merkle.Position) []byte {
-	val, _ := ms.getter.Get(concatBytes([]byte{byte(common.MERKLE_NODE_BY_POSITION)}, p.Bytes()))
+	val, _ := ms.getter.Get(concatBytes([]byte{byte(MERKLE_NODE_BY_POSITION)}, p.Bytes()))
 	return val
 }
 
 func (ms *merkleStore) getLeafCount() *big.Int {
 	count := big.NewInt(0)
-	val, err := ms.getter.Get([]byte{byte(common.MERKLE_LEAF_COUNT)})
+	val, err := ms.getter.Get([]byte{byte(MERKLE_LEAF_COUNT)})
 	if err == nil {
 		count.SetBytes(val)
 	}
@@ -53,7 +52,7 @@ func (ms *merkleStore) getLeafCount() *big.Int {
 
 func (ms *merkleStore) getHeight() uint8 {
 	var height uint8
-	val, _ := ms.getter.Get([]byte{byte(common.MERKLE_TREE_HEIGHT)})
+	val, _ := ms.getter.Get([]byte{byte(MERKLE_TREE_HEIGHT)})
 	if len(val) > 0 {
 		height = val[0]
 	}
@@ -69,21 +68,21 @@ func (ms *merkleStore) setNodes(nodes []*merkle.Node) []updateFunc {
 }
 
 func (ms *merkleStore) setNode(n *merkle.Node) updateFunc {
-	return func(setter common.Setter) error {
+	return func(setter Setter) error {
 		return setter.Put(
-			concatBytes([]byte{byte(common.MERKLE_NODE_BY_POSITION)}, n.Position.Bytes()), n.Data,
+			concatBytes([]byte{byte(MERKLE_NODE_BY_POSITION)}, n.Position.Bytes()), n.Data,
 		)
 	}
 }
 
 func (ms *merkleStore) setLeafCount(leafCount *big.Int) updateFunc {
-	return func(setter common.Setter) error {
-		return setter.Put([]byte{byte(common.MERKLE_LEAF_COUNT)}, leafCount.Bytes())
+	return func(setter Setter) error {
+		return setter.Put([]byte{byte(MERKLE_LEAF_COUNT)}, leafCount.Bytes())
 	}
 }
 
 func (ms *merkleStore) setTreeHeight(height uint8) updateFunc {
-	return func(setter common.Setter) error {
-		return setter.Put([]byte{byte(common.MERKLE_TREE_HEIGHT)}, []byte{height})
+	return func(setter Setter) error {
+		return setter.Put([]byte{byte(MERKLE_TREE_HEIGHT)}, []byte{height})
 	}
 }

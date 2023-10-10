@@ -25,14 +25,12 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/holiman/uint256"
 	"github.com/wooyang2018/svp-blockchain/evm"
-	"github.com/wooyang2018/svp-blockchain/evm/common/params"
-	"github.com/wooyang2018/svp-blockchain/evm/storage"
-	"github.com/wooyang2018/svp-blockchain/evm/storage/overlaydb"
-	"github.com/wooyang2018/svp-blockchain/storage/leveldb"
+	"github.com/wooyang2018/svp-blockchain/evm/params"
+	"github.com/wooyang2018/svp-blockchain/storage"
+	"github.com/wooyang2018/svp-blockchain/storage/statedb"
 )
 
-// Config is a basic type specifying certain configuration flags for running
-// the EVM.
+// Config is a basic type specifying certain configuration flags for running the EVM.
 type Config struct {
 	ChainConfig *params.ChainConfig
 	Difficulty  *big.Int
@@ -45,9 +43,8 @@ type Config struct {
 	Value       *big.Int
 	Debug       bool
 	EVMConfig   evm.Config
-
-	State     *storage.StateDB
-	GetHashFn func(n uint64) common.Hash
+	State       *statedb.StateDB
+	GetHashFn   func(n uint64) common.Hash
 }
 
 // sets defaults on the config
@@ -100,15 +97,15 @@ func setDefaults(cfg *Config) {
 //
 // Execute sets up an in-memory, temporary, environment for the execution of
 // the given code. It makes sure that it's restored to its original state afterwards.
-func Execute(code, input []byte, cfg *Config) ([]byte, *storage.StateDB, error) {
+func Execute(code, input []byte, cfg *Config) ([]byte, *statedb.StateDB, error) {
 	if cfg == nil {
 		cfg = new(Config)
 	}
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		db := storage.NewCacheDB(overlaydb.NewOverlayDB(leveldb.NewMemLevelDBStore()))
-		cfg.State = storage.NewStateDB(db, common.Hash{}, common.Hash{}, storage.NewDummy())
+		db := statedb.NewCacheDB(statedb.NewOverlayDB(storage.NewMemLevelDBStore()))
+		cfg.State = statedb.NewStateDB(db, common.Hash{}, common.Hash{}, statedb.NewDummy())
 	}
 	var (
 		address = common.BytesToAddress([]byte("contract"))
@@ -139,8 +136,8 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		db := storage.NewCacheDB(overlaydb.NewOverlayDB(leveldb.NewMemLevelDBStore()))
-		cfg.State = storage.NewStateDB(db, common.Hash{}, common.Hash{}, storage.NewDummy())
+		db := statedb.NewCacheDB(statedb.NewOverlayDB(storage.NewMemLevelDBStore()))
+		cfg.State = statedb.NewStateDB(db, common.Hash{}, common.Hash{}, statedb.NewDummy())
 	}
 	var (
 		vmenv  = NewEnv(cfg)
@@ -165,8 +162,8 @@ func Create2(input []byte, cfg *Config, salt *uint256.Int) ([]byte, common.Addre
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		db := storage.NewCacheDB(overlaydb.NewOverlayDB(leveldb.NewMemLevelDBStore()))
-		cfg.State = storage.NewStateDB(db, common.Hash{}, common.Hash{}, storage.NewDummy())
+		db := statedb.NewCacheDB(statedb.NewOverlayDB(storage.NewMemLevelDBStore()))
+		cfg.State = statedb.NewStateDB(db, common.Hash{}, common.Hash{}, statedb.NewDummy())
 	}
 	var (
 		vmenv  = NewEnv(cfg)

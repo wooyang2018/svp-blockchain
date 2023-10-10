@@ -77,17 +77,6 @@ func CreateContract(cfg *Config, jsonABI string, hexCode string, params ...inter
 	}
 }
 
-func NewContract(cfg *Config, jsonABI string, addr common.Address) *Contract {
-	cabi, err := abi.JSON(strings.NewReader(jsonABI))
-	Ensure(err)
-
-	return &Contract{
-		Abi:     cabi,
-		Cfg:     cfg,
-		Address: addr,
-	}
-}
-
 func (self *Contract) Call(method string, params ...interface{}) ([]byte, uint64, error) {
 	input, err := self.Abi.Pack(method, params...)
 	Ensure(err)
