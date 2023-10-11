@@ -38,7 +38,7 @@ message QuorumCert {
   bytes blockHash = 2;
   repeated uint32 quotas = 3;
   repeated Signature signatures = 4;
-  Signature signature  = 5;
+  Signature signature = 5;
 }
 
 message Vote {

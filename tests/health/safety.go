@@ -15,8 +15,16 @@ func (hc *checker) checkLiveness() error {
 	if err != nil {
 		return err
 	}
-	lastHeight := hc.getMaximumBexec(status)
+
+	// get maximum bexec block
+	var lastHeight uint64 = 0
+	for _, s := range status {
+		if s.BExec > lastHeight {
+			lastHeight = s.BExec
+		}
+	}
 	time.Sleep(hc.getLivenessWaitTime())
+
 	select {
 	case <-hc.interrupt:
 		return nil
@@ -27,20 +35,10 @@ func (hc *checker) checkLiveness() error {
 	if err != nil {
 		return err
 	}
-	if err := hc.shouldCommitNewBlocks(status, lastHeight); err != nil {
+	if err = hc.shouldCommitNewBlocks(status, lastHeight); err != nil {
 		return err
 	}
 	return hc.shouldCommitTxs(prevStatus, status)
-}
-
-func (hc *checker) getMaximumBexec(status map[int]*consensus.Status) uint64 {
-	var bexec uint64 = 0
-	for _, s := range status {
-		if s.BExec > bexec {
-			bexec = s.BExec
-		}
-	}
-	return bexec
 }
 
 func (hc *checker) getLivenessWaitTime() time.Duration {
@@ -69,7 +67,7 @@ func (hc *checker) shouldCommitNewBlocks(sMap map[int]*consensus.Status, lastHei
 		return fmt.Errorf("%d nodes are not committing new blocks",
 			hc.cluster.NodeCount()-validCount)
 	}
-	fmt.Printf(" + Committed blocks in %s = %d\n", hc.getLivenessWaitTime(), blkCount)
+	fmt.Printf(" + Committed %d blocks in %s\n", blkCount, hc.getLivenessWaitTime())
 	return nil
 }
 
@@ -90,6 +88,6 @@ func (hc *checker) shouldCommitTxs(prevStatus, status map[int]*consensus.Status)
 		return fmt.Errorf("%d nodes are not committing new txs",
 			hc.cluster.NodeCount()-validCount)
 	}
-	fmt.Printf(" + Committed txs in %s = %d\n", hc.getLivenessWaitTime(), txCount)
+	fmt.Printf(" + Committed %d txs in %s\n", txCount, hc.getLivenessWaitTime())
 	return nil
 }

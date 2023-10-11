@@ -10,10 +10,11 @@ import (
 	"sync"
 	"time"
 
+	_ "golang.org/x/crypto/sha3"
+
 	"github.com/wooyang2018/svp-blockchain/core"
 	"github.com/wooyang2018/svp-blockchain/logger"
 	"github.com/wooyang2018/svp-blockchain/merkle"
-	_ "golang.org/x/crypto/sha3"
 )
 
 type updateFunc func(setter Setter) error

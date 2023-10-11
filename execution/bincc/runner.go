@@ -116,7 +116,7 @@ func (r *Runner) serveStateAndGetResult() ([]byte, error) {
 		}
 		b, err := r.rw.read()
 		if err != nil {
-			return nil, fmt.Errorf("read upstream error %w", err)
+			return nil, fmt.Errorf("read upstream error, %w", err)
 		}
 		up := new(UpStream)
 		if err := json.Unmarshal(b, up); err != nil {

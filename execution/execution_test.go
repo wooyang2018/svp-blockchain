@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
 	"github.com/wooyang2018/svp-blockchain/chaincode/pcoin"
 	"github.com/wooyang2018/svp-blockchain/core"
 )

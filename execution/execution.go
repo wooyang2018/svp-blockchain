@@ -49,8 +49,7 @@ func New(stateStore StateStore, config Config) *Execution {
 }
 
 func (exec *Execution) Execute(blk *core.Block, txs []*core.Transaction) (
-	*core.BlockCommit, []*core.TxCommit,
-) {
+	*core.BlockCommit, []*core.TxCommit) {
 	bexe := &blkExecutor{
 		txTimeout:       exec.config.TxExecTimeout,
 		concurrentLimit: exec.config.ConcurrentLimit,
@@ -97,7 +96,7 @@ type QueryData struct {
 func (exec *Execution) Query(query *QueryData) (val []byte, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("%v", r)
+			err = fmt.Errorf("%+v", r)
 		}
 	}()
 	cc, err := exec.codeRegistry.getInstance(

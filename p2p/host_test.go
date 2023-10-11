@@ -9,6 +9,7 @@ import (
 
 	"github.com/multiformats/go-multiaddr"
 	"github.com/stretchr/testify/assert"
+
 	"github.com/wooyang2018/svp-blockchain/core"
 )
 

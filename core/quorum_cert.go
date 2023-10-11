@@ -7,8 +7,9 @@ import (
 	"encoding/binary"
 	"errors"
 
-	"github.com/wooyang2018/svp-blockchain/pb"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/wooyang2018/svp-blockchain/pb"
 )
 
 // errors

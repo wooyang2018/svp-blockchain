@@ -25,7 +25,7 @@ func checkResponse(resp *http.Response, err error) error {
 	if resp.StatusCode != 200 {
 		msg, _ := io.ReadAll(resp.Body)
 		resp.Body.Close()
-		return fmt.Errorf("status code not 200 %s", string(msg))
+		return fmt.Errorf("status code not 200, %s", string(msg))
 	}
 	return nil
 }
@@ -128,7 +128,7 @@ func GetBlockByHeight(node cluster.Node, height uint64) (*core.Block, error) {
 	}
 	defer resp.Body.Close()
 	ret := core.NewBlock()
-	if err := json.NewDecoder(resp.Body).Decode(ret); err != nil {
+	if err = json.NewDecoder(resp.Body).Decode(ret); err != nil {
 		return nil, err
 	}
 	return ret, nil

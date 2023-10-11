@@ -10,9 +10,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	_ "golang.org/x/crypto/sha3"
+
 	"github.com/wooyang2018/svp-blockchain/core"
 	"github.com/wooyang2018/svp-blockchain/merkle"
-	_ "golang.org/x/crypto/sha3"
 )
 
 const hashFunc = crypto.SHA3_256

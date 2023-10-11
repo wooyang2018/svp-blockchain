@@ -91,10 +91,6 @@ func (ftry *RemoteFactory) ReadHosts(hostsPath string, nodeCount int) error {
 	return nil
 }
 
-func (ftry *RemoteFactory) GetHosts() []string {
-	return ftry.hosts
-}
-
 func (ftry *RemoteFactory) GetParams() RemoteFactoryParams {
 	return ftry.params
 }
@@ -118,7 +114,7 @@ func (ftry *RemoteFactory) setup() error {
 	}
 	peers := MakePeers(keys, addrs)
 
-	if err := SetupTemplateDir(ftry.templateDir, keys, genesis, peers); err != nil {
+	if err = SetupTemplateDir(ftry.templateDir, keys, genesis, peers); err != nil {
 		return err
 	}
 	fmt.Println()
@@ -147,76 +143,62 @@ func (ftry *RemoteFactory) makeAddrs() ([]multiaddr.Multiaddr, error) {
 
 func (ftry *RemoteFactory) setupRemoteServers() error {
 	for i := 0; i < ftry.params.NodeCount; i++ {
-		if err := ftry.setupRemoteServerOne(i); err != nil {
-			return err
+		if ftry.params.InstallRequired {
+			cmd := exec.Command("ssh",
+				"-i", ftry.params.KeySSH,
+				fmt.Sprintf("%s@%s", ftry.loginNames[i], ftry.hosts[i]),
+				"sudo", "apt", "update", ";",
+				"sudo", "apt", "install", "-y", "dstat", ";",
+			)
+			if err := RunCommand(cmd); err != nil {
+				return err
+			}
 		}
-	}
-	return nil
-}
-
-func (ftry *RemoteFactory) setupRemoteServerOne(i int) error {
-	if ftry.params.InstallRequired {
+		// also kills remaining effect and nodes to make sure clean environment
 		cmd := exec.Command("ssh",
 			"-i", ftry.params.KeySSH,
 			fmt.Sprintf("%s@%s", ftry.loginNames[i], ftry.hosts[i]),
-			"sudo", "apt", "update", ";",
-			"sudo", "apt", "install", "-y", "dstat", ";",
+			"sudo", "tc", "qdisc", "del", "dev", ftry.netDevices[i], "root", ";",
+			"sudo", "killall", "chain", ";",
+			"sudo", "killall", "dstat", ";",
+			"mkdir", "-p", ftry.workDirs[i], ";",
+			"cd", ftry.workDirs[i], ";",
+			"rm", "-r", "template",
 		)
 		if err := RunCommand(cmd); err != nil {
 			return err
 		}
 	}
-
-	// also kills remaining effect and nodes to make sure clean environment
-	cmd := exec.Command("ssh",
-		"-i", ftry.params.KeySSH,
-		fmt.Sprintf("%s@%s", ftry.loginNames[i], ftry.hosts[i]),
-		"sudo", "tc", "qdisc", "del", "dev", ftry.netDevices[i], "root", ";",
-		"sudo", "killall", "chain", ";",
-		"sudo", "killall", "dstat", ";",
-		"mkdir", "-p", ftry.workDirs[i], ";",
-		"cd", ftry.workDirs[i], ";",
-		"rm", "-r", "template",
-	)
-	return RunCommand(cmd)
+	return nil
 }
 
 func (ftry *RemoteFactory) sendChain() error {
 	for i := 0; i < ftry.params.NodeCount; i++ {
-		if err := ftry.sendChainOne(i); err != nil {
+		cmd := exec.Command("scp",
+			"-i", ftry.params.KeySSH,
+			ftry.params.BinPath,
+			fmt.Sprintf("%s@%s:%s", ftry.loginNames[i], ftry.hosts[i], ftry.workDirs[i]),
+		)
+		if err := RunCommand(cmd); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-func (ftry *RemoteFactory) sendChainOne(i int) error {
-	cmd := exec.Command("scp",
-		"-i", ftry.params.KeySSH,
-		ftry.params.BinPath,
-		fmt.Sprintf("%s@%s:%s", ftry.loginNames[i], ftry.hosts[i],
-			ftry.workDirs[i]),
-	)
-	return RunCommand(cmd)
 }
 
 func (ftry *RemoteFactory) sendTemplate() error {
 	for i := 0; i < ftry.params.NodeCount; i++ {
-		if err := ftry.sendTemplateOne(i); err != nil {
+		cmd := exec.Command("scp",
+			"-i", ftry.params.KeySSH,
+			"-r", path.Join(ftry.templateDir, strconv.Itoa(i)),
+			fmt.Sprintf("%s@%s:%s", ftry.loginNames[i], ftry.hosts[i],
+				path.Join(ftry.workDirs[i], "/template")),
+		)
+		if err := RunCommand(cmd); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-func (ftry *RemoteFactory) sendTemplateOne(i int) error {
-	cmd := exec.Command("scp",
-		"-i", ftry.params.KeySSH,
-		"-r", path.Join(ftry.templateDir, strconv.Itoa(i)),
-		fmt.Sprintf("%s@%s:%s", ftry.loginNames[i], ftry.hosts[i],
-			path.Join(ftry.workDirs[i], "/template")),
-	)
-	return RunCommand(cmd)
 }
 
 func (ftry *RemoteFactory) SetupCluster(name string) (*Cluster, error) {
@@ -251,22 +233,18 @@ func (ftry *RemoteFactory) SetupCluster(name string) (*Cluster, error) {
 
 func (ftry *RemoteFactory) setupClusterDir(name string) error {
 	for i := 0; i < ftry.params.NodeCount; i++ {
-		if err := ftry.setupClusterDirOne(i, name); err != nil {
+		cmd := exec.Command("ssh",
+			"-i", ftry.params.KeySSH,
+			fmt.Sprintf("%s@%s", ftry.loginNames[i], ftry.hosts[i]),
+			"cd", ftry.workDirs[i], ";",
+			"rm", "-r", name, ";",
+			"cp", "-r", "template", name,
+		)
+		if err := cmd.Run(); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-func (ftry *RemoteFactory) setupClusterDirOne(i int, name string) error {
-	cmd := exec.Command("ssh",
-		"-i", ftry.params.KeySSH,
-		fmt.Sprintf("%s@%s", ftry.loginNames[i], ftry.hosts[i]),
-		"cd", ftry.workDirs[i], ";",
-		"rm", "-r", name, ";",
-		"cp", "-r", "template", name,
-	)
-	return cmd.Run()
 }
 
 type RemoteNode struct {

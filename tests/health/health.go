@@ -42,7 +42,6 @@ type checker struct {
 
 func (hc *checker) run() error {
 	hc.interrupt = make(chan struct{})
-
 	wg := new(sync.WaitGroup)
 	wg.Add(2)
 	go hc.runChecker(hc.checkSafety, wg)
@@ -59,19 +58,15 @@ func (hc *checker) runChecker(checker func() error, wg *sync.WaitGroup) {
 	defer wg.Done()
 	if err := checker(); err != nil {
 		hc.err = err
-		hc.makeInterrupt()
+		hc.mtxInter.Lock()
+		defer hc.mtxInter.Unlock()
+		select {
+		case <-hc.interrupt:
+			return
+		default:
+		}
+		close(hc.interrupt)
 	}
-}
-
-func (hc *checker) makeInterrupt() {
-	hc.mtxInter.Lock()
-	defer hc.mtxInter.Unlock()
-	select {
-	case <-hc.interrupt:
-		return
-	default:
-	}
-	close(hc.interrupt)
 }
 
 func (hc *checker) shouldGetStatus() (map[int]*consensus.Status, error) {

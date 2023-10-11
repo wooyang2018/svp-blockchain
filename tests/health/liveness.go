@@ -6,7 +6,6 @@ package health
 import (
 	"fmt"
 
-	"github.com/wooyang2018/svp-blockchain/consensus"
 	"github.com/wooyang2018/svp-blockchain/core"
 	"github.com/wooyang2018/svp-blockchain/tests/testutil"
 )
@@ -16,10 +15,17 @@ func (hc *checker) checkSafety() error {
 	if err != nil {
 		return err
 	}
-	height, err := hc.getMinimumBexec(status)
-	if err != nil {
-		return err
+
+	// get minimum bexec block
+	var height uint64
+	for _, s := range status {
+		if height == 0 {
+			height = s.BExec
+		} else if s.BExec < height {
+			height = s.BExec
+		}
 	}
+
 	select {
 	case <-hc.interrupt:
 		return nil
@@ -30,18 +36,6 @@ func (hc *checker) checkSafety() error {
 		return err
 	}
 	return hc.shouldEqualMerkleRoot(blocks)
-}
-
-func (hc *checker) getMinimumBexec(sMap map[int]*consensus.Status) (uint64, error) {
-	var ret uint64
-	for _, status := range sMap {
-		if ret == 0 {
-			ret = status.BExec
-		} else if status.BExec < ret {
-			ret = status.BExec
-		}
-	}
-	return ret, nil
 }
 
 func (hc *checker) shouldGetBlockByHeight(height uint64) (map[int]*core.Block, error) {
@@ -58,7 +52,7 @@ func (hc *checker) shouldEqualMerkleRoot(blocks map[int]*core.Block) error {
 	equalCount := make(map[string]int)
 	for i, blk := range blocks {
 		if !hc.cluster.EmptyChainCode && blk.MerkleRoot() == nil {
-			return fmt.Errorf("nil merkle root at node %d, block %d", i, blk.Height())
+			return fmt.Errorf("nil merkle root at node %d, height %d", i, blk.Height())
 		}
 		equalCount[string(blk.MerkleRoot())]++
 		if height == 0 {
@@ -67,9 +61,9 @@ func (hc *checker) shouldEqualMerkleRoot(blocks map[int]*core.Block) error {
 	}
 	for _, count := range equalCount {
 		if count >= hc.minimumHealthyNode() {
-			fmt.Printf(" + Same merkle root at block %d\n", height)
+			fmt.Printf(" + Same merkle root at height %d\n", height)
 			return nil
 		}
 	}
-	return fmt.Errorf("different merkle root at block %d", height)
+	return fmt.Errorf("different merkle root at height %d", height)
 }

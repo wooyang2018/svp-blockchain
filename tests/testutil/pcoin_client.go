@@ -80,7 +80,6 @@ func (client *PCoinClient) SubmitTx() (int, *core.Transaction, error) {
 }
 
 func (client *PCoinClient) BatchSubmitTx(num int) (int, *core.TxList, error) {
-	//使用100个协程快速生成num个交易
 	jobCh := make(chan struct{}, num)
 	defer close(jobCh)
 	out := make(chan *core.Transaction, num)
@@ -124,7 +123,7 @@ func (client *PCoinClient) deploy() error {
 	}
 	depTx := client.MakeDeploymentTx(client.minter)
 	if _, err := SubmitTxAndWait(client.cluster, depTx); err != nil {
-		return fmt.Errorf("cannot deploy pcoin %w", err)
+		return fmt.Errorf("cannot deploy pcoin, %w", err)
 	}
 	client.codeAddr = depTx.Hash()
 	return nil
@@ -149,14 +148,14 @@ func (client *PCoinClient) Mint(dest *core.PublicKey, value int64) error {
 	mintTx := client.MakeMintTx(dest, value)
 	i, err := SubmitTxAndWait(client.cluster, mintTx)
 	if err != nil {
-		return fmt.Errorf("cannot mint pcoin %w", err)
+		return fmt.Errorf("cannot mint pcoin, %w", err)
 	}
 	balance, err := client.QueryBalance(client.cluster.GetNode(i), dest)
 	if err != nil {
-		return fmt.Errorf("cannot query pcoin balance %w", err)
+		return fmt.Errorf("cannot query pcoin balance, %w", err)
 	}
 	if value != balance {
-		return fmt.Errorf("incorrect balance %d %d", value, balance)
+		return fmt.Errorf("incorrect balance, expected %d, got %d", value, balance)
 	}
 	return nil
 }

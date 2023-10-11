@@ -17,8 +17,6 @@ type CallContext interface {
 type Chaincode interface {
 	// Init is called when chaincode is deployed
 	Init(ctx CallContext) error
-
 	Invoke(ctx CallContext) error
-
 	Query(ctx CallContext) ([]byte, error)
 }

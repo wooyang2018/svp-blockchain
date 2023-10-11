@@ -86,7 +86,7 @@ func (client *EmptyClient) setupOnCluster(cls *cluster.Cluster) error {
 func (client *EmptyClient) deploy() error {
 	depTx := client.MakeDeploymentTx(client.signer)
 	if _, err := SubmitTxAndWait(client.cluster, depTx); err != nil {
-		return fmt.Errorf("cannot deploy empty chaincode %w", err)
+		return fmt.Errorf("cannot deploy empty chaincode, %w", err)
 	}
 	client.codeAddr = depTx.Hash()
 	return nil

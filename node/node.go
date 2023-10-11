@@ -14,6 +14,8 @@ import (
 	"syscall"
 
 	"github.com/multiformats/go-multiaddr"
+	"go.uber.org/zap"
+
 	"github.com/wooyang2018/svp-blockchain/consensus"
 	"github.com/wooyang2018/svp-blockchain/core"
 	"github.com/wooyang2018/svp-blockchain/execution"
@@ -21,7 +23,6 @@ import (
 	"github.com/wooyang2018/svp-blockchain/p2p"
 	"github.com/wooyang2018/svp-blockchain/storage"
 	"github.com/wooyang2018/svp-blockchain/txpool"
-	"go.uber.org/zap"
 )
 
 type Node struct {

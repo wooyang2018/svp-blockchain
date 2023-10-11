@@ -17,7 +17,7 @@ var LoadGen *LoadGenerator
 
 type LoadGenerator struct {
 	txPerSec       int
-	jobPerTick     int //每一次嘀嗒需完成的任务数
+	jobPerTick     int // the number of tasks per tick
 	client         LoadClient
 	paused         bool
 	totalSubmitted int64
@@ -49,7 +49,8 @@ func (lg *LoadGenerator) UnPause() {
 }
 
 func (lg *LoadGenerator) Run(ctx context.Context) {
-	delay := time.Second / time.Duration(lg.txPerSec/lg.jobPerTick) //每一次嘀嗒的间隔时间
+	// the time between each tick
+	delay := time.Second / time.Duration(lg.txPerSec/lg.jobPerTick)
 	ticker := time.NewTicker(delay)
 	defer ticker.Stop()
 
@@ -79,7 +80,7 @@ func (lg *LoadGenerator) BatchRun(ctx context.Context) {
 	delay := time.Second / time.Duration(lg.txPerSec/lg.jobPerTick)
 	ticker := time.NewTicker(delay)
 	defer ticker.Stop()
-	timer := time.NewTimer(10 * time.Second) //ExecuteTxFlag为false时的函数退出时间
+	timer := time.NewTimer(10 * time.Second) //the execution time of BatchRun function
 	defer timer.Stop()
 	for {
 		select {
@@ -88,7 +89,7 @@ func (lg *LoadGenerator) BatchRun(ctx context.Context) {
 		case <-ticker.C:
 			_, txs, err := lg.client.BatchSubmitTx(lg.jobPerTick)
 			if err != nil {
-				fmt.Printf("batch submit tx failed %+v\n", err)
+				fmt.Printf("batch submit tx failed, %+v\n", err)
 			} else {
 				lg.increaseSubmitted(int64(len(*txs)))
 			}
@@ -114,10 +115,6 @@ func (lg *LoadGenerator) increaseSubmitted(delta int64) {
 
 func (lg *LoadGenerator) ResetTotalSubmitted() int {
 	return int(atomic.SwapInt64(&lg.totalSubmitted, 0))
-}
-
-func (lg *LoadGenerator) GetTxPerSec() int {
-	return lg.txPerSec
 }
 
 func (lg *LoadGenerator) GetClient() LoadClient {

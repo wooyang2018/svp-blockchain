@@ -73,8 +73,7 @@ func (ftry *LocalFactory) makeAddrs() ([]multiaddr.Multiaddr, error) {
 	addrs := make([]multiaddr.Multiaddr, ftry.params.NodeCount)
 	for i := range addrs {
 		addr, err := multiaddr.NewMultiaddr(
-			fmt.Sprintf("/ip4/127.0.0.1/tcp/%d",
-				ftry.params.NodeConfig.Port+i))
+			fmt.Sprintf("/ip4/127.0.0.1/tcp/%d", ftry.params.NodeConfig.Port+i))
 		if err != nil {
 			return nil, err
 		}

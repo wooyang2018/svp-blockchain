@@ -43,12 +43,12 @@ const (
 )
 
 type TxPool struct {
-	storage     Storage      //存储服务
-	execution   Execution    //交易执行服务
-	msgSvc      MsgService   //通信服务
-	store       *txStore     //交易缓存
-	broadcaster *broadcaster //交易广播器
-	broadcastTx bool         //是否广播交易
+	storage     Storage // storage service
+	execution   Execution
+	msgSvc      MsgService
+	store       *txStore // transaction cache
+	broadcaster *broadcaster
+	broadcastTx bool // broadcast transaction or not
 }
 
 func New(storage Storage, execution Execution, msgSvc MsgService, broadcastTx bool) *TxPool {
@@ -61,7 +61,7 @@ func New(storage Storage, execution Execution, msgSvc MsgService, broadcastTx bo
 	}
 	if pool.broadcastTx {
 		pool.broadcaster = newBroadcaster(msgSvc)
-		go pool.broadcaster.run() //运行交易广播器
+		go pool.broadcaster.run()
 		go pool.subscribeTxs()
 	}
 	logger.I().Infow("setup txpool", "broadcast tx", broadcastTx)

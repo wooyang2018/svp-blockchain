@@ -11,11 +11,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	"google.golang.org/protobuf/proto"
+
 	"github.com/wooyang2018/svp-blockchain/core"
 	"github.com/wooyang2018/svp-blockchain/emitter"
 	"github.com/wooyang2018/svp-blockchain/logger"
 	"github.com/wooyang2018/svp-blockchain/pb"
-	"google.golang.org/protobuf/proto"
 )
 
 type MsgType byte

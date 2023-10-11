@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 
 	"github.com/syndtr/goleveldb/leveldb/util"
+
 	"github.com/wooyang2018/svp-blockchain/evm/common"
 	storecomm "github.com/wooyang2018/svp-blockchain/storage"
 )

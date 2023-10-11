@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/multiformats/go-multiaddr"
+
 	"github.com/wooyang2018/svp-blockchain/core"
 	"github.com/wooyang2018/svp-blockchain/emitter"
 	"github.com/wooyang2018/svp-blockchain/logger"

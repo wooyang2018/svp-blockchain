@@ -10,6 +10,7 @@ import (
 	"path"
 
 	"github.com/multiformats/go-multiaddr"
+
 	"github.com/wooyang2018/svp-blockchain/core"
 	"github.com/wooyang2018/svp-blockchain/p2p"
 )
@@ -62,7 +63,7 @@ func readPeers(datadir string) ([]*p2p.Peer, error) {
 	defer f.Close()
 
 	var raws []Peer
-	if err := json.NewDecoder(f).Decode(&raws); err != nil {
+	if err = json.NewDecoder(f).Decode(&raws); err != nil {
 		return nil, fmt.Errorf("cannot parse %s, %w", PeersFile, err)
 	}
 
@@ -71,11 +72,11 @@ func readPeers(datadir string) ([]*p2p.Peer, error) {
 	for i, r := range raws {
 		pubKey, err := core.NewPublicKey(r.PubKey)
 		if err != nil {
-			return nil, fmt.Errorf("invalid public key %w", err)
+			return nil, fmt.Errorf("invalid public key, %w", err)
 		}
 		addr, err := multiaddr.NewMultiaddr(r.Addr)
 		if err != nil {
-			return nil, fmt.Errorf("invalid multiaddr %w", err)
+			return nil, fmt.Errorf("invalid multiaddr, %w", err)
 		}
 		peers[i] = p2p.NewPeer(pubKey, addr)
 	}

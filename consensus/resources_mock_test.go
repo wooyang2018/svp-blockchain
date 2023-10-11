@@ -5,6 +5,7 @@ package consensus
 
 import (
 	"github.com/stretchr/testify/mock"
+
 	"github.com/wooyang2018/svp-blockchain/core"
 	"github.com/wooyang2018/svp-blockchain/emitter"
 	"github.com/wooyang2018/svp-blockchain/storage"

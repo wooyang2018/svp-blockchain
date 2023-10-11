@@ -14,7 +14,7 @@ import (
 type txItem struct {
 	tx           *core.Transaction
 	receivedTime int64
-	index        int //txItem在txQueue中的索引
+	index        int // index of txItem in txQueue
 }
 
 func newTxItem(tx *core.Transaction) *txItem {
@@ -25,7 +25,7 @@ func newTxItem(tx *core.Transaction) *txItem {
 	}
 }
 
-// inQueue 根据index判断交易是否在队列中
+// inQueue determines whether a transaction is in the queue
 func (item *txItem) inQueue() bool {
 	return item.index != -1
 }
@@ -71,8 +71,8 @@ func (txq *txQueue) Pop() interface{} {
 }
 
 type txStore struct {
-	txq     *txQueue           //交易队列/堆,receivedTime顺序，涉及排队的交易
-	txItems map[string]*txItem //tx.Hash ==> txItem，涉及全部交易
+	txq     *txQueue           // transaction queue/heap, receivedTime order, containing queued transactions
+	txItems map[string]*txItem // tx.Hash ==> txItem, containing all transactions
 
 	mtx sync.RWMutex
 }

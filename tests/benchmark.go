@@ -276,7 +276,9 @@ func (bm *Benchmark) onTick() error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			meas.Latency = bm.measureLatency()
+			start := time.Now()
+			bm.loadGen.GetClient().SubmitTxAndWait()
+			meas.Latency = time.Since(start)
 		}()
 	}
 	wg.Wait()
@@ -302,12 +304,6 @@ func (bm *Benchmark) onTick() error {
 	log.Printf("  Load: %6.1f  |  Throughput: %6.1f  |  Latency: %s\n",
 		meas.Load, meas.Throughput, meas.Latency.String())
 	return nil
-}
-
-func (bm *Benchmark) measureLatency() time.Duration {
-	start := time.Now()
-	bm.loadGen.GetClient().SubmitTxAndWait()
-	return time.Since(start)
 }
 
 func (bm *Benchmark) saveResults() error {

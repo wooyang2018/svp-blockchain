@@ -28,8 +28,7 @@ func SubmitTxAndWait(cls *cluster.Cluster, tx *core.Transaction) (int, error) {
 	}
 	for {
 		if err = WaitTxCommitted(cls.GetNode(idx), tx); err != nil {
-			// maybe current leader doesn't receive tx
-			// resubmit tx again
+			// maybe current leader doesn't receive tx. resubmit tx again
 			time.Sleep(1 * time.Second)
 			return SubmitTxAndWait(cls, tx)
 		} else {
@@ -43,10 +42,10 @@ func WaitTxCommitted(node cluster.Node, tx *core.Transaction) error {
 	for {
 		status, err := GetTxStatus(node, tx.Hash())
 		if err != nil {
-			return fmt.Errorf("get tx status error %w", err)
+			return fmt.Errorf("get tx status error, %w", err)
 		} else {
 			if status == txpool.TxStatusNotFound {
-				return errors.New("submited tx status not found")
+				return errors.New("submitted tx status not found")
 			}
 			if status == txpool.TxStatusCommitted {
 				return nil
@@ -130,7 +129,7 @@ func QueryState(node cluster.Node, query *execution.QueryData) ([]byte, error) {
 	resp, err := http.Post(node.GetEndpoint()+"/querystate",
 		"application/json", bytes.NewReader(b))
 	if err = checkResponse(resp, err); err != nil {
-		return nil, fmt.Errorf("cannot query state %w", err)
+		return nil, fmt.Errorf("cannot query state, %w", err)
 	}
 	defer resp.Body.Close()
 	var ret []byte
@@ -157,7 +156,7 @@ func uploadBinChainCode(cls *cluster.Cluster, binccPath string) (int, []byte, er
 			return i, codeID, json.NewDecoder(resp.Body).Decode(&codeID)
 		}
 	}
-	return 0, nil, fmt.Errorf("cannot upload bincc %w", retErr)
+	return 0, nil, fmt.Errorf("cannot upload bincc, %w", retErr)
 }
 
 func createBinccRequestBody(binccPath string) (*bytes.Buffer, string, error) {
