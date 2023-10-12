@@ -62,7 +62,7 @@ func newTestProposal(priv core.Signer) (*core.Vote, *core.QuorumCert, *core.Bloc
 	return blk0, qc, blk
 }
 
-func TestMsgService_BroadcastProposal(t *testing.T) {
+func TestBroadcastProposal(t *testing.T) {
 	asrt := assert.New(t)
 
 	svc, raws, _ := setupMsgServiceWithLoopBackPeers()
@@ -96,7 +96,7 @@ func TestMsgService_BroadcastProposal(t *testing.T) {
 	}
 }
 
-func TestMsgService_SendVote(t *testing.T) {
+func TestSendVote(t *testing.T) {
 	asrt := assert.New(t)
 
 	svc, raws, peers := setupMsgServiceWithLoopBackPeers()
@@ -127,7 +127,7 @@ func TestMsgService_SendVote(t *testing.T) {
 	}
 }
 
-func TestMsgService_SendNewView(t *testing.T) {
+func TestSendNewView(t *testing.T) {
 	asrt := assert.New(t)
 
 	svc, raws, peers := setupMsgServiceWithLoopBackPeers()
@@ -158,7 +158,7 @@ func TestMsgService_SendNewView(t *testing.T) {
 	}
 }
 
-func TestMsgService_BroadcastTxList(t *testing.T) {
+func TestBroadcastTxList(t *testing.T) {
 	asrt := assert.New(t)
 
 	svc, raws, _ := setupMsgServiceWithLoopBackPeers()
@@ -195,7 +195,7 @@ func TestMsgService_BroadcastTxList(t *testing.T) {
 	}
 }
 
-func TestMsgService_RequestBlock(t *testing.T) {
+func TestRequestBlock(t *testing.T) {
 	asrt := assert.New(t)
 
 	_, _, blk := newTestProposal(core.GenerateKey(nil))
@@ -219,7 +219,7 @@ func TestMsgService_RequestBlock(t *testing.T) {
 	asrt.Error(err)
 }
 
-func TestMsgService_RequestTxList(t *testing.T) {
+func TestRequestTxList(t *testing.T) {
 	asrt := assert.New(t)
 
 	var txs = &core.TxList{

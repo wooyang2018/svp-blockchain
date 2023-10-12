@@ -5,7 +5,6 @@ package storage
 
 import "errors"
 
-// DataEntryPrefix
 type DataEntryPrefix byte
 
 // data collection prefixes for different data collections
@@ -24,13 +23,15 @@ const (
 	MERKLE_TREE_HEIGHT                                   // tree height
 	MERKLE_LEAF_COUNT                                    // tree leaf count
 	MERKLE_NODE_BY_POSITION                              // tree node value by position
-	BOOK_KEEPER                                          //BookKeeper state key prefix
-	CONTRACT                                             //Smart contract deploy code key prefix
-	STORAGE                                              //Smart contract storage key prefix
+	BOOK_KEEPER                                          // BookKeeper state key prefix
+	CONTRACT                                             // Smart contract deploy code key prefix
+	STORAGE                                              // Smart contract storage key prefix
 	DESTROYED                                            // record destroyed smart contract: prefix+address -> height
 	ETH_CODE                                             // eth contract code:hash -> bytes
 	ETH_ACCOUNT                                          // eth account: address -> [nonce, codeHash]
 	ETH_FILTER_START                                     // support eth filter height
+	EVENT_NOTIFY              DataEntryPrefix = 0x14     //Event notify key prefix
+	SYS_CURRENT_BLOCK         DataEntryPrefix = 0x10     //Current block key prefix
 )
 
 var ErrNotFound = errors.New("not found")

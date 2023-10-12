@@ -10,7 +10,7 @@ You can run the cluster tests on local machine in a few seconds.
 sudo apt-get install build-essential
 ```
 
-2. Download and install [`go 1.20`](https://golang.org/doc/install)
+2. Download and install [`golang`](https://golang.org/doc/install)
 3. Prepare the repo and run tests
 
 ```bash
@@ -42,8 +42,7 @@ node.
 cd tests && go run .
 ```
 
-The start command for each local node is displayed directly to the console as follows. Now, you can open 7 Shell windows
-and start each node in turn.
+The start command for each local node is displayed directly to the console as follows. Now, you can open 7 shell windows and start each node in turn.
 
 ### Remote Mode
 
@@ -57,11 +56,10 @@ RemoteHostsPath = "hosts"
 SetupClusterTemplate = true
 ```
 
-You will also need to modify the `tests/hosts` file based on your remote node information. Each line corresponds to a
-node's IP address, username, NIC name and working directory and is separated by a tab.
+You will also need to modify the `tests/hosts` file based on your remote node information.
+Each line corresponds to a node's IP address, username, NIC name and working directory and is separated by a tab.
 
-Then execute the following command to generate the configuration files and startup commands required to start each
-remote node.
+Then execute the following command to generate the configuration files and startup commands required to start each remote node.
 
 ```bash
 cd tests && go run .

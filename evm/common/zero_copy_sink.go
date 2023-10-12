@@ -6,7 +6,7 @@ package common
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
+	"math"
 )
 
 type ZeroCopySink struct {
@@ -24,8 +24,6 @@ func (self *ZeroCopySink) tryGrowByReslice(n int) (int, bool) {
 	return 0, false
 }
 
-const maxInt = int(^uint(0) >> 1)
-
 // grow grows the buffer to guarantee space for n more bytes.
 // It returns the index where bytes should be written.
 // If the buffer can't grow it will panic with ErrTooLarge.
@@ -34,11 +32,10 @@ func (self *ZeroCopySink) grow(n int) int {
 	if i, ok := self.tryGrowByReslice(n); ok {
 		return i
 	}
-
 	l := len(self.buf)
 	c := cap(self.buf)
-	if c > maxInt-c-n {
-		panic(ErrTooLarge)
+	if c > math.MaxInt-c-n {
+		panic(bytes.ErrTooLarge)
 	}
 	// Not enough space anywhere, we need to allocate.
 	buf := makeSlice(2*c + n)
@@ -118,7 +115,6 @@ func (self *ZeroCopySink) WriteInt16(data int16) {
 func (self *ZeroCopySink) WriteVarBytes(data []byte) (size uint64) {
 	l := uint64(len(data))
 	size = self.WriteVarUint(l) + l
-
 	self.WriteBytes(data)
 	return
 }
@@ -153,7 +149,6 @@ func (self *ZeroCopySink) WriteVarUint(data uint64) (size uint64) {
 		binary.LittleEndian.PutUint64(buf[1:], uint64(data))
 		size = 9
 	}
-
 	self.BackUp(9 - size)
 	return
 }
@@ -170,10 +165,7 @@ func (self *ZeroCopySink) Bytes() []byte { return self.buf }
 
 func (self *ZeroCopySink) Reset() { self.buf = self.buf[:0] }
 
-var ErrTooLarge = errors.New("bytes.Buffer: too large")
-
-// makeSlice allocates a slice of size n. If the allocation fails, it panics
-// with ErrTooLarge.
+// makeSlice allocates a slice of size n. If the allocation fails, it panics with ErrTooLarge.
 func makeSlice(n int) []byte {
 	// If the make fails, give a known error.
 	defer func() {

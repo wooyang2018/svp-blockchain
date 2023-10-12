@@ -18,7 +18,7 @@ func newTestStorage() *Storage {
 	return New(dir, DefaultConfig)
 }
 
-func TestStorage_StateZero(t *testing.T) {
+func TestStateZero(t *testing.T) {
 	asrt := assert.New(t)
 	strg := newTestStorage()
 	asrt.Nil(strg.GetMerkleRoot())
@@ -27,7 +27,7 @@ func TestStorage_StateZero(t *testing.T) {
 	asrt.Nil(strg.GetState([]byte("some key")))
 }
 
-func TestStorage_Commit(t *testing.T) {
+func TestCommit(t *testing.T) {
 	asrt := assert.New(t)
 	strg := newTestStorage()
 

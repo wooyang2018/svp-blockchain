@@ -1,3 +1,6 @@
+// Copyright (C) 2023 Wooyang2018
+// Licensed under the GNU General Public License v3.0
+
 package kvdb
 
 import (
@@ -9,7 +12,7 @@ import (
 	"github.com/wooyang2018/svp-blockchain/execution/chaincode"
 )
 
-func TestKVDB_Init(t *testing.T) {
+func TestInit(t *testing.T) {
 	asrt := assert.New(t)
 	state := chaincode.NewMockState()
 	jctx := new(KVDB)
@@ -30,7 +33,7 @@ func TestKVDB_Init(t *testing.T) {
 	asrt.Equal(ctx.MockSender, owner, "deployer should be owner")
 }
 
-func TestKVDB_Set(t *testing.T) {
+func TestSet(t *testing.T) {
 	asrt := assert.New(t)
 	state := chaincode.NewMockState()
 	jctx := new(KVDB)

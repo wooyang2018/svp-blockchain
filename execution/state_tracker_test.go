@@ -31,7 +31,7 @@ func (store *mapStateStore) SetState(key, value []byte) {
 	store.stateMap[string(key)] = value
 }
 
-func TestStateTracker_GetState(t *testing.T) {
+func TestGetState(t *testing.T) {
 	asrt := assert.New(t)
 
 	ms := newMapStateStore()
@@ -50,7 +50,7 @@ func TestStateTracker_GetState(t *testing.T) {
 	asrt.Equal([]byte{100}, trkChild.GetState([]byte{1}), "child get latest state from parent")
 }
 
-func TestStateTracker_SetState(t *testing.T) {
+func TestSetState(t *testing.T) {
 	asrt := assert.New(t)
 
 	ms := newMapStateStore()
@@ -78,7 +78,7 @@ func TestStateTracker_SetState(t *testing.T) {
 	asrt.Equal(3, len(scList))
 }
 
-func TestStateTracker_Merge(t *testing.T) {
+func TestMerge(t *testing.T) {
 	asrt := assert.New(t)
 
 	ms := newMapStateStore()
@@ -103,7 +103,7 @@ func TestStateTracker_Merge(t *testing.T) {
 	asrt.Equal(2, len(scList))
 }
 
-func TestStateTracker_WithPrefix(t *testing.T) {
+func TestWithPrefix(t *testing.T) {
 	asrt := assert.New(t)
 
 	ms := newMapStateStore()

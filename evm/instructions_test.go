@@ -45,7 +45,6 @@ var commonParams []*twoOperandParams
 var twoOpMethods map[string]executionFunc
 
 func init() {
-
 	// Params is a list of common edgecases that should be used for some common tests
 	params := []string{
 		"0000000000000000000000000000000000000000000000000000000000000000", // 0
@@ -91,7 +90,6 @@ func init() {
 }
 
 func testTwoOperandOp(t *testing.T, tests []TwoOperandTestcase, opFn executionFunc, name string) {
-
 	var (
 		env            = NewEVM(BlockContext{}, TxContext{}, nil, params.TestChainConfig, Config{})
 		stack          = newstack()
@@ -630,21 +628,11 @@ func TestCreate2Addreses(t *testing.T) {
 			expected: "0xE33C0C7F7df4809055C3ebA6c09CFe4BaF1BD9e0",
 		},
 	} {
-
 		origin := common.BytesToAddress(common.FromHex(tt.origin))
 		salt := common.BytesToHash(common.FromHex(tt.salt))
 		code := common.FromHex(tt.code)
 		codeHash := crypto.Keccak256(code)
 		address := crypto.CreateAddress2(origin, salt, codeHash)
-		/*
-			stack          := newstack()
-			// salt, but we don't need that for this test
-			stack.push(big.NewInt(int64(len(code)))) //size
-			stack.push(big.NewInt(0)) // memstart
-			stack.push(big.NewInt(0)) // value
-			gas, _ := gasCreate2(params.GasTable{}, nil, nil, stack, nil, 0)
-			fmt.Printf("Example %d\n* address `0x%x`\n* salt `0x%x`\n* init_code `0x%x`\n* gas (assuming no mem expansion): `%v`\n* result: `%s`\n\n", i,origin, salt, code, gas, address.String())
-		*/
 		expected := common.BytesToAddress(common.FromHex(tt.expected))
 		if !bytes.Equal(expected.Bytes(), address.Bytes()) {
 			t.Errorf("test %d: expected %s, got %s", i, expected.String(), address.String())

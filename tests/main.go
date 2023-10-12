@@ -39,7 +39,7 @@ var (
 	BroadcastTx    = true
 
 	// run tests in remote linux cluster
-	RemoteLinuxCluster    = true // if false it will use local cluster (running multiple nodes on single local machine)
+	RemoteLinuxCluster    = false // if false it will use local cluster (running multiple nodes on single local machine)
 	RemoteSetupRequired   = true
 	RemoteInstallRequired = false // if false it will not try to install dstat on remote machine
 	RemoteRunRequired     = false // if false it will not run dstat on remote machine
@@ -49,11 +49,12 @@ var (
 	RemoteNetworkLoss     = 15.0
 
 	// run benchmark, otherwise run experiments
-	RunBenchmark  = true
+	RunBenchmark  = false
 	BenchDuration = 1 * time.Minute
 	BenchLoads    = []int{2700}
 
-	SetupClusterTemplate = false
+	OnlySetupCluster = false
+	OnlyRunCluster   = true
 )
 
 func getNodeConfig() node.Config {
@@ -91,27 +92,33 @@ func main() {
 
 	if RunBenchmark {
 		runBenchmark()
-	} else {
-		var cfactory cluster.ClusterFactory
-		if RemoteLinuxCluster {
-			cfactory = makeRemoteClusterFactory()
-		} else {
-			cfactory = makeLocalClusterFactory()
-		}
-		if SetupClusterTemplate {
-			if cls, err := cfactory.SetupCluster("cluster_template"); err == nil {
-				fmt.Println("\nThe cluster startup command is as follows.")
-				for i := 0; i < cls.NodeCount(); i++ {
-					fmt.Println(cls.GetNode(i).PrintCmd())
-				}
-			} else {
-				fmt.Println(err)
-			}
-			return
-		}
-		testutil.NewLoadGenerator(makeLoadClient(), LoadTxPerSec, LoadJobPerTick)
-		runExperiments(cfactory)
+		return
 	}
+
+	var cfactory cluster.ClusterFactory
+	if RemoteLinuxCluster {
+		cfactory = makeRemoteClusterFactory()
+	} else {
+		cfactory = makeLocalClusterFactory()
+	}
+
+	if OnlySetupCluster {
+		if cls, err := cfactory.SetupCluster("cluster_template"); err == nil {
+			fmt.Println("\nThe cluster startup command is as follows.")
+			for i := 0; i < cls.NodeCount(); i++ {
+				fmt.Println(cls.GetNode(i).PrintCmd())
+			}
+		} else {
+			fmt.Println(err)
+		}
+		return
+	}
+	testutil.NewLoadGenerator(makeLoadClient(), LoadTxPerSec, LoadJobPerTick)
+	if OnlyRunCluster {
+		runRapidCluster(cfactory)
+		return
+	}
+	runExperiments(cfactory)
 }
 
 func setupTransport() {
@@ -141,8 +148,25 @@ func runExperiments(cfactory cluster.ClusterFactory) {
 	fmt.Printf("\nTotal: %d  |  Pass: %d  |  Fail: %d\n", len(r.experiments), pass, fail)
 }
 
+type KeepAliveRunning struct{}
+
+func (expm *KeepAliveRunning) Name() string {
+	return "keep_alive_running"
+}
+
+func (expm *KeepAliveRunning) Run(*cluster.Cluster) error {
+	select {}
+}
+
+func runRapidCluster(cfactory cluster.ClusterFactory) {
+	r := &ExperimentRunner{cfactory: cfactory}
+	if err := r.runSingleExperiment(&KeepAliveRunning{}); err != nil {
+		fmt.Printf("%+v\n", err)
+	}
+}
+
 func printAndCheckVars() {
-	if !SetupClusterTemplate && runtime.GOOS == "windows" {
+	if !OnlySetupCluster && runtime.GOOS == "windows" {
 		fmt.Println("cannot use windows to run experiments")
 		os.Exit(1)
 	}
@@ -205,8 +229,12 @@ func printAndCheckVars() {
 		fmt.Println("RunBenchmark ===> RemoteLinuxCluster")
 		pass = false
 	}
-	if SetupClusterTemplate && RunBenchmark {
-		fmt.Println("SetupClusterTemplate ===> !RunBenchmark")
+	if OnlySetupCluster && RunBenchmark {
+		fmt.Println("OnlySetupCluster ===> !RunBenchmark")
+		pass = false
+	}
+	if OnlyRunCluster && RunBenchmark {
+		fmt.Println("OnlyRunCluster ===> !RunBenchmark")
 		pass = false
 	}
 	if consensus.PreserveTxFlag && len(BenchLoads) != 1 {

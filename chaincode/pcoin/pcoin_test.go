@@ -12,7 +12,7 @@ import (
 	"github.com/wooyang2018/svp-blockchain/execution/chaincode"
 )
 
-func TestPCoin_Init(t *testing.T) {
+func TestInit(t *testing.T) {
 	asrt := assert.New(t)
 	state := chaincode.NewMockState()
 	jctx := new(PCoin)
@@ -34,7 +34,7 @@ func TestPCoin_Init(t *testing.T) {
 	asrt.Equal(ctx.MockSender, minter, "deployer should be minter")
 }
 
-func TestPCoin_SetMinter(t *testing.T) {
+func TestSetMinter(t *testing.T) {
 	asrt := assert.New(t)
 	state := chaincode.NewMockState()
 	jctx := new(PCoin)
@@ -69,7 +69,7 @@ func TestPCoin_SetMinter(t *testing.T) {
 	asrt.Equal([]byte{2, 2, 2}, minter)
 }
 
-func TestPCoin_Mint(t *testing.T) {
+func TestMint(t *testing.T) {
 	asrt := assert.New(t)
 	state := chaincode.NewMockState()
 	jctx := new(PCoin)
@@ -121,7 +121,7 @@ func TestPCoin_Mint(t *testing.T) {
 	asrt.EqualValues(100, balance)
 }
 
-func TestPCoin_Transfer(t *testing.T) {
+func TestTransfer(t *testing.T) {
 	asrt := assert.New(t)
 	state := chaincode.NewMockState()
 	jctx := new(PCoin)

@@ -28,7 +28,7 @@ func TestNewTree(t *testing.T) {
 	}
 }
 
-func TestTree_Root(t *testing.T) {
+func TestRoot(t *testing.T) {
 	store := NewMapStore()
 	tree := NewTree(store, Config{Hash: crypto.SHA1, BranchFactor: 2})
 
@@ -54,7 +54,7 @@ func TestTree_Root(t *testing.T) {
 	asrt.Equal(upd.Branches[2], tree.Root())
 }
 
-func TestTree_Update(t *testing.T) {
+func TestUpdate(t *testing.T) {
 	asrt := assert.New(t)
 
 	store := NewMapStore()
@@ -126,7 +126,7 @@ func TestTree_Update(t *testing.T) {
 	asrt.Equal(n20, store.GetNode(NewPosition(2, big.NewInt(0))))
 }
 
-func TestTree_Verify(t *testing.T) {
+func TestVerify(t *testing.T) {
 	store := NewMapStore()
 	tree := NewTree(store, Config{Hash: crypto.SHA1, BranchFactor: 3})
 

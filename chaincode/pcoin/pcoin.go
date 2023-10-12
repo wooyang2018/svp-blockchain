@@ -39,16 +39,12 @@ func (c *PCoin) Invoke(ctx chaincode.CallContext) error {
 		return err
 	}
 	switch input.Method {
-
 	case "setMinter":
 		return invokeSetMinter(ctx, input)
-
 	case "mint":
 		return invokeMint(ctx, input)
-
 	case "transfer":
 		return invokeTransfer(ctx, input)
-
 	default:
 		return errors.New("method not found")
 	}
@@ -60,16 +56,12 @@ func (c *PCoin) Query(ctx chaincode.CallContext) ([]byte, error) {
 		return nil, err
 	}
 	switch input.Method {
-
 	case "minter":
 		return ctx.GetState(keyMinter), nil
-
 	case "total":
 		return queryTotal(ctx)
-
 	case "balance":
 		return queryBalance(ctx, input)
-
 	default:
 		return nil, errors.New("method not found")
 	}

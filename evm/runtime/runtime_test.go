@@ -716,7 +716,6 @@ func BenchmarkSimpleLoop(b *testing.B) {
 func TestEip2929Cases(t *testing.T) {
 	id := 1
 	prettyPrint := func(comment string, code []byte) {
-
 		instrs := make([]string, 0)
 		it := asm.NewInstructionIterator(code)
 		for it.Next() {

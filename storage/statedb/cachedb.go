@@ -81,41 +81,6 @@ func (self *CacheDB) put(prefix storage.DataEntryPrefix, key []byte, value []byt
 	self.memdb.Put(self.keyScratch, value)
 }
 
-func (self *CacheDB) GetContract(addr common.Address) (*DeployCode, bool, error) {
-	destroyed, err := self.IsContractDestroyed(addr)
-	if err != nil {
-		return nil, false, err
-	}
-	if destroyed {
-		return nil, true, nil
-	}
-
-	value, err := self.get(storage.CONTRACT, addr[:])
-	if err != nil {
-		return nil, false, err
-	}
-
-	if len(value) == 0 {
-		return nil, false, nil
-	}
-
-	contract := new(DeployCode)
-	if err := contract.Deserialization(common.NewZeroCopySource(value)); err != nil {
-		return nil, false, err
-	}
-	return contract, false, nil
-}
-
-func (self *CacheDB) PutContract(contract *DeployCode) {
-	address := contract.Address()
-
-	sink := common.NewZeroCopySink(nil)
-	contract.Serialization(sink)
-
-	value := sink.Bytes()
-	self.put(storage.CONTRACT, address[:], value)
-}
-
 func (self *CacheDB) IsContractDestroyed(addr common.Address) (bool, error) {
 	value, err := self.get(storage.DESTROYED, addr[:])
 	if err != nil {

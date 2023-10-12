@@ -119,7 +119,7 @@ func (r *Runner) serveStateAndGetResult() ([]byte, error) {
 			return nil, fmt.Errorf("read upstream error, %w", err)
 		}
 		up := new(UpStream)
-		if err := json.Unmarshal(b, up); err != nil {
+		if err = json.Unmarshal(b, up); err != nil {
 			return nil, errors.New("cannot parse upstream data")
 		}
 		if up.Type == UpStreamResult {
@@ -128,7 +128,7 @@ func (r *Runner) serveStateAndGetResult() ([]byte, error) {
 			}
 			return up.Value, nil
 		}
-		if err := r.serveState(up); err != nil {
+		if err = r.serveState(up); err != nil {
 			return nil, err
 		}
 	}
@@ -137,15 +137,12 @@ func (r *Runner) serveStateAndGetResult() ([]byte, error) {
 func (r *Runner) serveState(up *UpStream) error {
 	down := new(DownStream)
 	switch up.Type {
-
 	case UpStreamGetState:
 		val := r.callContext.GetState(up.Key)
 		down.Value = val
-
 	case UpStreamSetState:
 		r.callContext.SetState(up.Key, up.Value)
 	}
-
 	b, _ := json.Marshal(down)
 	return r.rw.write(b)
 }

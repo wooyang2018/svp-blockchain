@@ -43,7 +43,7 @@ type EventStore interface {
 	//GetEventNotifyByTx return event notify by transaction hash
 	GetEventNotifyByTx(txHash common.Uint256) (*ExecuteNotify, error)
 	//Commit event notify to store
-	CommitTo() error
+	Commit() error
 }
 
 type Setter interface {

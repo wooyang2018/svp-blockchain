@@ -18,7 +18,6 @@ var ErrEof = errors.New("got EOF, can not get the next byte")
 type SerializableData interface {
 	// Write data to writer
 	Serialize(w io.Writer) error
-
 	// read data to reader
 	Deserialize(r io.Reader) error
 }
@@ -58,7 +57,7 @@ type SerializableData interface {
 
 func WriteVarUint(writer io.Writer, value uint64) error {
 	var buf [9]byte
-	var len = 0
+	var len int
 	if value < 0xFD {
 		buf[0] = uint8(value)
 		len = 1

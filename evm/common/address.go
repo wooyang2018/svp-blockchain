@@ -22,7 +22,7 @@ var ADDRESS_EMPTY = Address{}
 
 // ToHexString returns  hex string representation of Address
 func (self *Address) ToHexString() string {
-	return fmt.Sprintf("%x", ToArrayReverse(self[:]))
+	return fmt.Sprintf("%x", ReverseArray(self[:]))
 }
 
 // Serialize serialize Address into io.Writer
@@ -69,7 +69,7 @@ func AddressFromHexString(s string) (Address, error) {
 	if err != nil {
 		return ADDRESS_EMPTY, err
 	}
-	return AddressParseFromBytes(ToArrayReverse(hx))
+	return AddressParseFromBytes(ReverseArray(hx))
 }
 
 const MaxBase58AddrLen = 2048 // just to avoid dos
