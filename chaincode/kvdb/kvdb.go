@@ -75,7 +75,7 @@ func queryGet(ctx chaincode.CallContext, input *Input) ([]byte, error) {
 	if len(input.Key) == 0 {
 		return nil, errors.New("empty key")
 	}
-	return json.Marshal(ctx.GetState(input.Key))
+	return ctx.GetState(input.Key), nil
 }
 
 func parseInput(b []byte) (*Input, error) {

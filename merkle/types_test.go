@@ -40,7 +40,7 @@ func TestPosition(t *testing.T) {
 	}
 }
 
-func TestLoadSum(t *testing.T) {
+func TestGroupLoadSum(t *testing.T) {
 	s1 := NewMapStore()
 	s2 := storeWith3Nodes()
 
@@ -70,7 +70,7 @@ func TestLoadSum(t *testing.T) {
 	}
 }
 
-func TestSetNode(t *testing.T) {
+func TestGroupSetNode(t *testing.T) {
 	store := storeWith3Nodes()
 
 	b := NewGroup(crypto.SHA1, NewTreeCalc(2), store, NewPosition(1, big.NewInt(0)))

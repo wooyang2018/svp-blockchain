@@ -47,7 +47,7 @@ func Run(config Config) {
 	node.setupBinccDir()
 	node.setupLogger()
 	node.readFiles()
-	node.LimitCPUs()
+	node.limitCPUs()
 	node.setupComponents()
 	logger.I().Infow("node setup done")
 	node.consensus.Start()
@@ -59,7 +59,7 @@ func Run(config Config) {
 	node.consensus.Stop()
 }
 
-func (node *Node) LimitCPUs() {
+func (node *Node) limitCPUs() {
 	runtime.GOMAXPROCS(MaxProcsNum)
 	logger.I().Debugf("setup node to use %d out of %d CPUs",
 		runtime.GOMAXPROCS(0), runtime.NumCPU())
@@ -86,18 +86,18 @@ func (node *Node) setupBinccDir() {
 
 func (node *Node) readFiles() {
 	var err error
-	node.privKey, err = readNodeKey(node.config.Datadir)
+	node.privKey, err = ReadNodeKey(node.config.Datadir)
 	if err != nil {
 		logger.I().Fatalw("read key failed", "error", err)
 	}
 	logger.I().Infow("read nodekey", "pubkey", node.privKey.PublicKey())
 
-	node.genesis, err = readGenesis(node.config.Datadir)
+	node.genesis, err = ReadGenesis(node.config.Datadir)
 	if err != nil {
 		logger.I().Fatalw("read genesis failed", "error", err)
 	}
 
-	node.peers, err = readPeers(node.config.Datadir)
+	node.peers, err = ReadPeers(node.config.Datadir)
 	if err != nil {
 		logger.I().Fatalw("read peers failed", "error", err)
 	}

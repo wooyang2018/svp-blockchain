@@ -65,10 +65,7 @@ func TestSet(t *testing.T) {
 	}
 	b, _ = json.Marshal(input)
 	ctx.MockInput = b
-	b, err = jctx.Query(ctx)
+	value, err := jctx.Query(ctx)
 	asrt.NoError(err)
-
-	var value []byte
-	json.Unmarshal(b, &value)
 	asrt.EqualValues([]byte("value"), value)
 }

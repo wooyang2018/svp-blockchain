@@ -65,7 +65,6 @@ func (ftry *LocalFactory) setup() error {
 		genesis.StakeQuotas[i] = quotas[i]
 	}
 	peers := MakePeers(keys, addrs)
-
 	return SetupTemplateDir(ftry.templateDir, keys, genesis, peers)
 }
 

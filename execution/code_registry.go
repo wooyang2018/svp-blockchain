@@ -59,9 +59,8 @@ func (reg *codeRegistry) install(input *DeploymentInput) error {
 	return driver.Install(input.CodeInfo.CodeID, input.InstallData)
 }
 
-func (reg *codeRegistry) deploy(
-	codeAddr []byte, input *DeploymentInput, st *stateTracker,
-) (chaincode.Chaincode, error) {
+func (reg *codeRegistry) deploy(codeAddr []byte, input *DeploymentInput,
+	st *stateTracker) (chaincode.Chaincode, error) {
 	driver, err := reg.getDriver(input.CodeInfo.DriverType)
 	if err != nil {
 		return nil, err
@@ -70,8 +69,7 @@ func (reg *codeRegistry) deploy(
 	return driver.GetInstance(input.CodeInfo.CodeID)
 }
 
-func (reg *codeRegistry) getInstance(
-	codeAddr []byte, state stateGetter,
+func (reg *codeRegistry) getInstance(codeAddr []byte, state stateGetter,
 ) (chaincode.Chaincode, error) {
 	info, err := reg.getCodeInfo(codeAddr, state)
 	if err != nil {

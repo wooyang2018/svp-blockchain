@@ -62,7 +62,7 @@ func (m *MockMsgService) RequestTxList(pubKey *core.PublicKey, hashes [][]byte) 
 	return ret.(*core.TxList), args.Error(1)
 }
 
-func TestSubmitTx(t *testing.T) {
+func TestTxPoolSubmitTx(t *testing.T) {
 	asrt := assert.New(t)
 
 	priv := core.GenerateKey(nil)
@@ -117,7 +117,7 @@ func TestSubmitTx(t *testing.T) {
 	asrt.Equal(1, pool.GetStatus().Queue)
 }
 
-func TestSubscribeTxList(t *testing.T) {
+func TestTxPoolSubscribeTxList(t *testing.T) {
 	asrt := assert.New(t)
 
 	priv := core.GenerateKey(nil)
@@ -154,7 +154,7 @@ func TestSubscribeTxList(t *testing.T) {
 	storage.AssertExpectations(t)
 }
 
-func TestSyncTxs(t *testing.T) {
+func TestTxPoolSyncTxs(t *testing.T) {
 	asrt := assert.New(t)
 
 	priv := core.GenerateKey(nil)
@@ -211,7 +211,7 @@ func TestSyncTxs(t *testing.T) {
 	storage.AssertExpectations(t)
 }
 
-func TestGetTxsToExecute(t *testing.T) {
+func TestTxPoolGetTxsToExecute(t *testing.T) {
 	asrt := assert.New(t)
 
 	priv := core.GenerateKey(nil)
