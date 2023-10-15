@@ -84,7 +84,7 @@ func TestEIP2200(t *testing.T) {
 	for i, tt := range eip2200Tests {
 		address := common.BytesToAddress([]byte("contract"))
 
-		db := statedb.NewCacheDB(statedb.NewOverlayDB(storage.NewMemLevelDBStore()))
+		db := statedb.NewCacheDB(storage.NewMemLevelDBStore())
 		statedb := statedb.NewStateDB(db, common.Hash{}, common.Hash{}, handle)
 		statedb.CreateAccount(address)
 		statedb.SetCode(address, hexutil.MustDecode(tt.input))

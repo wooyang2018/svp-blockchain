@@ -491,7 +491,7 @@ func (evm *EVM) Create2(caller ContractRef, code []byte, gas uint64, endowment *
 // ChainConfig returns the environment's chain configuration
 func (evm *EVM) ChainConfig() *params.ChainConfig { return evm.chainConfig }
 
-// make native ong transfer Log
+// MakeOngTransferLog makes native ong transfer Log
 func MakeOngTransferLog(stateDB StateDB, from, to ethcomm.Address, value *big.Int) {
 	if value.Cmp(big0) > 0 {
 		topic := make([]ethcomm.Hash, 3)

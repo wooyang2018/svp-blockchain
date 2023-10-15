@@ -110,7 +110,7 @@ func StoreCode(codeDir string, r io.Reader) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := writeCodeFile(codeDir, codeID, buf); err != nil {
+	if err = writeCodeFile(codeDir, codeID, buf); err != nil {
 		return nil, err
 	}
 	return codeID, nil

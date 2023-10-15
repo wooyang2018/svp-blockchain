@@ -34,41 +34,6 @@ func TestInit(t *testing.T) {
 	asrt.Equal(ctx.MockSender, minter, "deployer should be minter")
 }
 
-func TestSetMinter(t *testing.T) {
-	asrt := assert.New(t)
-	state := chaincode.NewMockState()
-	jctx := new(PCoin)
-
-	ctx := new(chaincode.MockCallContext)
-	ctx.MockState = state
-	ctx.MockSender = []byte{1, 1, 1}
-	err := jctx.Init(ctx)
-	asrt.NoError(err)
-
-	input := &Input{
-		Method: "setMinter",
-		Dest:   []byte{2, 2, 2},
-	}
-	b, _ := json.Marshal(input)
-	ctx.MockSender = []byte{3, 3, 3}
-	ctx.MockInput = b
-	err = jctx.Invoke(ctx)
-	asrt.Error(err, "sender not minter error")
-
-	ctx.MockSender = []byte{1, 1, 1}
-	err = jctx.Invoke(ctx)
-	asrt.NoError(err)
-
-	input = &Input{
-		Method: "minter",
-	}
-	b, _ = json.Marshal(input)
-	ctx.MockInput = b
-	minter, err := jctx.Query(ctx)
-	asrt.NoError(err)
-	asrt.Equal([]byte{2, 2, 2}, minter)
-}
-
 func TestMint(t *testing.T) {
 	asrt := assert.New(t)
 	state := chaincode.NewMockState()

@@ -14,15 +14,16 @@ import (
 // When smart contract execute finish, need to commit transaction cache to block cache
 type CacheDB struct {
 	memdb      *MemDB
-	backend    *OverlayDB
+	backend    storage.PersistStore
 	keyScratch []byte
+	dbErr      error
 }
 
 const initMemCap = 1024
 const initKvNum = 16
 
 // NewCacheDB return a new contract cache
-func NewCacheDB(store *OverlayDB) *CacheDB {
+func NewCacheDB(store storage.PersistStore) *CacheDB {
 	return &CacheDB{
 		backend: store,
 		memdb:   NewMemDB(initMemCap, initKvNum),
@@ -30,7 +31,7 @@ func NewCacheDB(store *OverlayDB) *CacheDB {
 }
 
 func (self *CacheDB) SetDbErr(err error) {
-	self.backend.SetError(err)
+	self.dbErr = err
 }
 
 func (self *CacheDB) Reset() {

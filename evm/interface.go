@@ -72,9 +72,9 @@ type StateDB interface {
 type CallContext interface {
 	// Call another contract
 	Call(env *EVM, me ContractRef, addr ethcomm.Address, data []byte, gas, value *big.Int) ([]byte, error)
-	// Take another's contract code and execute within our own context
+	// CallCode takes another contract code and executes within our own context
 	CallCode(env *EVM, me ContractRef, addr ethcomm.Address, data []byte, gas, value *big.Int) ([]byte, error)
-	// Same as CallCode except sender and value is propagated from parent to child scope
+	// DelegateCall is same as CallCode except sender and value is propagated from parent to child scope
 	DelegateCall(env *EVM, me ContractRef, addr ethcomm.Address, data []byte, gas *big.Int) ([]byte, error)
 	// Create a new contract
 	Create(env *EVM, me ContractRef, data []byte, gas, value *big.Int) ([]byte, ethcomm.Address, error)

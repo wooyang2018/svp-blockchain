@@ -4,7 +4,6 @@
 package common
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,9 +15,4 @@ func TestHexAndBytesTransfer(t *testing.T) {
 	bytesAfterTrans, err := HexToBytes(stringAfterTrans)
 	assert.Nil(t, err)
 	assert.Equal(t, testBytes, bytesAfterTrans)
-}
-
-func TestBase58(t *testing.T) {
-	addr := ADDRESS_EMPTY
-	fmt.Println("emtpy addr:", addr.ToBase58())
 }

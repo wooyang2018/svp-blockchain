@@ -30,9 +30,9 @@ Experiments from `tests/experiments` will be run and health checks will be perfo
 Modify the following global variables in the source code of `tests/main.go`.
 
 ```go
-NodeCount = 7 //your expected number of nodes
+NodeCount = 7 // your expected number of nodes
 RemoteLinuxCluster = false
-SetupClusterTemplate = true
+OnlySetupCluster = true
 ```
 
 Then execute the following command to generate the configuration files and startup commands required to start each local
@@ -49,11 +49,11 @@ The start command for each local node is displayed directly to the console as fo
 Modify the following global variables in the source code of `tests/main.go`.
 
 ```go
-NodeCount = 7 //your expected number of nodes
+NodeCount = 7 // your expected number of nodes
 RemoteLinuxCluster = true
 RemoteKeySSH = "~/.ssh/id_rsa"
 RemoteHostsPath = "hosts"
-SetupClusterTemplate = true
+OnlySetupCluster = true
 ```
 
 You will also need to modify the `tests/hosts` file based on your remote node information.
@@ -76,13 +76,13 @@ and start each blockchain node.
 Modify the following global variables in the source code of `tests/main.go`.
 
 ```
-NodeCount = 7 //your expected number of nodes
-WindowSize = 4 //your expected size of voting window 
+NodeCount = 7 // your expected number of nodes
+WindowSize = 4 // your expected size of voting window 
 RemoteLinuxCluster = true
 RemoteKeySSH = "~/.ssh/id_rsa"
 RemoteHostsPath = "hosts"
 RunBenchmark = true 
-SetupClusterTemplate = false
+OnlySetupCluster = false
 ```
 
 And other variables are in the source code of `consensus\config.go`.

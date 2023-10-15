@@ -254,7 +254,7 @@ func printAndCheckVars() {
 		pass = false
 	}
 	if pass {
-		fmt.Println("passed testing parameters validation")
+		fmt.Println("Passed test parameter verification")
 	} else {
 		os.Exit(1)
 	}

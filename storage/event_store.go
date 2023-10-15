@@ -119,7 +119,7 @@ func (this *eventStore) PruneBlock(height uint32, hashes []common.Uint256) {
 	}
 }
 
-// CommitTo event store batch to store
+// Commit event store batch to store
 func (this *eventStore) Commit() error {
 	return this.store.BatchCommit()
 }

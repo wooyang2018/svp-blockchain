@@ -114,7 +114,7 @@ func (c *Client) request(key, value []byte, upType UpStreamType) ([]byte, error)
 		return nil, err
 	}
 	down := new(DownStream)
-	if err := json.Unmarshal(b, down); err != nil {
+	if err = json.Unmarshal(b, down); err != nil {
 		return nil, err
 	}
 	if len(down.Error) > 0 {

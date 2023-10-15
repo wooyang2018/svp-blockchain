@@ -36,9 +36,7 @@ func TestEtherAccount(t *testing.T) {
 	a := require.New(t)
 
 	memback := storage.NewMemLevelDBStore()
-	overlay := NewOverlayDB(memback)
-
-	cache := NewCacheDB(overlay)
+	cache := NewCacheDB(memback)
 	// don't consider ong yet
 	sd := NewStateDB(cache, ethcomm.Hash{}, ethcomm.Hash{}, dummy{})
 	a.NotNil(sd, "fail")

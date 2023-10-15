@@ -65,6 +65,7 @@ func (gns *genesis) propose() {
 	blk := core.NewBlock().
 		SetView(0).
 		SetHeight(0).
+		SetTransactions(gns.genesisTxs()).
 		SetParentHash(hashChainID(gns.chainID)).
 		SetTimestamp(time.Now().UnixNano()).
 		Sign(gns.resources.Signer)
@@ -73,6 +74,11 @@ func (gns *genesis) propose() {
 	go gns.broadcastProposalLoop()
 	quota := gns.resources.RoleStore.GetValidatorQuota(gns.resources.Signer.PublicKey())
 	gns.onReceiveVote(blk.Vote(gns.resources.Signer, (quota+1)/2))
+}
+
+func (gns *genesis) genesisTxs() [][]byte {
+	//首先向交易池中提交交易
+	return nil
 }
 
 func (gns *genesis) broadcastProposalLoop() {

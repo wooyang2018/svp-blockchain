@@ -105,7 +105,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *statedb.StateDB, error) 
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		db := statedb.NewCacheDB(statedb.NewOverlayDB(storage.NewMemLevelDBStore()))
+		db := statedb.NewCacheDB(storage.NewMemLevelDBStore())
 		cfg.State = statedb.NewStateDB(db, common.Hash{}, common.Hash{}, statedb.NewDummy())
 	}
 	var (
@@ -137,7 +137,7 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		db := statedb.NewCacheDB(statedb.NewOverlayDB(storage.NewMemLevelDBStore()))
+		db := statedb.NewCacheDB(storage.NewMemLevelDBStore())
 		cfg.State = statedb.NewStateDB(db, common.Hash{}, common.Hash{}, statedb.NewDummy())
 	}
 	var (
@@ -163,7 +163,7 @@ func Create2(input []byte, cfg *Config, salt *uint256.Int) ([]byte, common.Addre
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		db := statedb.NewCacheDB(statedb.NewOverlayDB(storage.NewMemLevelDBStore()))
+		db := statedb.NewCacheDB(storage.NewMemLevelDBStore())
 		cfg.State = statedb.NewStateDB(db, common.Hash{}, common.Hash{}, statedb.NewDummy())
 	}
 	var (

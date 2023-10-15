@@ -27,6 +27,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
+
+	//"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/asm"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -102,7 +104,7 @@ func TestExecute(t *testing.T) {
 }
 
 func TestCall(t *testing.T) {
-	db := statedb.NewCacheDB(statedb.NewOverlayDB(storage.NewMemLevelDBStore()))
+	db := statedb.NewCacheDB(storage.NewMemLevelDBStore())
 	statedb := statedb.NewStateDB(db, common.Hash{}, common.Hash{}, statedb.NewDummy())
 	address := common.HexToAddress("0x0a")
 	statedb.SetCode(address, []byte{
@@ -159,7 +161,7 @@ func BenchmarkCall(b *testing.B) {
 
 func benchmarkEVM_Create(bench *testing.B, code string) {
 	var (
-		db       = statedb.NewCacheDB(statedb.NewOverlayDB(storage.NewMemLevelDBStore()))
+		db       = statedb.NewCacheDB(storage.NewMemLevelDBStore())
 		statedb  = statedb.NewStateDB(db, common.Hash{}, common.Hash{}, statedb.NewDummy())
 		sender   = common.BytesToAddress([]byte("sender"))
 		receiver = common.BytesToAddress([]byte("receiver"))
@@ -344,7 +346,7 @@ func (s *stepCounter) CaptureEnd(output []byte, gasUsed uint64, t time.Duration,
 }
 
 func TestJumpSub1024Limit(t *testing.T) {
-	db := statedb.NewCacheDB(statedb.NewOverlayDB(storage.NewMemLevelDBStore()))
+	db := statedb.NewCacheDB(storage.NewMemLevelDBStore())
 	statedb := statedb.NewStateDB(db, common.Hash{}, common.Hash{}, statedb.NewDummy())
 	address := common.HexToAddress("0x0a")
 	// Code is
@@ -381,7 +383,7 @@ func TestJumpSub1024Limit(t *testing.T) {
 }
 
 func TestReturnSubShallow(t *testing.T) {
-	db := statedb.NewCacheDB(statedb.NewOverlayDB(storage.NewMemLevelDBStore()))
+	db := statedb.NewCacheDB(storage.NewMemLevelDBStore())
 	statedb := statedb.NewStateDB(db, common.Hash{}, common.Hash{}, statedb.NewDummy())
 	address := common.HexToAddress("0x0a")
 	// The code does returnsub without having anything on the returnstack.
@@ -568,7 +570,7 @@ func TestEipExampleCases(t *testing.T) {
 func benchmarkNonModifyingCode(gas uint64, code []byte, name string, b *testing.B) {
 	cfg := new(Config)
 	setDefaults(cfg)
-	db := statedb.NewCacheDB(statedb.NewOverlayDB(storage.NewMemLevelDBStore()))
+	db := statedb.NewCacheDB(storage.NewMemLevelDBStore())
 	cfg.State = statedb.NewStateDB(db, common.Hash{}, common.Hash{}, statedb.NewDummy())
 	cfg.GasLimit = gas
 	var (

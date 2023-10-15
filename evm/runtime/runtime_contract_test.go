@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"os/exec"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -23,9 +24,7 @@ func makeConfig() *Config {
 	setDefaults(cfg)
 
 	memback := storage.NewMemLevelDBStore()
-	overlay := statedb.NewOverlayDB(memback)
-
-	cache := statedb.NewCacheDB(overlay)
+	cache := statedb.NewCacheDB(memback)
 	cfg.State = statedb.NewStateDB(cache, common.Hash{}, common.Hash{}, statedb.NewDummy())
 
 	cfg.GasLimit = 10000000
@@ -73,6 +72,9 @@ func compileCode(path string) map[string][2]string {
 }
 
 func TestCreate(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("compiling contracts on windows is not supported")
+	}
 	create(t, false)
 	create(t, true)
 }
@@ -125,6 +127,9 @@ func create(t *testing.T, is2 bool) {
 }
 
 func TestContractChainDelete(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("compiling contracts on windows is not supported")
+	}
 	contractChaindelete(t, false)
 	contractChaindelete(t, true)
 }
@@ -173,6 +178,9 @@ func contractChaindelete(t *testing.T, is2 bool) {
 }
 
 func TestCreateOnDeletedAddress(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("compiling contracts on windows is not supported")
+	}
 	a := require.New(t)
 	cfg := makeConfig()
 	compiled := compileCode("../testdata/contracts/Storage.sol")
@@ -201,6 +209,9 @@ func TestCreateOnDeletedAddress(t *testing.T) {
 }
 
 func TestENS(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("compiling contracts on windows is not supported")
+	}
 	a := require.New(t)
 	cfg := makeConfig()
 	compiled := compileCode("../testdata/contracts/ens/ENSRegistry.sol")

@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math"
 	"testing"
 
@@ -17,7 +17,7 @@ import (
 func BenchmarkWriteVarUint(b *testing.B) {
 	n := uint64(math.MaxUint64)
 	for i := 0; i < b.N; i++ {
-		WriteVarUint(ioutil.Discard, n)
+		WriteVarUint(io.Discard, n)
 	}
 }
 
