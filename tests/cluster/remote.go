@@ -218,8 +218,8 @@ func (ftry *RemoteFactory) SetupCluster(name string) (*Cluster, error) {
 			networkDevice: ftry.netDevices[i],
 			host:          ftry.hosts[i],
 		}
-		node.config.Datadir = path.Join(ftry.workDirs[i], name)
-		node.config.ConsensusConfig.BenchmarkPath = path.Join(node.config.Datadir, "consensus.csv")
+		node.config.DataDir = path.Join(ftry.workDirs[i], name)
+		node.config.ConsensusConfig.BenchmarkPath = path.Join(node.config.DataDir, "consensus.csv")
 		node.config.Port = node.config.Port + i
 		node.config.APIPort = node.config.APIPort + i
 		node.RemoveEffect()
@@ -271,7 +271,7 @@ func (node *RemoteNode) Start() error {
 	)
 	AddCmdFlags(cmd, &node.config)
 	cmd.Args = append(cmd.Args,
-		">>", path.Join(node.config.Datadir, "log.txt"), "2>&1", "&",
+		">>", path.Join(node.config.DataDir, "log.txt"), "2>&1", "&",
 	)
 	return cmd.Run()
 }
@@ -331,7 +331,7 @@ func (node *RemoteNode) StartDstat() {
 		"-i", node.keySSH,
 		fmt.Sprintf("%s@%s", node.loginName, node.host),
 		"nohup", "dstat", "-Tcmdns",
-		">", path.Join(node.config.Datadir, "dstat.txt"), "2>&1", "&",
+		">", path.Join(node.config.DataDir, "dstat.txt"), "2>&1", "&",
 	)
 	cmd.Run()
 }
@@ -349,7 +349,7 @@ func (node *RemoteNode) DownloadFile(localPath string, fileName string) {
 	cmd := exec.Command("scp",
 		"-i", node.keySSH,
 		fmt.Sprintf("%s@%s:%s", node.loginName, node.host,
-			path.Join(node.config.Datadir, fileName)),
+			path.Join(node.config.DataDir, fileName)),
 		localPath,
 	)
 	cmd.Run()
@@ -359,7 +359,7 @@ func (node *RemoteNode) RemoveDB() {
 	cmd := exec.Command("ssh",
 		"-i", node.keySSH,
 		fmt.Sprintf("%s@%s", node.loginName, node.host),
-		"rm", "-rf", path.Join(node.config.Datadir, "db"),
+		"rm", "-rf", path.Join(node.config.DataDir, "db"),
 	)
 	cmd.Run()
 }

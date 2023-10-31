@@ -37,8 +37,6 @@ func (c *KVDB) Invoke(ctx common.CallContext) error {
 	switch input.Method {
 	case "set":
 		return invokeSet(ctx, input)
-	case "del":
-		return invokeSet(ctx, input)
 	default:
 		return errors.New("method not found")
 	}

@@ -34,16 +34,16 @@ var accountCmd = &cobra.Command{
 	Short: "Generate the nodekey file for the account",
 	Run: func(cmd *cobra.Command, args []string) {
 		owner := core.GenerateKey(nil)
-		DumpFile(owner.Bytes(), FileNodekey)
+		DumpFile(owner.Bytes(), DataPath, FileNodekey)
 		fmt.Println(owner.PublicKey().String())
 	},
 }
 
-func DumpFile(data []byte, file string) {
-	if !Exists(DataPath) {
-		check(os.MkdirAll(DataPath, os.ModePerm))
+func DumpFile(data []byte, directory, file string) {
+	if !Exists(directory) {
+		check(os.MkdirAll(directory, os.ModePerm))
 	}
-	f, err := os.Create(path.Join(DataPath, file))
+	f, err := os.Create(path.Join(directory, file))
 	check(err)
 	defer f.Close()
 	_, err = f.Write(data)

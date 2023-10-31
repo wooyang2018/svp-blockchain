@@ -32,7 +32,7 @@ var deployCmd = &cobra.Command{
 		client := native.NewClient(true)
 		tx := client.MakeDeploymentTx(native.CodeKVDB)
 		client.SubmitTx(tx)
-		native.DumpFile(tx.Hash(), native.FileCodeAddr)
+		native.DumpFile(tx.Hash(), native.DataPath, native.FileCodeAddr)
 	},
 }
 

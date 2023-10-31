@@ -80,24 +80,24 @@ func (node *Node) setupLogger() {
 }
 
 func (node *Node) setupBinccDir() {
-	node.config.ExecutionConfig.BinccDir = path.Join(node.config.Datadir, "bincc")
+	node.config.ExecutionConfig.BinccDir = path.Join(node.config.DataDir, "bincc")
 	os.Mkdir(node.config.ExecutionConfig.BinccDir, 0755)
 }
 
 func (node *Node) readFiles() {
 	var err error
-	node.privKey, err = ReadNodeKey(node.config.Datadir)
+	node.privKey, err = ReadNodeKey(node.config.DataDir)
 	if err != nil {
 		logger.I().Fatalw("read key failed", "error", err)
 	}
 	logger.I().Infow("read nodekey", "pubkey", node.privKey.PublicKey())
 
-	node.genesis, err = ReadGenesis(node.config.Datadir)
+	node.genesis, err = ReadGenesis(node.config.DataDir)
 	if err != nil {
 		logger.I().Fatalw("read genesis failed", "error", err)
 	}
 
-	node.peers, err = ReadPeers(node.config.Datadir)
+	node.peers, err = ReadPeers(node.config.DataDir)
 	if err != nil {
 		logger.I().Fatalw("read peers failed", "error", err)
 	}
@@ -107,7 +107,7 @@ func (node *Node) readFiles() {
 func (node *Node) setupComponents() {
 	node.setupRoleStore()
 	node.setupHost()
-	node.storage = storage.New(path.Join(node.config.Datadir, "db"), node.config.StorageConfig)
+	node.storage = storage.New(path.Join(node.config.DataDir, "db"), node.config.StorageConfig)
 	node.msgSvc = p2p.NewMsgService(node.host)
 	node.execution = execution.New(node.storage, node.config.ExecutionConfig)
 	node.txpool = txpool.New(node.storage, node.execution, node.msgSvc, node.config.BroadcastTx)
@@ -143,6 +143,7 @@ func (node *Node) setupHost() {
 }
 
 func (node *Node) setupConsensus() {
+	node.config.ConsensusConfig.DataDir = node.config.DataDir
 	node.consensus = consensus.New(&consensus.Resources{
 		Signer:    node.privKey,
 		RoleStore: node.roleStore,
