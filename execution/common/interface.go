@@ -3,6 +3,29 @@
 
 package common
 
+type DriverType uint8
+
+const (
+	DriverTypeNative DriverType = iota + 1
+	DriverTypeBincc
+)
+
+type CodeInfo struct {
+	DriverType DriverType `json:"driverType"`
+	CodeID     []byte     `json:"codeID"`
+}
+
+type QueryData struct {
+	CodeAddr []byte
+	Input    []byte
+}
+
+type DeploymentInput struct {
+	CodeInfo    CodeInfo `json:"codeInfo"`
+	InstallData []byte   `json:"installData"`
+	InitInput   []byte   `json:"initInput"`
+}
+
 type CodeDriver interface {
 	// Install is called when code deployment transaction is received
 	// Example data field - download url for code binary

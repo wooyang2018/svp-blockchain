@@ -5,119 +5,90 @@ package main
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/spf13/cobra"
 
-	"github.com/wooyang2018/svp-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/native"
 	"github.com/wooyang2018/svp-blockchain/native/kvdb"
-	"github.com/wooyang2018/svp-blockchain/node"
 )
 
 const (
-	FlagKey    string = "key"
-	FlagValue  string = "value"
-	FlagAction string = "action"
-
-	FileCodeAddr string = "codeaddr"
+	FlagKey   string = "key"
+	FlagValue string = "value"
 )
 
 var (
-	nodeUrl = fmt.Sprintf("http://127.0.0.1:%d", node.DefaultConfig.APIPort)
-	keyPath = "./"
+	key   string
+	value string
 )
 
-var (
-	key    string
-	value  string
-	action string
-)
+var deployCmd = &cobra.Command{
+	Use:   "deploy",
+	Short: "Deploy the kvdb native contract",
+	Run: func(cmd *cobra.Command, args []string) {
+		client := native.NewClient(true)
+		tx := client.MakeDeploymentTx(native.CodeKVDB)
+		client.SubmitTx(tx)
+		native.DumpFile(tx.Hash(), native.FileCodeAddr)
+	},
+}
 
-var rootCmd = &cobra.Command{
-	Use:   "client",
-	Short: "The client of kvdb native contract",
+var ownerCmd = &cobra.Command{
+	Use:   "owner",
+	Short: "Query the owner of the deployed contract",
+	Run: func(cmd *cobra.Command, args []string) {
+		client := native.NewClient(false)
+		input := &kvdb.Input{Method: "owner"}
+		rawBytes, _ := json.Marshal(input)
+		owner := client.QueryState(rawBytes)
+		fmt.Println(base64.StdEncoding.EncodeToString(owner))
+	},
 }
 
 var getCmd = &cobra.Command{
-	Use: "get",
+	Use:   "get",
+	Short: "Query the value of the given key",
 	Run: func(cmd *cobra.Command, args []string) {
-		client := NewClient(keyPath, false)
-		query := client.MakeQuery(&kvdb.Input{
+		client := native.NewClient(false)
+		input := &kvdb.Input{
 			Method: "get",
 			Key:    []byte(key),
-		})
-		fmt.Println(string(client.QueryState(query)))
+		}
+		rawBytes, _ := json.Marshal(input)
+		fmt.Println(string(client.QueryState(rawBytes)))
 	},
 }
 
 var setCmd = &cobra.Command{
-	Use: "set",
+	Use:   "set",
+	Short: "Set the given key to the given value",
 	Run: func(cmd *cobra.Command, args []string) {
-		client := NewClient(keyPath, false)
-		tx := client.MakeTx(&kvdb.Input{
+		client := native.NewClient(false)
+		input := &kvdb.Input{
 			Method: "set",
 			Key:    []byte(key),
 			Value:  []byte(value),
-		})
+		}
+		rawBytes, _ := json.Marshal(input)
+		tx := client.MakeTx(rawBytes)
 		client.SubmitTx(tx)
 	},
 }
 
-var setupCmd = &cobra.Command{
-	Use: "setup",
-	Run: func(cmd *cobra.Command, args []string) {
-		switch action {
-		case "owner":
-			client := NewClient(keyPath, false)
-			query := client.MakeQuery(&kvdb.Input{
-				Method: "owner",
-			})
-			owner := client.QueryState(query)
-			fmt.Println(base64.StdEncoding.EncodeToString(owner))
-		case "account":
-			owner := core.GenerateKey(nil)
-			dumpFile(owner.Bytes(), node.NodekeyFile)
-			fmt.Println(owner.PublicKey().String())
-		case "deploy":
-			client := NewClient(keyPath, true)
-			tx := client.MakeDeploymentTx()
-			client.SubmitTx(tx)
-			dumpFile(tx.Hash(), FileCodeAddr)
-		default:
-			fmt.Println("no support action")
-		}
-	},
-}
-
-func dumpFile(data []byte, path string) {
-	f, err := os.Create(path)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer f.Close()
-	if _, err = f.Write(data); err != nil {
-		fmt.Println(err)
-	}
-}
-
 func main() {
-	if err := rootCmd.Execute(); err != nil {
+	if err := native.RootCmd.Execute(); err != nil {
 		log.Fatal(err)
 	}
 }
 
 func init() {
-	rootCmd.AddCommand(getCmd)
-	rootCmd.AddCommand(setCmd)
-	rootCmd.AddCommand(setupCmd)
-
-	rootCmd.PersistentFlags().StringVar(&nodeUrl,
-		"node-url", nodeUrl, "blockchain node url")
-	rootCmd.PersistentFlags().StringVar(&keyPath,
-		"key-path", keyPath, "private key path")
+	native.RootCmd.AddCommand(deployCmd)
+	native.RootCmd.AddCommand(ownerCmd)
+	native.RootCmd.AddCommand(getCmd)
+	native.RootCmd.AddCommand(setCmd)
 
 	getCmd.PersistentFlags().StringVar(&key, FlagKey, key, "key of query")
 	getCmd.MarkPersistentFlagRequired(FlagKey)
@@ -126,7 +97,4 @@ func init() {
 	setCmd.MarkPersistentFlagRequired(FlagKey)
 	setCmd.PersistentFlags().StringVar(&value, FlagValue, value, "value of set command")
 	setCmd.MarkPersistentFlagRequired(FlagValue)
-
-	setupCmd.PersistentFlags().StringVar(&action, FlagAction, action, "action of setup command")
-	setupCmd.MarkPersistentFlagRequired(FlagAction)
 }

@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/wooyang2018/svp-blockchain/core"
-	"github.com/wooyang2018/svp-blockchain/execution"
+	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/native"
 	"github.com/wooyang2018/svp-blockchain/native/pcoin"
 	"github.com/wooyang2018/svp-blockchain/tests/cluster"
@@ -190,19 +190,19 @@ func (client *PCoinClient) MakeDeploymentTx(minter *core.PrivateKey) *core.Trans
 		Sign(minter)
 }
 
-func (client *PCoinClient) nativeDeploymentInput() *execution.DeploymentInput {
-	return &execution.DeploymentInput{
-		CodeInfo: execution.CodeInfo{
-			DriverType: execution.DriverTypeNative,
+func (client *PCoinClient) nativeDeploymentInput() *common.DeploymentInput {
+	return &common.DeploymentInput{
+		CodeInfo: common.CodeInfo{
+			DriverType: common.DriverTypeNative,
 			CodeID:     native.CodePCoin,
 		},
 	}
 }
 
-func (client *PCoinClient) binccDeploymentInput() *execution.DeploymentInput {
-	return &execution.DeploymentInput{
-		CodeInfo: execution.CodeInfo{
-			DriverType: execution.DriverTypeBincc,
+func (client *PCoinClient) binccDeploymentInput() *common.DeploymentInput {
+	return &common.DeploymentInput{
+		CodeInfo: common.CodeInfo{
+			DriverType: common.DriverTypeBincc,
 			CodeID:     client.binccCodeID,
 		},
 		InstallData: []byte(fmt.Sprintf("%s/bincc/%s",
@@ -242,13 +242,13 @@ func (client *PCoinClient) MakeTransferTx(
 		Sign(sender)
 }
 
-func (client *PCoinClient) MakeBalanceQuery(dest *core.PublicKey) *execution.QueryData {
+func (client *PCoinClient) MakeBalanceQuery(dest *core.PublicKey) *common.QueryData {
 	input := &pcoin.Input{
 		Method: "balance",
 		Dest:   dest.Bytes(),
 	}
 	b, _ := json.Marshal(input)
-	return &execution.QueryData{
+	return &common.QueryData{
 		CodeAddr: client.codeAddr,
 		Input:    b,
 	}

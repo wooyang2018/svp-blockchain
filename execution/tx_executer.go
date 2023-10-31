@@ -14,12 +14,6 @@ import (
 	"github.com/wooyang2018/svp-blockchain/logger"
 )
 
-type DeploymentInput struct {
-	CodeInfo    CodeInfo `json:"codeInfo"`
-	InstallData []byte   `json:"installData"`
-	InitInput   []byte   `json:"initInput"`
-}
-
 type txExecutor struct {
 	codeRegistry *codeRegistry
 
@@ -71,7 +65,7 @@ func (txe *txExecutor) executeChaincode() (err error) {
 }
 
 func (txe *txExecutor) executeDeployment() error {
-	input := new(DeploymentInput)
+	input := new(common.DeploymentInput)
 	err := json.Unmarshal(txe.tx.Input(), input)
 	if err != nil {
 		return err

@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/native"
 )
 
@@ -19,9 +20,9 @@ func TestCodeRegistry(t *testing.T) {
 	reg := newCodeRegistry()
 
 	codeAddr := bytes.Repeat([]byte{1}, 32)
-	dep := &DeploymentInput{
-		CodeInfo: CodeInfo{
-			DriverType: DriverTypeNative,
+	dep := &common.DeploymentInput{
+		CodeInfo: common.CodeInfo{
+			DriverType: common.DriverTypeNative,
 			CodeID:     native.CodePCoin,
 		},
 	}
@@ -36,13 +37,13 @@ func TestCodeRegistry(t *testing.T) {
 	asrt.Error(err, "native driver not registered yet")
 	asrt.Nil(cc)
 
-	reg.registerDriver(DriverTypeNative, native.NewCodeDriver())
+	reg.registerDriver(common.DriverTypeNative, native.NewCodeDriver())
 	cc, err = reg.deploy(codeAddr, dep, trk)
 
 	asrt.NoError(err)
 	asrt.NotNil(cc)
 
-	err = reg.registerDriver(DriverTypeNative, native.NewCodeDriver())
+	err = reg.registerDriver(common.DriverTypeNative, native.NewCodeDriver())
 
 	asrt.Error(err, "registered driver twice")
 

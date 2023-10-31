@@ -13,8 +13,8 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/wooyang2018/svp-blockchain/core"
-	"github.com/wooyang2018/svp-blockchain/execution"
 	"github.com/wooyang2018/svp-blockchain/execution/bincc"
+	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/logger"
 )
 
@@ -86,7 +86,7 @@ func (api *nodeAPI) batchSubmitTxs(c *gin.Context) {
 }
 
 func (api *nodeAPI) queryState(c *gin.Context) {
-	query := new(execution.QueryData)
+	query := new(common.QueryData)
 	if err := c.ShouldBind(query); err != nil {
 		c.String(http.StatusBadRequest, "cannot parse request")
 		return

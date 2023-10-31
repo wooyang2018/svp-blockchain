@@ -13,7 +13,7 @@ import (
 
 	"github.com/wooyang2018/svp-blockchain/consensus"
 	"github.com/wooyang2018/svp-blockchain/core"
-	"github.com/wooyang2018/svp-blockchain/execution"
+	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/native"
 	"github.com/wooyang2018/svp-blockchain/tests/cluster"
 )
@@ -102,10 +102,10 @@ func (client *EmptyClient) MakeDeploymentTx(minter *core.PrivateKey) *core.Trans
 		Sign(minter)
 }
 
-func (client *EmptyClient) nativeDeploymentInput() *execution.DeploymentInput {
-	return &execution.DeploymentInput{
-		CodeInfo: execution.CodeInfo{
-			DriverType: execution.DriverTypeNative,
+func (client *EmptyClient) nativeDeploymentInput() *common.DeploymentInput {
+	return &common.DeploymentInput{
+		CodeInfo: common.CodeInfo{
+			DriverType: common.DriverTypeNative,
 			CodeID:     native.CodeEmpty,
 		},
 	}

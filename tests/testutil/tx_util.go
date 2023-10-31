@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/wooyang2018/svp-blockchain/core"
-	"github.com/wooyang2018/svp-blockchain/execution"
+	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/tests/cluster"
 	"github.com/wooyang2018/svp-blockchain/txpool"
 )
@@ -121,7 +121,7 @@ func GetTxStatus(node cluster.Node, hash []byte) (txpool.TxStatus, error) {
 	return status, json.NewDecoder(resp.Body).Decode(&status)
 }
 
-func QueryState(node cluster.Node, query *execution.QueryData) ([]byte, error) {
+func QueryState(node cluster.Node, query *common.QueryData) ([]byte, error) {
 	b, err := json.Marshal(query)
 	if err != nil {
 		return nil, err
