@@ -35,8 +35,8 @@ import (
 
 	"github.com/wooyang2018/svp-blockchain/evm"
 	"github.com/wooyang2018/svp-blockchain/evm/params"
+	statedb2 "github.com/wooyang2018/svp-blockchain/evm/statedb"
 	"github.com/wooyang2018/svp-blockchain/storage"
-	"github.com/wooyang2018/svp-blockchain/storage/statedb"
 )
 
 func TestDefaults(t *testing.T) {
@@ -104,8 +104,8 @@ func TestExecute(t *testing.T) {
 }
 
 func TestCall(t *testing.T) {
-	db := statedb.NewCacheDB(storage.NewMemLevelDBStore())
-	statedb := statedb.NewStateDB(db, common.Hash{}, common.Hash{}, statedb.NewDummy())
+	db := statedb2.NewCacheDB(storage.NewMemLevelDBStore())
+	statedb := statedb2.NewStateDB(db, common.Hash{}, common.Hash{}, statedb2.NewDummy())
 	address := common.HexToAddress("0x0a")
 	statedb.SetCode(address, []byte{
 		byte(evm.PUSH1), 10,
@@ -161,8 +161,8 @@ func BenchmarkCall(b *testing.B) {
 
 func benchmarkEVM_Create(bench *testing.B, code string) {
 	var (
-		db       = statedb.NewCacheDB(storage.NewMemLevelDBStore())
-		statedb  = statedb.NewStateDB(db, common.Hash{}, common.Hash{}, statedb.NewDummy())
+		db       = statedb2.NewCacheDB(storage.NewMemLevelDBStore())
+		statedb  = statedb2.NewStateDB(db, common.Hash{}, common.Hash{}, statedb2.NewDummy())
 		sender   = common.BytesToAddress([]byte("sender"))
 		receiver = common.BytesToAddress([]byte("receiver"))
 	)
@@ -346,8 +346,8 @@ func (s *stepCounter) CaptureEnd(output []byte, gasUsed uint64, t time.Duration,
 }
 
 func TestJumpSub1024Limit(t *testing.T) {
-	db := statedb.NewCacheDB(storage.NewMemLevelDBStore())
-	statedb := statedb.NewStateDB(db, common.Hash{}, common.Hash{}, statedb.NewDummy())
+	db := statedb2.NewCacheDB(storage.NewMemLevelDBStore())
+	statedb := statedb2.NewStateDB(db, common.Hash{}, common.Hash{}, statedb2.NewDummy())
 	address := common.HexToAddress("0x0a")
 	// Code is
 	// 0 beginsub
@@ -383,8 +383,8 @@ func TestJumpSub1024Limit(t *testing.T) {
 }
 
 func TestReturnSubShallow(t *testing.T) {
-	db := statedb.NewCacheDB(storage.NewMemLevelDBStore())
-	statedb := statedb.NewStateDB(db, common.Hash{}, common.Hash{}, statedb.NewDummy())
+	db := statedb2.NewCacheDB(storage.NewMemLevelDBStore())
+	statedb := statedb2.NewStateDB(db, common.Hash{}, common.Hash{}, statedb2.NewDummy())
 	address := common.HexToAddress("0x0a")
 	// The code does returnsub without having anything on the returnstack.
 	// It should not panic, but just fail after one step
@@ -570,8 +570,8 @@ func TestEipExampleCases(t *testing.T) {
 func benchmarkNonModifyingCode(gas uint64, code []byte, name string, b *testing.B) {
 	cfg := new(Config)
 	setDefaults(cfg)
-	db := statedb.NewCacheDB(storage.NewMemLevelDBStore())
-	cfg.State = statedb.NewStateDB(db, common.Hash{}, common.Hash{}, statedb.NewDummy())
+	db := statedb2.NewCacheDB(storage.NewMemLevelDBStore())
+	cfg.State = statedb2.NewStateDB(db, common.Hash{}, common.Hash{}, statedb2.NewDummy())
 	cfg.GasLimit = gas
 	var (
 		destination = common.BytesToAddress([]byte("contract"))

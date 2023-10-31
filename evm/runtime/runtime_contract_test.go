@@ -15,8 +15,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
 
+	statedb2 "github.com/wooyang2018/svp-blockchain/evm/statedb"
 	"github.com/wooyang2018/svp-blockchain/storage"
-	"github.com/wooyang2018/svp-blockchain/storage/statedb"
 )
 
 func makeConfig() *Config {
@@ -24,8 +24,8 @@ func makeConfig() *Config {
 	setDefaults(cfg)
 
 	memback := storage.NewMemLevelDBStore()
-	cache := statedb.NewCacheDB(memback)
-	cfg.State = statedb.NewStateDB(cache, common.Hash{}, common.Hash{}, statedb.NewDummy())
+	cache := statedb2.NewCacheDB(memback)
+	cfg.State = statedb2.NewStateDB(cache, common.Hash{}, common.Hash{}, statedb2.NewDummy())
 
 	cfg.GasLimit = 10000000
 	cfg.Origin = common.HexToAddress("0x123456")

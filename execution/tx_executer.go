@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/wooyang2018/svp-blockchain/core"
-	"github.com/wooyang2018/svp-blockchain/execution/chaincode"
+	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/logger"
 )
 
@@ -36,9 +36,7 @@ func (txe *txExecutor) execute() *core.TxCommit {
 		SetHash(txe.tx.Hash()).
 		SetBlockHash(txe.blk.Hash()).
 		SetBlockHeight(txe.blk.Height())
-
-	err := txe.executeWithTimeout()
-	if err != nil {
+	if err := txe.executeWithTimeout(); err != nil {
 		logger.I().Warnf("execute tx error %+v", err)
 		txc.SetError(err.Error())
 	}
@@ -55,7 +53,6 @@ func (txe *txExecutor) executeWithTimeout() error {
 	select {
 	case err := <-exeError:
 		return err
-
 	case <-time.After(txe.timeout):
 		return errors.New("tx execution timeout")
 	}
@@ -111,7 +108,7 @@ func (txe *txExecutor) executeInvoke() error {
 	return nil
 }
 
-func (txe *txExecutor) makeCallContext(st *stateTracker, input []byte) chaincode.CallContext {
+func (txe *txExecutor) makeCallContext(st *stateTracker, input []byte) common.CallContext {
 	return &callContextTx{
 		blk:          txe.blk,
 		tx:           txe.tx,

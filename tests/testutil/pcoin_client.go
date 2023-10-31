@@ -11,9 +11,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/wooyang2018/svp-blockchain/chaincode/pcoin"
 	"github.com/wooyang2018/svp-blockchain/core"
 	"github.com/wooyang2018/svp-blockchain/execution"
+	"github.com/wooyang2018/svp-blockchain/native"
+	"github.com/wooyang2018/svp-blockchain/native/pcoin"
 	"github.com/wooyang2018/svp-blockchain/tests/cluster"
 )
 
@@ -193,7 +194,7 @@ func (client *PCoinClient) nativeDeploymentInput() *execution.DeploymentInput {
 	return &execution.DeploymentInput{
 		CodeInfo: execution.CodeInfo{
 			DriverType: execution.DriverTypeNative,
-			CodeID:     execution.NativeCodePCoin,
+			CodeID:     native.CodePCoin,
 		},
 	}
 }

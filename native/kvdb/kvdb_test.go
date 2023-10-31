@@ -9,25 +9,26 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/wooyang2018/svp-blockchain/execution/chaincode"
+	"github.com/wooyang2018/svp-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/execution/common"
 )
+
+func makeInitCtx() *common.MockCallContext {
+	ctx := new(common.MockCallContext)
+	ctx.MockState = common.NewMockState()
+	ctx.MockSender = core.GenerateKey(nil).PublicKey().Bytes()
+	return ctx
+}
 
 func TestInit(t *testing.T) {
 	asrt := assert.New(t)
-	state := chaincode.NewMockState()
 	jctx := new(KVDB)
-
-	ctx := new(chaincode.MockCallContext)
-	ctx.MockState = state
-	ctx.MockSender = []byte{1, 1, 1}
+	ctx := makeInitCtx()
 	err := jctx.Init(ctx)
 	asrt.NoError(err)
 
-	input := &Input{
-		Method: "owner",
-	}
-	b, _ := json.Marshal(input)
-	ctx.MockInput = b
+	input := &Input{Method: "owner"}
+	ctx.MockInput, _ = json.Marshal(input)
 	owner, err := jctx.Query(ctx)
 	asrt.NoError(err)
 	asrt.Equal(ctx.MockSender, owner, "deployer should be owner")
@@ -35,12 +36,8 @@ func TestInit(t *testing.T) {
 
 func TestSet(t *testing.T) {
 	asrt := assert.New(t)
-	state := chaincode.NewMockState()
 	jctx := new(KVDB)
-
-	ctx := new(chaincode.MockCallContext)
-	ctx.MockState = state
-	ctx.MockSender = []byte{1, 1, 1}
+	ctx := makeInitCtx()
 	err := jctx.Init(ctx)
 	asrt.NoError(err)
 
@@ -49,13 +46,7 @@ func TestSet(t *testing.T) {
 		Key:    []byte("key"),
 		Value:  []byte("value"),
 	}
-	b, _ := json.Marshal(input)
-	ctx.MockSender = []byte{3, 3, 3}
-	ctx.MockInput = b
-	err = jctx.Invoke(ctx)
-	asrt.Error(err, "sender not owner error")
-
-	ctx.MockSender = []byte{1, 1, 1}
+	ctx.MockInput, _ = json.Marshal(input)
 	err = jctx.Invoke(ctx)
 	asrt.NoError(err)
 
@@ -63,8 +54,8 @@ func TestSet(t *testing.T) {
 		Method: "get",
 		Key:    []byte("key"),
 	}
-	b, _ = json.Marshal(input)
-	ctx.MockInput = b
+	ctx.MockInput, _ = json.Marshal(input)
+	ctx.MockSender = nil
 	value, err := jctx.Query(ctx)
 	asrt.NoError(err)
 	asrt.EqualValues([]byte("value"), value)

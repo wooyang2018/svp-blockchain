@@ -11,8 +11,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/wooyang2018/svp-blockchain/chaincode/kvdb"
 	"github.com/wooyang2018/svp-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/native/kvdb"
 	"github.com/wooyang2018/svp-blockchain/node"
 )
 
@@ -43,7 +43,7 @@ var rootCmd = &cobra.Command{
 var getCmd = &cobra.Command{
 	Use: "get",
 	Run: func(cmd *cobra.Command, args []string) {
-		client := NewKVDBClient(keyPath, false)
+		client := NewClient(keyPath, false)
 		query := client.MakeQuery(&kvdb.Input{
 			Method: "get",
 			Key:    []byte(key),
@@ -55,7 +55,7 @@ var getCmd = &cobra.Command{
 var setCmd = &cobra.Command{
 	Use: "set",
 	Run: func(cmd *cobra.Command, args []string) {
-		client := NewKVDBClient(keyPath, false)
+		client := NewClient(keyPath, false)
 		tx := client.MakeTx(&kvdb.Input{
 			Method: "set",
 			Key:    []byte(key),
@@ -70,7 +70,7 @@ var setupCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		switch action {
 		case "owner":
-			client := NewKVDBClient(keyPath, false)
+			client := NewClient(keyPath, false)
 			query := client.MakeQuery(&kvdb.Input{
 				Method: "owner",
 			})
@@ -81,7 +81,7 @@ var setupCmd = &cobra.Command{
 			dumpFile(owner.Bytes(), node.NodekeyFile)
 			fmt.Println(owner.PublicKey().String())
 		case "deploy":
-			client := NewKVDBClient(keyPath, true)
+			client := NewClient(keyPath, true)
 			tx := client.MakeDeploymentTx()
 			client.SubmitTx(tx)
 			dumpFile(tx.Hash(), FileCodeAddr)

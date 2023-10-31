@@ -11,6 +11,7 @@ import (
 	"github.com/wooyang2018/svp-blockchain/core"
 	"github.com/wooyang2018/svp-blockchain/execution/bincc"
 	"github.com/wooyang2018/svp-blockchain/logger"
+	"github.com/wooyang2018/svp-blockchain/native"
 )
 
 type Config struct {
@@ -42,7 +43,7 @@ func New(stateStore StateStore, config Config) *Execution {
 		config:     config,
 	}
 	exec.codeRegistry = newCodeRegistry()
-	exec.codeRegistry.registerDriver(DriverTypeNative, newNativeCodeDriver())
+	exec.codeRegistry.registerDriver(DriverTypeNative, native.NewCodeDriver())
 	exec.codeRegistry.registerDriver(DriverTypeBincc,
 		bincc.NewCodeDriver(exec.config.BinccDir, exec.config.TxExecTimeout))
 	return exec

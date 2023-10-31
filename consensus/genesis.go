@@ -77,7 +77,6 @@ func (gns *genesis) propose() {
 }
 
 func (gns *genesis) genesisTxs() [][]byte {
-	//首先向交易池中提交交易
 	return nil
 }
 

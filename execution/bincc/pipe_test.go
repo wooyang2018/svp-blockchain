@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/wooyang2018/svp-blockchain/execution/chaincode"
+	"github.com/wooyang2018/svp-blockchain/execution/common"
 )
 
 func setupRunnerAndClient() (*Runner, *Client) {
@@ -36,7 +36,7 @@ func setupRunnerAndClient() (*Runner, *Client) {
 func TestCallData(t *testing.T) {
 	r, c := setupRunnerAndClient()
 
-	mctx := new(chaincode.MockCallContext)
+	mctx := new(common.MockCallContext)
 	mctx.MockInput = []byte("input")
 	mctx.MockSender = []byte("sender")
 	mctx.MockBlockHash = []byte("blockHash")
@@ -57,8 +57,8 @@ func TestCallData(t *testing.T) {
 
 func TestGetState(t *testing.T) {
 	r, c := setupRunnerAndClient()
-	mctx := new(chaincode.MockCallContext)
-	mctx.MockState = chaincode.NewMockState()
+	mctx := new(common.MockCallContext)
+	mctx.MockState = common.NewMockState()
 	r.callContext = mctx
 
 	key := []byte("somekey")
@@ -73,8 +73,8 @@ func TestGetState(t *testing.T) {
 
 func TestSetState(t *testing.T) {
 	r, c := setupRunnerAndClient()
-	mctx := new(chaincode.MockCallContext)
-	mctx.MockState = chaincode.NewMockState()
+	mctx := new(common.MockCallContext)
+	mctx.MockState = common.NewMockState()
 	r.callContext = mctx
 
 	key := []byte("somekey")

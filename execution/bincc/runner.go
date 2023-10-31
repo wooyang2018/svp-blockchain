@@ -10,7 +10,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/wooyang2018/svp-blockchain/execution/chaincode"
+	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/logger"
 )
 
@@ -20,28 +20,28 @@ type Runner struct {
 	codePath string
 	timeout  time.Duration
 
-	callContext chaincode.CallContext
+	callContext common.CallContext
 
 	cmd   *exec.Cmd
 	rw    *readWriter
 	timer *time.Timer
 }
 
-var _ chaincode.Chaincode = (*Runner)(nil)
+var _ common.Chaincode = (*Runner)(nil)
 
-func (r *Runner) Init(ctx chaincode.CallContext) error {
+func (r *Runner) Init(ctx common.CallContext) error {
 	r.callContext = ctx
 	_, err := r.runCode(CallTypeInit)
 	return err
 }
 
-func (r *Runner) Invoke(ctx chaincode.CallContext) error {
+func (r *Runner) Invoke(ctx common.CallContext) error {
 	r.callContext = ctx
 	_, err := r.runCode(CallTypeInvoke)
 	return err
 }
 
-func (r *Runner) Query(ctx chaincode.CallContext) ([]byte, error) {
+func (r *Runner) Query(ctx common.CallContext) ([]byte, error) {
 	r.callContext = ctx
 	return r.runCode(CallTypeQuery)
 }

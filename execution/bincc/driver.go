@@ -16,7 +16,7 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
-	"github.com/wooyang2018/svp-blockchain/execution/chaincode"
+	"github.com/wooyang2018/svp-blockchain/execution/common"
 )
 
 type CodeDriver struct {
@@ -24,6 +24,8 @@ type CodeDriver struct {
 	execTimeout time.Duration
 	mtxInstall  sync.Mutex
 }
+
+var _ common.CodeDriver = (*CodeDriver)(nil)
 
 func NewCodeDriver(codeDir string, timeout time.Duration) *CodeDriver {
 	return &CodeDriver{
@@ -38,7 +40,7 @@ func (drv *CodeDriver) Install(codeID, data []byte) error {
 	return drv.downloadCodeIfRequired(codeID, data)
 }
 
-func (drv *CodeDriver) GetInstance(codeID []byte) (chaincode.Chaincode, error) {
+func (drv *CodeDriver) GetInstance(codeID []byte) (common.Chaincode, error) {
 	return &Runner{
 		codePath: path.Join(drv.codeDir, hex.EncodeToString(codeID)),
 		timeout:  drv.execTimeout,

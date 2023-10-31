@@ -24,7 +24,7 @@ import (
 	"github.com/holiman/uint256"
 
 	"github.com/wooyang2018/svp-blockchain/evm/params"
-	"github.com/wooyang2018/svp-blockchain/storage/statedb"
+	"github.com/wooyang2018/svp-blockchain/evm/statedb"
 )
 
 type dummyContractRef struct {

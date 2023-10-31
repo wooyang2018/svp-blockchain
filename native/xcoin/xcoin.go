@@ -1,15 +1,16 @@
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
-package pcoin
+package xcoin
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
 
-	"github.com/wooyang2018/svp-blockchain/execution/chaincode"
+	"github.com/wooyang2018/svp-blockchain/execution/common"
 )
 
 type Input struct {
@@ -18,29 +19,35 @@ type Input struct {
 	Value  int64  `json:"value"`
 }
 
-var (
-	keyMinter = []byte("minter")
-	keyTotal  = []byte("total")
-)
+// XCoin chaincode
+type XCoin struct{}
 
-// PCoin chaincode
-type PCoin struct{}
+var _ common.Chaincode = (*XCoin)(nil)
 
-var _ chaincode.Chaincode = (*PCoin)(nil)
-
-func (c *PCoin) Init(ctx chaincode.CallContext) error {
-	ctx.SetState(keyMinter, ctx.Sender())
+func (c *XCoin) Init(ctx common.CallContext) error {
+	if ctx.BlockHeight() != 0 {
+		return errors.New("xcoin must init at height 0")
+	}
+	m := make(map[string]int64)
+	json.Unmarshal(ctx.Input(), &m)
+	for k, v := range m {
+		owner, err := base64.StdEncoding.DecodeString(k)
+		if err != nil {
+			return errors.New("init xcoin failed: " + err.Error())
+		}
+		ctx.SetState(owner, encodeBalance(v))
+	}
 	return nil
 }
 
-func (c *PCoin) Invoke(ctx chaincode.CallContext) error {
+func (c *XCoin) Invoke(ctx common.CallContext) error {
 	input, err := parseInput(ctx.Input())
 	if err != nil {
 		return err
 	}
 	switch input.Method {
-	case "mint":
-		return invokeMint(ctx, input)
+	case "set":
+		return invokeSet(ctx, input)
 	case "transfer":
 		return invokeTransfer(ctx, input)
 	default:
@@ -48,16 +55,12 @@ func (c *PCoin) Invoke(ctx chaincode.CallContext) error {
 	}
 }
 
-func (c *PCoin) Query(ctx chaincode.CallContext) ([]byte, error) {
+func (c *XCoin) Query(ctx common.CallContext) ([]byte, error) {
 	input, err := parseInput(ctx.Input())
 	if err != nil {
 		return nil, err
 	}
 	switch input.Method {
-	case "minter":
-		return ctx.GetState(keyMinter), nil
-	case "total":
-		return queryTotal(ctx)
 	case "balance":
 		return queryBalance(ctx, input)
 	default:
@@ -65,23 +68,15 @@ func (c *PCoin) Query(ctx chaincode.CallContext) ([]byte, error) {
 	}
 }
 
-func invokeMint(ctx chaincode.CallContext, input *Input) error {
-	minter := ctx.GetState(keyMinter)
-	if !bytes.Equal(minter, ctx.Sender()) {
-		return errors.New("sender must be minter")
+func invokeSet(ctx common.CallContext, input *Input) error {
+	if !bytes.Equal(nil, ctx.Sender()) {
+		return errors.New("set must be internal")
 	}
-	total := decodeBalance(ctx.GetState(keyTotal))
-	balance := decodeBalance(ctx.GetState(input.Dest))
-
-	total += input.Value
-	balance += input.Value
-
-	ctx.SetState(keyTotal, encodeBalance(total))
-	ctx.SetState(input.Dest, encodeBalance(balance))
+	ctx.SetState(input.Dest, encodeBalance(input.Value))
 	return nil
 }
 
-func invokeTransfer(ctx chaincode.CallContext, input *Input) error {
+func invokeTransfer(ctx common.CallContext, input *Input) error {
 	bsctx := decodeBalance(ctx.GetState(ctx.Sender()))
 	if bsctx < input.Value {
 		return errors.New("not enough balance")
@@ -96,11 +91,7 @@ func invokeTransfer(ctx chaincode.CallContext, input *Input) error {
 	return nil
 }
 
-func queryTotal(ctx chaincode.CallContext) ([]byte, error) {
-	return json.Marshal(decodeBalance(ctx.GetState(keyTotal)))
-}
-
-func queryBalance(ctx chaincode.CallContext, input *Input) ([]byte, error) {
+func queryBalance(ctx common.CallContext, input *Input) ([]byte, error) {
 	return json.Marshal(decodeBalance(ctx.GetState(input.Dest)))
 }
 

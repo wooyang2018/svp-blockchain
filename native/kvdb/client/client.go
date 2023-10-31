@@ -10,20 +10,21 @@ import (
 	"path"
 	"time"
 
-	"github.com/wooyang2018/svp-blockchain/chaincode/kvdb"
 	"github.com/wooyang2018/svp-blockchain/core"
 	"github.com/wooyang2018/svp-blockchain/execution"
+	"github.com/wooyang2018/svp-blockchain/native"
+	"github.com/wooyang2018/svp-blockchain/native/kvdb"
 	"github.com/wooyang2018/svp-blockchain/node"
 )
 
-type KVDBClient struct {
+type Client struct {
 	signer   *core.PrivateKey
 	codeAddr []byte
 }
 
-func NewKVDBClient(dataPath string, isDeploy bool) *KVDBClient {
+func NewClient(dataPath string, isDeploy bool) *Client {
 	var err error
-	client := &KVDBClient{}
+	client := &Client{}
 	if !isDeploy {
 		if client.codeAddr, err = os.ReadFile(path.Join(dataPath, FileCodeAddr)); err != nil {
 			panic(err)
@@ -35,7 +36,7 @@ func NewKVDBClient(dataPath string, isDeploy bool) *KVDBClient {
 	return client
 }
 
-func (client *KVDBClient) SubmitTx(tx *core.Transaction) {
+func (client *Client) SubmitTx(tx *core.Transaction) {
 	b, err := json.Marshal(tx)
 	if err != nil {
 		panic(err)
@@ -50,7 +51,7 @@ func (client *KVDBClient) SubmitTx(tx *core.Transaction) {
 	fmt.Printf("status code %d, body %s\n", resp.StatusCode, string(msg))
 }
 
-func (client *KVDBClient) QueryState(query *execution.QueryData) (ret []byte) {
+func (client *Client) QueryState(query *execution.QueryData) (ret []byte) {
 	b, err := json.Marshal(query)
 	if err != nil {
 		panic(err)
@@ -65,7 +66,7 @@ func (client *KVDBClient) QueryState(query *execution.QueryData) (ret []byte) {
 	return
 }
 
-func (client *KVDBClient) MakeTx(input *kvdb.Input) *core.Transaction {
+func (client *Client) MakeTx(input *kvdb.Input) *core.Transaction {
 	b, _ := json.Marshal(input)
 	return core.NewTransaction().
 		SetCodeAddr(client.codeAddr).
@@ -74,11 +75,11 @@ func (client *KVDBClient) MakeTx(input *kvdb.Input) *core.Transaction {
 		Sign(client.signer)
 }
 
-func (client *KVDBClient) MakeDeploymentTx() *core.Transaction {
+func (client *Client) MakeDeploymentTx() *core.Transaction {
 	input := &execution.DeploymentInput{
 		CodeInfo: execution.CodeInfo{
 			DriverType: execution.DriverTypeNative,
-			CodeID:     execution.NativeCodeKVDB,
+			CodeID:     native.CodeKVDB,
 		},
 	}
 	b, _ := json.Marshal(input)
@@ -88,7 +89,7 @@ func (client *KVDBClient) MakeDeploymentTx() *core.Transaction {
 		Sign(client.signer)
 }
 
-func (client *KVDBClient) MakeQuery(input *kvdb.Input) *execution.QueryData {
+func (client *Client) MakeQuery(input *kvdb.Input) *execution.QueryData {
 	b, _ := json.Marshal(input)
 	return &execution.QueryData{
 		CodeAddr: client.codeAddr,

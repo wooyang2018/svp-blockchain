@@ -10,8 +10,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/wooyang2018/svp-blockchain/chaincode/pcoin"
 	"github.com/wooyang2018/svp-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/native"
+	"github.com/wooyang2018/svp-blockchain/native/pcoin"
 )
 
 func TestTxExecutor(t *testing.T) {
@@ -21,7 +22,7 @@ func TestTxExecutor(t *testing.T) {
 	depInput := &DeploymentInput{
 		CodeInfo: CodeInfo{
 			DriverType: DriverTypeNative,
-			CodeID:     NativeCodePCoin,
+			CodeID:     native.CodePCoin,
 		},
 	}
 	b, _ := json.Marshal(depInput)
@@ -42,7 +43,7 @@ func TestTxExecutor(t *testing.T) {
 
 	asrt.NotEqual("", txc.Error(), "code driver not registered")
 
-	reg.registerDriver(DriverTypeNative, newNativeCodeDriver())
+	reg.registerDriver(DriverTypeNative, native.NewCodeDriver())
 	txc = texe.execute()
 
 	asrt.Equal("", txc.Error())

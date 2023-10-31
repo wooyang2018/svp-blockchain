@@ -106,8 +106,8 @@ func (node *Node) readFiles() {
 
 func (node *Node) setupComponents() {
 	node.setupRoleStore()
-	node.setupStorage()
 	node.setupHost()
+	node.storage = storage.New(path.Join(node.config.Datadir, "db"), node.config.StorageConfig)
 	node.msgSvc = p2p.NewMsgService(node.host)
 	node.execution = execution.New(node.storage, node.config.ExecutionConfig)
 	node.txpool = txpool.New(node.storage, node.execution, node.msgSvc, node.config.BroadcastTx)
@@ -120,10 +120,6 @@ func (node *Node) setupRoleStore() {
 	node.roleStore = core.NewRoleStore(node.genesis.Validators,
 		node.genesis.StakeQuotas, node.genesis.WindowSize)
 	logger.I().Infow("setup role store", "window size", node.roleStore.GetWindowSize())
-}
-
-func (node *Node) setupStorage() {
-	node.storage = storage.New(path.Join(node.config.Datadir, "db"), node.config.StorageConfig)
 }
 
 func (node *Node) setupHost() {
