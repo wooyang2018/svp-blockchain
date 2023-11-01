@@ -14,8 +14,6 @@ import (
 	"github.com/wooyang2018/svp-blockchain/logger"
 )
 
-const MessageSizeLimit = 100 * 1000 * 1000
-
 type Runner struct {
 	codePath string
 	timeout  time.Duration

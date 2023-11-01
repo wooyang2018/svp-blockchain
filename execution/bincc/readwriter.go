@@ -9,6 +9,8 @@ import (
 	"io"
 )
 
+const MessageSizeLimit = 100 * 1000 * 1000
+
 type readWriter struct {
 	reader io.ReadCloser
 	writer io.WriteCloser
@@ -18,7 +20,6 @@ func (rw *readWriter) write(b []byte) error {
 	payload := make([]byte, 4, 4+len(b))
 	binary.BigEndian.PutUint32(payload, uint32(len(b)))
 	payload = append(payload, b...)
-
 	_, err := rw.writer.Write(payload)
 	return err
 }

@@ -27,7 +27,7 @@ import (
 
 	"github.com/wooyang2018/svp-blockchain/evm"
 	"github.com/wooyang2018/svp-blockchain/evm/params"
-	statedb2 "github.com/wooyang2018/svp-blockchain/evm/statedb"
+	"github.com/wooyang2018/svp-blockchain/evm/statedb"
 	"github.com/wooyang2018/svp-blockchain/storage"
 )
 
@@ -44,7 +44,7 @@ type Config struct {
 	Value       *big.Int
 	Debug       bool
 	EVMConfig   evm.Config
-	State       *statedb2.StateDB
+	State       *statedb.StateDB
 	GetHashFn   func(n uint64) common.Hash
 }
 
@@ -98,15 +98,15 @@ func setDefaults(cfg *Config) {
 //
 // Execute sets up an in-memory, temporary, environment for the execution of
 // the given code. It makes sure that it's restored to its original state afterwards.
-func Execute(code, input []byte, cfg *Config) ([]byte, *statedb2.StateDB, error) {
+func Execute(code, input []byte, cfg *Config) ([]byte, *statedb.StateDB, error) {
 	if cfg == nil {
 		cfg = new(Config)
 	}
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		db := statedb2.NewCacheDB(storage.NewMemLevelDBStore())
-		cfg.State = statedb2.NewStateDB(db, common.Hash{}, common.Hash{}, statedb2.NewDummy())
+		db := statedb.NewCacheDB(storage.NewMemLevelDBStore())
+		cfg.State = statedb.NewStateDB(db, common.Hash{}, common.Hash{}, statedb.NewDummy())
 	}
 	var (
 		address = common.BytesToAddress([]byte("contract"))
@@ -137,8 +137,8 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		db := statedb2.NewCacheDB(storage.NewMemLevelDBStore())
-		cfg.State = statedb2.NewStateDB(db, common.Hash{}, common.Hash{}, statedb2.NewDummy())
+		db := statedb.NewCacheDB(storage.NewMemLevelDBStore())
+		cfg.State = statedb.NewStateDB(db, common.Hash{}, common.Hash{}, statedb.NewDummy())
 	}
 	var (
 		vmenv  = NewEnv(cfg)
@@ -163,8 +163,8 @@ func Create2(input []byte, cfg *Config, salt *uint256.Int) ([]byte, common.Addre
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		db := statedb2.NewCacheDB(storage.NewMemLevelDBStore())
-		cfg.State = statedb2.NewStateDB(db, common.Hash{}, common.Hash{}, statedb2.NewDummy())
+		db := statedb.NewCacheDB(storage.NewMemLevelDBStore())
+		cfg.State = statedb.NewStateDB(db, common.Hash{}, common.Hash{}, statedb.NewDummy())
 	}
 	var (
 		vmenv  = NewEnv(cfg)
