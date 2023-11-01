@@ -32,7 +32,7 @@ const (
 	PeersFile   = "peers.json"
 )
 
-func readNodeKey(datadir string) (*core.PrivateKey, error) {
+func ReadNodeKey(datadir string) (*core.PrivateKey, error) {
 	b, err := os.ReadFile(path.Join(datadir, NodekeyFile))
 	if err != nil {
 		return nil, fmt.Errorf("cannot read %s, %w", NodekeyFile, err)
@@ -40,7 +40,7 @@ func readNodeKey(datadir string) (*core.PrivateKey, error) {
 	return core.NewPrivateKey(b)
 }
 
-func readGenesis(datadir string) (*Genesis, error) {
+func ReadGenesis(datadir string) (*Genesis, error) {
 	f, err := os.Open(path.Join(datadir, GenesisFile))
 	if err != nil {
 		return nil, fmt.Errorf("cannot read %s, %w", GenesisFile, err)
@@ -55,7 +55,7 @@ func readGenesis(datadir string) (*Genesis, error) {
 	return genesis, nil
 }
 
-func readPeers(datadir string) ([]*p2p.Peer, error) {
+func ReadPeers(datadir string) ([]*p2p.Peer, error) {
 	f, err := os.Open(path.Join(datadir, PeersFile))
 	if err != nil {
 		return nil, fmt.Errorf("cannot read %s, %w", PeersFile, err)

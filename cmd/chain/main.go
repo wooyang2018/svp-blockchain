@@ -9,7 +9,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/wooyang2018/svp-blockchain/consensus"
-
 	"github.com/wooyang2018/svp-blockchain/node"
 )
 
@@ -33,7 +32,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&nodeConfig.Debug,
 		consensus.FlagDebug, false, "debug mode")
 
-	rootCmd.PersistentFlags().StringVarP(&nodeConfig.Datadir,
+	rootCmd.PersistentFlags().StringVarP(&nodeConfig.DataDir,
 		consensus.FlagDataDir, "d", "", "blockchain data directory")
 	rootCmd.MarkPersistentFlagRequired(consensus.FlagDataDir)
 

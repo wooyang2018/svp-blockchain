@@ -8,14 +8,15 @@ import (
 	"math/big"
 	"os/exec"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
 
+	statedb2 "github.com/wooyang2018/svp-blockchain/evm/statedb"
 	"github.com/wooyang2018/svp-blockchain/storage"
-	"github.com/wooyang2018/svp-blockchain/storage/statedb"
 )
 
 func makeConfig() *Config {
@@ -23,10 +24,8 @@ func makeConfig() *Config {
 	setDefaults(cfg)
 
 	memback := storage.NewMemLevelDBStore()
-	overlay := statedb.NewOverlayDB(memback)
-
-	cache := statedb.NewCacheDB(overlay)
-	cfg.State = statedb.NewStateDB(cache, common.Hash{}, common.Hash{}, statedb.NewDummy())
+	cache := statedb2.NewCacheDB(memback)
+	cfg.State = statedb2.NewStateDB(cache, common.Hash{}, common.Hash{}, statedb2.NewDummy())
 
 	cfg.GasLimit = 10000000
 	cfg.Origin = common.HexToAddress("0xffffff")
@@ -73,6 +72,9 @@ func compileCode(path string) map[string][2]string {
 }
 
 func TestCreate(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("compiling contracts on windows is not supported")
+	}
 	create(t, false)
 	create(t, true)
 }
@@ -125,6 +127,9 @@ func create(t *testing.T, is2 bool) {
 }
 
 func TestContractChainDelete(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("compiling contracts on windows is not supported")
+	}
 	contractChaindelete(t, false)
 	contractChaindelete(t, true)
 }
@@ -173,6 +178,9 @@ func contractChaindelete(t *testing.T, is2 bool) {
 }
 
 func TestCreateOnDeletedAddress(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("compiling contracts on windows is not supported")
+	}
 	a := require.New(t)
 	cfg := makeConfig()
 	compiled := compileCode("../testdata/contracts/Storage.sol")
@@ -209,6 +217,10 @@ func byteArrayToUint64(byteArray []byte) uint64 {
 }
 
 func TestENS(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("compiling contracts on windows is not supported")
+	}
+	a := require.New(t)
 	a := require.New(t) //import dependencies
 	cfg := makeConfig()
 	compiled := compileCode("../testdata/contracts/ens/ENSRegistry.sol")

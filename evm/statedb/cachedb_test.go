@@ -25,9 +25,7 @@ func TestCacheDB(t *testing.T) {
 	N := 10000
 	mem := make(map[string]string)
 	memback := storage.NewMemLevelDBStore()
-	overlay := NewOverlayDB(memback)
-
-	cache := NewCacheDB(overlay)
+	cache := NewCacheDB(memback)
 	for i := 0; i < N; i++ {
 		key, val := genRandKeyVal()
 		cache.Put([]byte(key), []byte(val))
@@ -61,7 +59,7 @@ func TestCacheDB(t *testing.T) {
 		pkey := make([]byte, 1+len(key))
 		pkey[0] = byte(prefix)
 		copy(pkey[1:], key)
-		raw, err := overlay.Get(pkey)
+		raw, err := memback.Get(pkey)
 		assert.Nil(t, err)
 		assert.NotNil(t, raw)
 		assert.Equal(t, []byte(val), raw)

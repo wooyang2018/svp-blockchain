@@ -14,15 +14,16 @@ import (
 // When smart contract execute finish, need to commit transaction cache to block cache
 type CacheDB struct {
 	memdb      *MemDB
-	backend    *OverlayDB
+	backend    storage.PersistStore
 	keyScratch []byte
+	dbErr      error
 }
 
 const initMemCap = 1024
 const initKvNum = 16
 
 // NewCacheDB return a new contract cache
-func NewCacheDB(store *OverlayDB) *CacheDB {
+func NewCacheDB(store storage.PersistStore) *CacheDB {
 	return &CacheDB{
 		backend: store,
 		memdb:   NewMemDB(initMemCap, initKvNum),
@@ -30,7 +31,7 @@ func NewCacheDB(store *OverlayDB) *CacheDB {
 }
 
 func (self *CacheDB) SetDbErr(err error) {
-	self.backend.SetError(err)
+	self.dbErr = err
 }
 
 func (self *CacheDB) Reset() {
@@ -79,41 +80,6 @@ func (self *CacheDB) GenAccountStateKey(addr common.Address, key []byte) []byte 
 func (self *CacheDB) put(prefix storage.DataEntryPrefix, key []byte, value []byte) {
 	self.keyScratch = makePrefixedKey(self.keyScratch, byte(prefix), key)
 	self.memdb.Put(self.keyScratch, value)
-}
-
-func (self *CacheDB) GetContract(addr common.Address) (*DeployCode, bool, error) {
-	destroyed, err := self.IsContractDestroyed(addr)
-	if err != nil {
-		return nil, false, err
-	}
-	if destroyed {
-		return nil, true, nil
-	}
-
-	value, err := self.get(storage.CONTRACT, addr[:])
-	if err != nil {
-		return nil, false, err
-	}
-
-	if len(value) == 0 {
-		return nil, false, nil
-	}
-
-	contract := new(DeployCode)
-	if err := contract.Deserialization(common.NewZeroCopySource(value)); err != nil {
-		return nil, false, err
-	}
-	return contract, false, nil
-}
-
-func (self *CacheDB) PutContract(contract *DeployCode) {
-	address := contract.Address()
-
-	sink := common.NewZeroCopySink(nil)
-	contract.Serialization(sink)
-
-	value := sink.Bytes()
-	self.put(storage.CONTRACT, address[:], value)
 }
 
 func (self *CacheDB) IsContractDestroyed(addr common.Address) (bool, error) {

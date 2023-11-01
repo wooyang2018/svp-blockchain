@@ -91,10 +91,6 @@ func (self *StateDB) Prepare(thash, bhash ethcomm.Hash) {
 	//	s.accessList = newAccessList()
 }
 
-func (self *StateDB) DbErr() error {
-	return self.cacheDB.backend.Error()
-}
-
 func (self *StateDB) BlockHash() ethcomm.Hash {
 	return self.bhash
 }

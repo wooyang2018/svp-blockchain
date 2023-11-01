@@ -105,7 +105,7 @@ func (m *MockListener) CB(e emitter.Event) {
 	m.Called(e)
 }
 
-func TestPeer_ReadWrite(t *testing.T) {
+func TestPeerReadWrite(t *testing.T) {
 	asrt := assert.New(t)
 	p := NewPeer(nil, nil)
 
@@ -128,7 +128,7 @@ func TestPeer_ReadWrite(t *testing.T) {
 	mln.AssertExpectations(t)
 }
 
-func TestPeer_ConnStatus(t *testing.T) {
+func TestPeerConnStatus(t *testing.T) {
 	asrt := assert.New(t)
 	p := NewPeer(nil, nil)
 

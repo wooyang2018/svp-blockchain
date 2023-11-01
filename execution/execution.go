@@ -10,7 +10,9 @@ import (
 
 	"github.com/wooyang2018/svp-blockchain/core"
 	"github.com/wooyang2018/svp-blockchain/execution/bincc"
+	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/logger"
+	"github.com/wooyang2018/svp-blockchain/native"
 )
 
 type Config struct {
@@ -25,9 +27,8 @@ var DefaultConfig = Config{
 }
 
 type Execution struct {
-	stateStore StateStore
-	config     Config
-
+	stateStore   StateStore
+	config       Config
 	codeRegistry *codeRegistry
 }
 
@@ -42,8 +43,8 @@ func New(stateStore StateStore, config Config) *Execution {
 		config:     config,
 	}
 	exec.codeRegistry = newCodeRegistry()
-	exec.codeRegistry.registerDriver(DriverTypeNative, newNativeCodeDriver())
-	exec.codeRegistry.registerDriver(DriverTypeBincc,
+	exec.codeRegistry.registerDriver(common.DriverTypeNative, native.NewCodeDriver())
+	exec.codeRegistry.registerDriver(common.DriverTypeBincc,
 		bincc.NewCodeDriver(exec.config.BinccDir, exec.config.TxExecTimeout))
 	return exec
 }
@@ -88,12 +89,7 @@ func (exec *Execution) MockExecute(blk *core.Block) (*core.BlockCommit, []*core.
 	return bcm, bexe.txCommits
 }
 
-type QueryData struct {
-	CodeAddr []byte
-	Input    []byte
-}
-
-func (exec *Execution) Query(query *QueryData) (val []byte, err error) {
+func (exec *Execution) Query(query *common.QueryData) (val []byte, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("%+v", r)
@@ -115,7 +111,7 @@ func (exec *Execution) VerifyTx(tx *core.Transaction) error {
 		return nil
 	}
 	// deployment tx
-	input := new(DeploymentInput)
+	input := new(common.DeploymentInput)
 	if err := json.Unmarshal(tx.Input(), input); err != nil {
 		return err
 	}

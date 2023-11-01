@@ -18,7 +18,7 @@ func (m *MockListener) CB(e Event) {
 	m.Called(e)
 }
 
-func TestEmitter_Subscribe(t *testing.T) {
+func TestSubscribe(t *testing.T) {
 	e := New()
 	ln1 := new(MockListener)
 	ln2 := new(MockListener)
@@ -52,7 +52,7 @@ func TestEmitter_Subscribe(t *testing.T) {
 	}
 }
 
-func TestEmitter_Unsubscribe(t *testing.T) {
+func TestUnsubscribe(t *testing.T) {
 	e := New()
 	ln1 := new(MockListener)
 	ln2 := new(MockListener)

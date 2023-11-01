@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestTreeCalc_Height(t *testing.T) {
+func TestTreeCalcHeight(t *testing.T) {
 	tests := []struct {
 		name    string
 		bfactor uint8
@@ -31,7 +31,7 @@ func TestTreeCalc_Height(t *testing.T) {
 	}
 }
 
-func TestTreeCalc_GroupCount(t *testing.T) {
+func TestTreeCalcGroupCount(t *testing.T) {
 	tests := []struct {
 		name      string
 		bfactor   uint8
@@ -50,7 +50,7 @@ func TestTreeCalc_GroupCount(t *testing.T) {
 	}
 }
 
-func TestTreeCalc_FirstNodeInGroup(t *testing.T) {
+func TestFirstNodeInGroup(t *testing.T) {
 	tests := []struct {
 		name    string
 		bfactor uint8
@@ -69,7 +69,7 @@ func TestTreeCalc_FirstNodeInGroup(t *testing.T) {
 	}
 }
 
-func TestTreeCalc_GroupOfNode(t *testing.T) {
+func TestTreeCalcGroupOfNode(t *testing.T) {
 	tests := []struct {
 		name    string
 		bfactor uint8
@@ -89,7 +89,7 @@ func TestTreeCalc_GroupOfNode(t *testing.T) {
 	}
 }
 
-func TestTreeCalc_NodeIndexInGroup(t *testing.T) {
+func TestNodeIndexInGroup(t *testing.T) {
 	tests := []struct {
 		name    string
 		bfactor uint8

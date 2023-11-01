@@ -18,7 +18,7 @@ import (
 
 const hashFunc = crypto.SHA3_256
 
-func TestStateStore_loadPrevValuesAndTreeIndexes(t *testing.T) {
+func TestLoadPrevValuesAndTreeIndexes(t *testing.T) {
 	asrt := assert.New(t)
 
 	dir, _ := os.MkdirTemp("", "db")
@@ -45,7 +45,7 @@ func TestStateStore_loadPrevValuesAndTreeIndexes(t *testing.T) {
 	asrt.Nil(scList[1].PrevTreeIndex())
 }
 
-func TestStateStore_updateState(t *testing.T) {
+func TestUpdateState(t *testing.T) {
 	asrt := assert.New(t)
 
 	dir, _ := os.MkdirTemp("", "db")
@@ -67,7 +67,7 @@ func TestStateStore_updateState(t *testing.T) {
 	asrt.Equal(upd.TreeIndex(), idx)
 }
 
-func TestStateStore_computeUpdatedTreeNodes(t *testing.T) {
+func TestComputeUpdatedTreeNodes(t *testing.T) {
 	asrt := assert.New(t)
 
 	scList := []*core.StateChange{
@@ -94,7 +94,7 @@ func TestStateStore_computeUpdatedTreeNodes(t *testing.T) {
 	asrt.Equal(d1, nodes[1].Data)
 }
 
-func TestStateStore_setNewTreeIndexes(t *testing.T) {
+func TestSetNewTreeIndexes(t *testing.T) {
 	asrt := assert.New(t)
 
 	ss := &stateStore{hashFunc: hashFunc}

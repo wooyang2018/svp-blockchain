@@ -10,15 +10,9 @@ import (
 	"time"
 
 	"github.com/wooyang2018/svp-blockchain/core"
-	"github.com/wooyang2018/svp-blockchain/execution/chaincode"
+	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/logger"
 )
-
-type DeploymentInput struct {
-	CodeInfo    CodeInfo `json:"codeInfo"`
-	InstallData []byte   `json:"installData"`
-	InitInput   []byte   `json:"initInput"`
-}
 
 type txExecutor struct {
 	codeRegistry *codeRegistry
@@ -36,9 +30,7 @@ func (txe *txExecutor) execute() *core.TxCommit {
 		SetHash(txe.tx.Hash()).
 		SetBlockHash(txe.blk.Hash()).
 		SetBlockHeight(txe.blk.Height())
-
-	err := txe.executeWithTimeout()
-	if err != nil {
+	if err := txe.executeWithTimeout(); err != nil {
 		logger.I().Warnf("execute tx error %+v", err)
 		txc.SetError(err.Error())
 	}
@@ -55,7 +47,6 @@ func (txe *txExecutor) executeWithTimeout() error {
 	select {
 	case err := <-exeError:
 		return err
-
 	case <-time.After(txe.timeout):
 		return errors.New("tx execution timeout")
 	}
@@ -74,7 +65,7 @@ func (txe *txExecutor) executeChaincode() (err error) {
 }
 
 func (txe *txExecutor) executeDeployment() error {
-	input := new(DeploymentInput)
+	input := new(common.DeploymentInput)
 	err := json.Unmarshal(txe.tx.Input(), input)
 	if err != nil {
 		return err
@@ -111,7 +102,7 @@ func (txe *txExecutor) executeInvoke() error {
 	return nil
 }
 
-func (txe *txExecutor) makeCallContext(st *stateTracker, input []byte) chaincode.CallContext {
+func (txe *txExecutor) makeCallContext(st *stateTracker, input []byte) common.CallContext {
 	return &callContextTx{
 		blk:          txe.blk,
 		tx:           txe.tx,

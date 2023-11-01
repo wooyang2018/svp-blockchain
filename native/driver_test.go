@@ -1,7 +1,7 @@
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
-package execution
+package native
 
 import (
 	"testing"
@@ -12,13 +12,13 @@ import (
 func TestNativeCodeDriver(t *testing.T) {
 	asrt := assert.New(t)
 
-	drv := newNativeCodeDriver()
-	cc, err := drv.GetInstance(NativeCodePCoin)
+	drv := NewCodeDriver()
+	cc, err := drv.GetInstance(CodePCoin)
 
 	asrt.NoError(err)
 	asrt.NotNil(cc)
 
-	err = drv.Install(NativeCodePCoin, nil)
+	err = drv.Install(CodePCoin, nil)
 
 	asrt.NoError(err)
 }

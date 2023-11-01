@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math"
 	"testing"
 
@@ -17,7 +17,7 @@ import (
 func BenchmarkWriteVarUint(b *testing.B) {
 	n := uint64(math.MaxUint64)
 	for i := 0; i < b.N; i++ {
-		WriteVarUint(ioutil.Discard, n)
+		WriteVarUint(io.Discard, n)
 	}
 }
 
@@ -185,9 +185,8 @@ func TestReadVarBytesRead(t *testing.T) {
 	assert.Equal(t, bs, read)
 }
 
-const N = 24829*1 + 1
-
 func BenchmarkBytesXReader(b *testing.B) {
+	const N = 24829*1 + 1
 	bs := make([]byte, N)
 	rand.Read(bs)
 	for i := 0; i < b.N; i++ {

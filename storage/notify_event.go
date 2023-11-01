@@ -4,7 +4,7 @@
 package storage
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
@@ -42,7 +42,7 @@ func NotifyEventInfoFromEvmLog(log *common.StorageLog) *NotifyEventInfo {
 
 func NotifyEventInfoToEvmLog(n *NotifyEventInfo) (*common.StorageLog, error) {
 	if !n.IsEvm {
-		return nil, fmt.Errorf("not evm event")
+		return nil, errors.New("not evm event")
 	}
 
 	var data []byte
@@ -55,7 +55,7 @@ func NotifyEventInfoToEvmLog(n *NotifyEventInfo) (*common.StorageLog, error) {
 	case hexutil.Bytes:
 		data = val
 	default:
-		return nil, fmt.Errorf("not support such states type")
+		return nil, errors.New("not support such states type")
 	}
 
 	source := common.NewZeroCopySource(data)

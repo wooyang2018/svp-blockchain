@@ -92,6 +92,11 @@ func (r *ExperimentRunner) runSingleExperiment(expm Experiment) error {
 			return
 		}
 
+		if OnlyRunCluster {
+			fmt.Println("Running rapid cluster")
+			expm.Run(cls)
+			return
+		}
 		fmt.Println("==> Running experiment")
 		if err = expm.Run(cls); err != nil {
 			fmt.Println("==> Experiment failed")

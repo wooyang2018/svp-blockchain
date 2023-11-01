@@ -8,12 +8,10 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/wooyang2018/svp-blockchain/execution/chaincode"
+	"github.com/wooyang2018/svp-blockchain/execution/common"
 )
 
-var (
-	keyOwner = []byte("owner")
-)
+var keyOwner = []byte("owner")
 
 type Input struct {
 	Method string `json:"method"`
@@ -24,14 +22,14 @@ type Input struct {
 // KVDB chaincode
 type KVDB struct{}
 
-var _ chaincode.Chaincode = (*KVDB)(nil)
+var _ common.Chaincode = (*KVDB)(nil)
 
-func (c *KVDB) Init(ctx chaincode.CallContext) error {
+func (c *KVDB) Init(ctx common.CallContext) error {
 	ctx.SetState(keyOwner, ctx.Sender())
 	return nil
 }
 
-func (c *KVDB) Invoke(ctx chaincode.CallContext) error {
+func (c *KVDB) Invoke(ctx common.CallContext) error {
 	input, err := parseInput(ctx.Input())
 	if err != nil {
 		return err
@@ -44,7 +42,7 @@ func (c *KVDB) Invoke(ctx chaincode.CallContext) error {
 	}
 }
 
-func (c *KVDB) Query(ctx chaincode.CallContext) ([]byte, error) {
+func (c *KVDB) Query(ctx common.CallContext) ([]byte, error) {
 	input, err := parseInput(ctx.Input())
 	if err != nil {
 		return nil, err
@@ -59,7 +57,7 @@ func (c *KVDB) Query(ctx chaincode.CallContext) ([]byte, error) {
 	}
 }
 
-func invokeSet(ctx chaincode.CallContext, input *Input) error {
+func invokeSet(ctx common.CallContext, input *Input) error {
 	owner := ctx.GetState(keyOwner)
 	if !bytes.Equal(owner, ctx.Sender()) {
 		return errors.New("sender must be owner")
@@ -71,11 +69,11 @@ func invokeSet(ctx chaincode.CallContext, input *Input) error {
 	return nil
 }
 
-func queryGet(ctx chaincode.CallContext, input *Input) ([]byte, error) {
+func queryGet(ctx common.CallContext, input *Input) ([]byte, error) {
 	if len(input.Key) == 0 {
 		return nil, errors.New("empty key")
 	}
-	return json.Marshal(ctx.GetState(input.Key))
+	return ctx.GetState(input.Key), nil
 }
 
 func parseInput(b []byte) (*Input, error) {

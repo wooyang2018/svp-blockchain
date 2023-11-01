@@ -124,7 +124,7 @@ func RunCommand(cmd *exec.Cmd) error {
 }
 
 func AddCmdFlags(cmd *exec.Cmd, config *node.Config) {
-	cmd.Args = append(cmd.Args, "-d", config.Datadir)
+	cmd.Args = append(cmd.Args, "-d", config.DataDir)
 	cmd.Args = append(cmd.Args, "-p", strconv.Itoa(config.Port))
 	cmd.Args = append(cmd.Args, "-P", strconv.Itoa(config.APIPort))
 

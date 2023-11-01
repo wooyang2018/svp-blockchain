@@ -11,3 +11,4 @@ OK
 .vscode
 .idea
 go.sum
+qodana.yaml

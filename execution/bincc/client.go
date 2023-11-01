@@ -9,20 +9,20 @@ import (
 	"os"
 	"time"
 
-	"github.com/wooyang2018/svp-blockchain/execution/chaincode"
+	"github.com/wooyang2018/svp-blockchain/execution/common"
 )
 
 const ChaincodeHardTimeout = 10 * time.Second
 
 type Client struct {
 	rw       *readWriter
-	cc       chaincode.Chaincode
+	cc       common.Chaincode
 	callData *CallData
 }
 
-var _ chaincode.CallContext = (*Client)(nil)
+var _ common.CallContext = (*Client)(nil)
 
-func RunChaincode(cc chaincode.Chaincode) {
+func RunChaincode(cc common.Chaincode) {
 	timeout := time.After(ChaincodeHardTimeout)
 	done := make(chan struct{})
 	go runChaincodeAsync(cc, done)
@@ -34,7 +34,7 @@ func RunChaincode(cc chaincode.Chaincode) {
 	}
 }
 
-func runChaincodeAsync(cc chaincode.Chaincode, done chan<- struct{}) {
+func runChaincodeAsync(cc common.Chaincode, done chan<- struct{}) {
 	defer close(done)
 	c := &Client{
 		rw: &readWriter{
@@ -114,7 +114,7 @@ func (c *Client) request(key, value []byte, upType UpStreamType) ([]byte, error)
 		return nil, err
 	}
 	down := new(DownStream)
-	if err := json.Unmarshal(b, down); err != nil {
+	if err = json.Unmarshal(b, down); err != nil {
 		return nil, err
 	}
 	if len(down.Error) > 0 {

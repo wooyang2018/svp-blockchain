@@ -30,7 +30,7 @@ func (u *Uint256) ToArray() []byte {
 }
 
 func (u Uint256) ToHexString() string {
-	return fmt.Sprintf("%x", ToArrayReverse(u[:]))
+	return fmt.Sprintf("%x", ReverseArray(u[:]))
 }
 
 func (u *Uint256) Serialize(w io.Writer) error {
@@ -50,7 +50,6 @@ func Uint256ParseFromBytes(f []byte) (Uint256, error) {
 	if len(f) != UINT256_SIZE {
 		return Uint256{}, errors.New("[Common]: Uint256ParseFromBytes err, len != 32")
 	}
-
 	var hash Uint256
 	copy(hash[:], f)
 	return hash, nil
@@ -61,5 +60,5 @@ func Uint256FromHexString(s string) (Uint256, error) {
 	if err != nil {
 		return UINT256_EMPTY, err
 	}
-	return Uint256ParseFromBytes(ToArrayReverse(hx))
+	return Uint256ParseFromBytes(ReverseArray(hx))
 }

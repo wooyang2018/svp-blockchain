@@ -5,7 +5,7 @@ package execution
 
 import (
 	"github.com/wooyang2018/svp-blockchain/core"
-	"github.com/wooyang2018/svp-blockchain/execution/chaincode"
+	"github.com/wooyang2018/svp-blockchain/execution/common"
 )
 
 type callContextTx struct {
@@ -15,7 +15,7 @@ type callContextTx struct {
 	*stateTracker
 }
 
-var _ chaincode.CallContext = (*callContextTx)(nil)
+var _ common.CallContext = (*callContextTx)(nil)
 
 func (ctx *callContextTx) Sender() []byte {
 	if ctx.tx == nil {
@@ -50,7 +50,7 @@ type callContextQuery struct {
 	stateGetter
 }
 
-var _ chaincode.CallContext = (*callContextQuery)(nil)
+var _ common.CallContext = (*callContextQuery)(nil)
 
 func (ctx *callContextQuery) Input() []byte {
 	return ctx.input

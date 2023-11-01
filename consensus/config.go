@@ -37,6 +37,7 @@ const (
 
 type Config struct {
 	ChainID int64
+	DataDir string // copy from node config
 
 	// maximum tx count in a block
 	BlockTxLimit int

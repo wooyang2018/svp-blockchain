@@ -65,7 +65,6 @@ func (ftry *LocalFactory) setup() error {
 		genesis.StakeQuotas[i] = quotas[i]
 	}
 	peers := MakePeers(keys, addrs)
-
 	return SetupTemplateDir(ftry.templateDir, keys, genesis, peers)
 }
 
@@ -100,8 +99,8 @@ func (ftry *LocalFactory) SetupCluster(name string) (*Cluster, error) {
 			binPath: ftry.params.BinPath,
 			config:  ftry.params.NodeConfig,
 		}
-		node.config.Datadir = path.Join(clusterDir, strconv.Itoa(i))
-		node.config.ConsensusConfig.BenchmarkPath = path.Join(node.config.Datadir, "consensus.csv")
+		node.config.DataDir = path.Join(clusterDir, strconv.Itoa(i))
+		node.config.ConsensusConfig.BenchmarkPath = path.Join(node.config.DataDir, "consensus.csv")
 		node.config.Port = node.config.Port + i
 		node.config.APIPort = node.config.APIPort + i
 		nodes[i] = node
@@ -130,7 +129,7 @@ func (node *LocalNode) Start() error {
 	if node.IsRunning() {
 		return nil
 	}
-	f, err := os.OpenFile(path.Join(node.config.Datadir, "log.txt"),
+	f, err := os.OpenFile(path.Join(node.config.DataDir, "log.txt"),
 		os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
 		return err

@@ -55,6 +55,5 @@ func (self *StorageLog) Deserialization(source *ZeroCopySource) error {
 		return err
 	}
 	self.Data = data
-
 	return nil
 }

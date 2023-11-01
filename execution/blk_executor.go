@@ -38,7 +38,7 @@ Later tx's state changes are merged with the block's state changes.
 
 Given the total transactions is N and concurrentLimit is L.
 
-An (i)th tx is executed after (i - L)th tx is executed and it's state changes are merged.
+An (i)th tx is executed after (i - L)th tx is executed, and it's state changes are merged.
 If (i) < (L) it's straight away executed.
 
 An (i)th tx's state changes are merged only after (i - 1)th tx's state changes are merged.

@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestUint256_Serialize(t *testing.T) {
+func TestUint256Serialize(t *testing.T) {
 	var val Uint256
 	val[1] = 245
 	buf := bytes.NewBuffer(nil)
@@ -18,7 +18,7 @@ func TestUint256_Serialize(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func TestUint256_Deserialize(t *testing.T) {
+func TestUint256Deserialize(t *testing.T) {
 	var val Uint256
 	val[1] = 245
 	buf := bytes.NewBuffer(nil)
@@ -26,19 +26,15 @@ func TestUint256_Deserialize(t *testing.T) {
 
 	var val2 Uint256
 	val2.Deserialize(buf)
-
 	assert.Equal(t, val, val2)
 
 	buf = bytes.NewBuffer([]byte{1, 2, 3})
 	err := val2.Deserialize(buf)
-
 	assert.NotNil(t, err)
 }
 
 func TestUint256ParseFromBytes(t *testing.T) {
 	buf := []byte{1, 2, 3}
-
 	_, err := Uint256ParseFromBytes(buf)
-
 	assert.NotNil(t, err)
 }

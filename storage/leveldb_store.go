@@ -95,12 +95,12 @@ func (self *LevelDBStore) Get(key []byte) ([]byte, error) {
 	return dat, nil
 }
 
-// Has return whether the key is exist in leveldb
+// Has return whether the key exists in leveldb
 func (self *LevelDBStore) Has(key []byte) (bool, error) {
 	return self.db.Has(key, nil)
 }
 
-// Delete the the in leveldb
+// Delete the key in leveldb
 func (self *LevelDBStore) Delete(key []byte) error {
 	return self.db.Delete(key, nil)
 }

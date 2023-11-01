@@ -16,8 +16,7 @@ type ZeroCopySource struct {
 	off uint64 // current reading index
 }
 
-// Len returns the number of bytes of the unread portion of the
-// slice.
+// Len returns the number of bytes of the unread portion of the slice.
 func (self *ZeroCopySource) Len() uint64 {
 	length := uint64(len(self.s))
 	if self.off >= length {
@@ -34,9 +33,10 @@ func (self *ZeroCopySource) Pos() uint64 {
 // Size is the number of bytes available for reading via ReadAt.
 // The returned value is always the same and is not affected by calls
 // to any other method.
-func (self *ZeroCopySource) Size() uint64 { return uint64(len(self.s)) }
+func (self *ZeroCopySource) Size() uint64 {
+	return uint64(len(self.s))
+}
 
-// Read implements the io.ZeroCopySource interface.
 func (self *ZeroCopySource) NextBytes(n uint64) (data []byte, eof bool) {
 	m := uint64(len(self.s))
 	end, overflow := SafeAdd(self.off, n)
@@ -46,7 +46,6 @@ func (self *ZeroCopySource) NextBytes(n uint64) (data []byte, eof bool) {
 	}
 	data = self.s[self.off:end]
 	self.off = end
-
 	return
 }
 
@@ -58,16 +57,13 @@ func (self *ZeroCopySource) Skip(n uint64) (eof bool) {
 		eof = true
 	}
 	self.off = end
-
 	return
 }
 
-// ReadByte implements the io.ByteReader interface.
 func (self *ZeroCopySource) NextByte() (data byte, eof bool) {
 	if self.off >= uint64(len(self.s)) {
 		return 0, true
 	}
-
 	b := self.s[self.off]
 	self.off++
 	return b, false
@@ -89,7 +85,6 @@ func (self *ZeroCopySource) NextBool() (data bool, irregular bool, eof bool) {
 		data = true
 		irregular = true
 	}
-
 	return
 }
 
@@ -105,7 +100,6 @@ func (self *ZeroCopySource) NextUint16() (data uint16, eof bool) {
 	if eof {
 		return
 	}
-
 	return binary.LittleEndian.Uint16(buf), eof
 }
 
@@ -115,7 +109,6 @@ func (self *ZeroCopySource) NextUint32() (data uint32, eof bool) {
 	if eof {
 		return
 	}
-
 	return binary.LittleEndian.Uint32(buf), eof
 }
 
@@ -124,7 +117,6 @@ func (self *ZeroCopySource) ReadUint32() (data uint32, err error) {
 	if eof {
 		return 0, io.ErrUnexpectedEOF
 	}
-
 	return data, nil
 }
 
@@ -133,7 +125,6 @@ func (self *ZeroCopySource) ReadUint64() (data uint64, err error) {
 	if eof {
 		return 0, io.ErrUnexpectedEOF
 	}
-
 	return data, nil
 }
 
@@ -143,7 +134,6 @@ func (self *ZeroCopySource) NextUint64() (data uint64, eof bool) {
 	if eof {
 		return
 	}
-
 	return binary.LittleEndian.Uint64(buf), eof
 }
 
@@ -169,11 +159,9 @@ func (self *ZeroCopySource) NextVarBytes() (data []byte, size uint64, irregular 
 	var count uint64
 	count, size, irregular, eof = self.NextVarUint()
 	size += count
-
 	if count > 0 {
 		data, eof = self.NextBytes(count)
 	}
-
 	return
 }
 
@@ -190,7 +178,6 @@ func (self *ZeroCopySource) ReadVarBytes() (data []byte, err error) {
 	if eof {
 		return nil, io.ErrUnexpectedEOF
 	}
-
 	return data, nil
 }
 
@@ -202,7 +189,6 @@ func (self *ZeroCopySource) ReadVarUint() (uint64, error) {
 	if eof {
 		return 0, io.ErrUnexpectedEOF
 	}
-
 	return length, nil
 }
 
@@ -213,7 +199,6 @@ func (self *ZeroCopySource) NextAddress() (data Address, eof bool) {
 		return
 	}
 	copy(data[:], buf)
-
 	return
 }
 
@@ -224,7 +209,6 @@ func (self *ZeroCopySource) NextHash() (data Uint256, eof bool) {
 		return
 	}
 	copy(data[:], buf)
-
 	return
 }
 
@@ -273,7 +257,6 @@ func (self *ZeroCopySource) NextVarUint() (data uint64, size uint64, irregular b
 	}
 
 	irregular = size != getVarUintSize(data)
-
 	return
 }
 
@@ -289,5 +272,7 @@ func getVarUintSize(value uint64) uint64 {
 	}
 }
 
-// NewReader returns a new ZeroCopySource reading from b.
-func NewZeroCopySource(b []byte) *ZeroCopySource { return &ZeroCopySource{b, 0} }
+// NewZeroCopySource returns a new ZeroCopySource reading from b.
+func NewZeroCopySource(b []byte) *ZeroCopySource {
+	return &ZeroCopySource{b, 0}
+}

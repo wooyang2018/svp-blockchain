@@ -106,11 +106,12 @@ func (cons *Consensus) getInitialBlockAndQC() (exec *core.Block, leaf *core.Bloc
 		return exec, leaf, qc
 	}
 	// not started blockchain yet, create genesis block
-	genesis := &genesis{
+	gns := &genesis{
 		resources: cons.resources,
+		config:    cons.config,
 		chainID:   cons.config.ChainID,
 	}
-	exec, qc = genesis.run()
+	exec, qc = gns.run()
 	return exec, exec, qc
 }
 

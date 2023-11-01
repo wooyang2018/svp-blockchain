@@ -10,8 +10,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/wooyang2018/svp-blockchain/chaincode/pcoin"
 	"github.com/wooyang2018/svp-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/execution/common"
+	"github.com/wooyang2018/svp-blockchain/native"
+	"github.com/wooyang2018/svp-blockchain/native/pcoin"
 )
 
 func TestExecution(t *testing.T) {
@@ -19,7 +21,7 @@ func TestExecution(t *testing.T) {
 
 	state := newMapStateStore()
 	reg := newCodeRegistry()
-	reg.registerDriver(DriverTypeNative, newNativeCodeDriver())
+	reg.registerDriver(common.DriverTypeNative, native.NewCodeDriver())
 
 	execution := &Execution{
 		stateStore:   state,
@@ -31,16 +33,16 @@ func TestExecution(t *testing.T) {
 	priv := core.GenerateKey(nil)
 	blk := core.NewBlock().SetHeight(10).Sign(priv)
 
-	cinfo := CodeInfo{
-		DriverType: DriverTypeNative,
-		CodeID:     NativeCodePCoin,
+	cinfo := common.CodeInfo{
+		DriverType: common.DriverTypeNative,
+		CodeID:     native.CodePCoin,
 	}
-	cinfo2 := CodeInfo{
-		DriverType: DriverTypeNative,
+	cinfo2 := common.CodeInfo{
+		DriverType: common.DriverTypeNative,
 		CodeID:     []byte{2, 2, 2}, // invalid code id
 	}
 
-	depInput := &DeploymentInput{CodeInfo: cinfo}
+	depInput := &common.DeploymentInput{CodeInfo: cinfo}
 	b, _ := json.Marshal(depInput)
 
 	depInput.CodeInfo = cinfo2
@@ -78,15 +80,15 @@ func TestExecution(t *testing.T) {
 	asrt.Equal(&cinfo, resci)
 
 	ccInput, _ := json.Marshal(pcoin.Input{Method: "minter"})
-	minter, err := execution.Query(&QueryData{tx1.Hash(), ccInput})
+	minter, err := execution.Query(&common.QueryData{tx1.Hash(), ccInput})
 	asrt.NoError(err)
 	asrt.Equal(priv.PublicKey().Bytes(), minter)
 
-	minter, err = execution.Query(&QueryData{tx2.Hash(), ccInput})
+	minter, err = execution.Query(&common.QueryData{tx2.Hash(), ccInput})
 	asrt.Error(err)
 	asrt.Nil(minter)
 
-	minter, err = execution.Query(&QueryData{tx3.Hash(), ccInput})
+	minter, err = execution.Query(&common.QueryData{tx3.Hash(), ccInput})
 	asrt.NoError(err)
 	asrt.Equal(priv.PublicKey().Bytes(), minter)
 }

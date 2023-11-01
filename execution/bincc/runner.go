@@ -10,7 +10,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/wooyang2018/svp-blockchain/execution/chaincode"
+	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/logger"
 )
 
@@ -20,28 +20,28 @@ type Runner struct {
 	codePath string
 	timeout  time.Duration
 
-	callContext chaincode.CallContext
+	callContext common.CallContext
 
 	cmd   *exec.Cmd
 	rw    *readWriter
 	timer *time.Timer
 }
 
-var _ chaincode.Chaincode = (*Runner)(nil)
+var _ common.Chaincode = (*Runner)(nil)
 
-func (r *Runner) Init(ctx chaincode.CallContext) error {
+func (r *Runner) Init(ctx common.CallContext) error {
 	r.callContext = ctx
 	_, err := r.runCode(CallTypeInit)
 	return err
 }
 
-func (r *Runner) Invoke(ctx chaincode.CallContext) error {
+func (r *Runner) Invoke(ctx common.CallContext) error {
 	r.callContext = ctx
 	_, err := r.runCode(CallTypeInvoke)
 	return err
 }
 
-func (r *Runner) Query(ctx chaincode.CallContext) ([]byte, error) {
+func (r *Runner) Query(ctx common.CallContext) ([]byte, error) {
 	r.callContext = ctx
 	return r.runCode(CallTypeQuery)
 }
@@ -119,7 +119,7 @@ func (r *Runner) serveStateAndGetResult() ([]byte, error) {
 			return nil, fmt.Errorf("read upstream error, %w", err)
 		}
 		up := new(UpStream)
-		if err := json.Unmarshal(b, up); err != nil {
+		if err = json.Unmarshal(b, up); err != nil {
 			return nil, errors.New("cannot parse upstream data")
 		}
 		if up.Type == UpStreamResult {
@@ -128,7 +128,7 @@ func (r *Runner) serveStateAndGetResult() ([]byte, error) {
 			}
 			return up.Value, nil
 		}
-		if err := r.serveState(up); err != nil {
+		if err = r.serveState(up); err != nil {
 			return nil, err
 		}
 	}
@@ -137,15 +137,12 @@ func (r *Runner) serveStateAndGetResult() ([]byte, error) {
 func (r *Runner) serveState(up *UpStream) error {
 	down := new(DownStream)
 	switch up.Type {
-
 	case UpStreamGetState:
 		val := r.callContext.GetState(up.Key)
 		down.Value = val
-
 	case UpStreamSetState:
 		r.callContext.SetState(up.Key, up.Value)
 	}
-
 	b, _ := json.Marshal(down)
 	return r.rw.write(b)
 }

@@ -211,11 +211,11 @@ func (d *driver) syncMissingParentRecursive(peer *core.PublicKey, blk *core.Bloc
 		return nil, fmt.Errorf("invalid block, height %d, parent %d", blk.Height(), parent.Height())
 	}
 	if ExecuteTxFlag { // must sync transactions before updating block
-		if err := d.resources.TxPool.SyncTxs(peer, parent.Transactions()); err != nil {
+		if err = d.resources.TxPool.SyncTxs(peer, parent.Transactions()); err != nil {
 			return nil, err
 		}
 	}
-	if _, err := d.syncMissingParentRecursive(peer, parent); err != nil {
+	if _, err = d.syncMissingParentRecursive(peer, parent); err != nil {
 		return nil, err
 	}
 	return parent, nil
@@ -366,7 +366,7 @@ func (d *driver) commit(blk *core.Block) {
 		}
 
 		if err := d.resources.Storage.Commit(data); err != nil {
-			logger.I().Fatalf("commit storage error, %+v", err)
+			logger.I().Fatalf("commit storage failed, %+v", err)
 		}
 		logger.I().Infow("committed bock",
 			"height", blk.Height(),
@@ -387,11 +387,11 @@ func (d *driver) cleanStateOnCommitted(blk *core.Block) {
 	}
 	d.state.setCommittedBlock(blk)
 	blocks := d.state.getUncommittedOlderBlocks(blk)
-	for _, blk := range blocks {
+	for _, b := range blocks {
 		// put txs from forked block back to queue
-		d.resources.TxPool.PutTxsToQueue(blk.Transactions())
-		d.state.deleteBlock(blk.Hash())
-		d.state.deleteQC(blk.Hash())
+		d.resources.TxPool.PutTxsToQueue(b.Transactions())
+		d.state.deleteBlock(b.Hash())
+		d.state.deleteQC(b.Hash())
 	}
 
 	//delete committed older blocks
@@ -400,8 +400,8 @@ func (d *driver) cleanStateOnCommitted(blk *core.Block) {
 		return
 	}
 	blks := d.state.getOlderBlocks(height)
-	for _, blk := range blks {
-		d.state.deleteBlock(blk.Hash())
-		d.state.deleteCommitted(blk.Hash())
+	for _, b := range blks {
+		d.state.deleteBlock(b.Hash())
+		d.state.deleteCommitted(b.Hash())
 	}
 }

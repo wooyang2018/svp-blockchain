@@ -12,7 +12,7 @@ import (
 	"github.com/wooyang2018/svp-blockchain/core"
 )
 
-func TestTxStore_addNewTx(t *testing.T) {
+func TestTxStoreAddNewTx(t *testing.T) {
 	asrt := assert.New(t)
 
 	tx := core.NewTransaction().Sign(core.GenerateKey(nil))
@@ -42,7 +42,7 @@ func TestTxStore_addNewTx(t *testing.T) {
 	asrt.Equal(txItem.receivedTime, txItem1.receivedTime)
 }
 
-func TestTxStore_popTxsFromQueue(t *testing.T) {
+func TestTxStorePopTxsFromQueue(t *testing.T) {
 	asrt := assert.New(t)
 
 	priv := core.GenerateKey(nil)
@@ -91,7 +91,7 @@ func TestTxStore_popTxsFromQueue(t *testing.T) {
 	asrt.Nil(hashes)
 }
 
-func TestTxStore_putTxsToQueue(t *testing.T) {
+func TestTxStorePutTxsToQueue(t *testing.T) {
 	asrt := assert.New(t)
 
 	priv := core.GenerateKey(nil)
@@ -131,7 +131,7 @@ func TestTxStore_putTxsToQueue(t *testing.T) {
 	asrt.Equal(tx4.Hash(), hashes[1])
 }
 
-func TestTxStore_setTxsPending(t *testing.T) {
+func TestTxStoreSetTxsPending(t *testing.T) {
 	asrt := assert.New(t)
 
 	priv := core.GenerateKey(nil)
@@ -165,7 +165,7 @@ func TestTxStore_setTxsPending(t *testing.T) {
 	asrt.Equal(tx3.Hash(), hashes[1])
 }
 
-func TestTxStore_removeTxs(t *testing.T) {
+func TestTxStoreRemoveTxs(t *testing.T) {
 	asrt := assert.New(t)
 
 	priv := core.GenerateKey(nil)

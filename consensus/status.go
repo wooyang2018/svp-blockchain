@@ -6,7 +6,6 @@ package consensus
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"math/rand"
 	"sync"
 	"sync/atomic"
@@ -205,7 +204,7 @@ func (s *status) getVoteQuota() (uint32, error) {
 
 	quota, ok := s.window.vote()
 	if !ok {
-		return 0, fmt.Errorf("can not vote because of strategy")
+		return 0, errors.New("can not vote because of strategy")
 	}
 	return quota, nil
 }
