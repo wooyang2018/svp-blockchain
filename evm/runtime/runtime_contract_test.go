@@ -29,7 +29,7 @@ func makeConfig() *Config {
 	cfg.State = statedb.NewStateDB(cache, common.Hash{}, common.Hash{}, statedb.NewDummy())
 
 	cfg.GasLimit = 10000000
-	cfg.Origin = common.HexToAddress("0x123456")
+	cfg.Origin = common.HexToAddress("0xffffff")
 
 	return cfg
 }
@@ -200,19 +200,119 @@ func TestCreateOnDeletedAddress(t *testing.T) {
 	a.True((big.NewInt(0).SetBytes(ret).Cmp(big.NewInt(0)) == 0), "should not get previous value 0x1234")
 }
 
+func byteArrayToUint64(byteArray []byte) uint64 {
+	var result uint64
+	for _, b := range byteArray {
+		result = (result << 8) | uint64(b)
+	}
+	return result
+}
+
 func TestENS(t *testing.T) {
-	a := require.New(t)
+	a := require.New(t) //import dependencies
 	cfg := makeConfig()
 	compiled := compileCode("../testdata/contracts/ens/ENSRegistry.sol")
-
 	c := CreateContract(cfg, compiled["ENSRegistry"][1], compiled["ENSRegistry"][0])
 	a.NotNil(c, "fail")
-
-	_, _, err := c.Call("setRecord", [32]byte{}, common.HexToAddress("0x1"), common.HexToAddress("0x2"), uint64(10))
+	ret, _, err := c.Call("setRecord", [32]byte{}, common.HexToAddress("0xffffff"), common.HexToAddress("0x2"), uint64(0x10))
 	a.Nil(err, "fail")
 
-	// 继续测试合约的function
+	ret, _, err = c.Call("owner", [32]byte{}) // make sure owner=msg.sender
+	a.Equal(common.HexToAddress("0xffffff"), common.BytesToAddress(ret), "The owner output is same as input")
+	a.Nil(err, "fail")
+
+	ret, _, err = c.Call("resolver", [32]byte{})
+	a.Equal(common.HexToAddress("0x2"), common.BytesToAddress(ret), "The resolver output is same as input")
+	a.Nil(err, "fail")
+
+	ret, _, err = c.Call("ttl", [32]byte{})
+	a.Equal(uint64(0x10), byteArrayToUint64(ret), "The resolver output is same as input")
+	a.Nil(err, "fail")
+
+	ret, _, err = c.Call("recordExists", [32]byte{})
+	a.True(new(big.Int).SetBytes(ret).Cmp(big.NewInt(1)) == 0, "record exists")
+	a.Nil(err, "fail")
+
+	ret, _, err = c.Call("setApprovalForAll", common.HexToAddress("0x3"), true)
+	a.Nil(err, "fail")
+
+	ret, _, err = c.Call("isApprovedForAll", common.HexToAddress("0xffffff"), common.HexToAddress("0x3"))
+	a.True(new(big.Int).SetBytes(ret).Cmp(big.NewInt(1)) == 0, ret, "isApprovedForAll")
+	a.Nil(err, "fail")
+
+	ret, _, err = c.Call("setSubnodeRecord", [32]byte{}, [32]byte{0x44}, common.HexToAddress("0xffffff"), common.HexToAddress("0x4"), uint64(0x10))
+	a.Nil(err, "fail")
+}
+
+func TestENSRegistryWithFallback(t *testing.T) {
+	a := require.New(t) //import dependencies
+	cfg := makeConfig()
+	compiled := compileCode("../testdata/contracts/ens/ENSRegistryWithFallback.sol")
+
+	c := CreateContract(cfg, compiled["ENSRegistryWithFallback"][1], compiled["ENSRegistryWithFallback"][0], common.HexToAddress("0xfff"))
+	a.NotNil(c, "fail")
+
+	ret, _, err := c.Call("owner", [32]byte{})
+	a.Equal(common.HexToAddress("0xffffff"), common.BytesToAddress(ret), "The owner output is same as input")
+	a.Nil(err, "fail")
+}
+
+func TestFIFSRegistrar(t *testing.T) {
+	a := require.New(t)
+	cfg := makeConfig()
+	compiled := compileCode("../testdata/contracts/ens/FIFSRegistrar.sol") //compile the FIFSRegistrar contract
+
+	ENSRegistry := compileCode("../testdata/contracts/ens/ENSRegistry.sol")
+	ens := CreateContract(cfg, ENSRegistry["ENSRegistry"][1], ENSRegistry["ENSRegistry"][0]) //get the ens instance
+	_ = Create2Contract(cfg, ENSRegistry["ENSRegistry"][1], ENSRegistry["ENSRegistry"][0], 0xffff)
+
+	c := CreateContract(cfg, compiled["FIFSRegistrar"][1], compiled["FIFSRegistrar"][0], ens.Address, [32]byte{}) //ensAddr, node
+	fmt.Println(c.Address)
+	a.NotNil(c, "fail")
+
+	// execution reverted error happens when calling register function due to the address of the msg.sender changed from cfg.Origin to the address of the FIFSRegistrar contract
+	_, _, err := c.Call("register", [32]byte{0x11}, common.HexToAddress("0xffffff")) //label owner
+	a.Nil(err, "fail")
 	for _, log := range cfg.State.GetLogs() {
 		fmt.Println(log)
 	}
+}
+
+func TestMigrations(t *testing.T) {
+	a := require.New(t)
+	cfg := makeConfig()
+	compiled := compileCode("../testdata/contracts/ens/Migrations.sol")
+	c1 := CreateContract(cfg, compiled["Migrations"][1], compiled["Migrations"][0])
+	c2 := Create2Contract(cfg, compiled["Migrations"][1], compiled["Migrations"][0], 0xffff)
+
+	_, _, err := c1.Call("upgrade", c2.Address)
+	a.Nil(err, "fail")
+}
+
+func TestRegistrar(t *testing.T) {
+	a := require.New(t)
+	cfg := makeConfig()
+	compiled := compileCode("../testdata/contracts/ens/TestRegistrar.sol")
+	ENSRegistry := compileCode("../testdata/contracts/ens/ENSRegistry.sol")
+	ens := CreateContract(cfg, ENSRegistry["ENSRegistry"][1], ENSRegistry["ENSRegistry"][0]) //get the ens instance
+
+	c := CreateContract(cfg, compiled["TestRegistrar"][1], compiled["TestRegistrar"][0], ens.Address, [32]byte{})
+	// execution reverted error happens when calling register function due to the address of the msg.sender changed from cfg.Origin to the address of the FIFSRegistrar contract
+	_, _, err := c.Call("register", [32]byte{0x12}, common.HexToAddress("0x13")) //label owner
+	a.Nil(err, "fail")
+	for _, log := range cfg.State.GetLogs() {
+		fmt.Println(log)
+	}
+}
+
+func TestReverseRegistrar(t *testing.T) {
+	a := require.New(t)
+	cfg := makeConfig()
+	compiled := compileCode("../testdata/contracts/ens/ReverseRegistrar.sol")
+	ENSRegistry := compileCode("../testdata/contracts/ens/ENSRegistry.sol")
+	ens := CreateContract(cfg, ENSRegistry["ENSRegistry"][1], ENSRegistry["ENSRegistry"][0]) //get the ens instance
+
+	//test cannot be done, because NameResolver is an abstract class
+	c := CreateContract(cfg, compiled["ReverseRegistrar"][1], compiled["ReverseRegistrar"][0], ens.Address)
+	a.NotNil(c, "fail")
 }
