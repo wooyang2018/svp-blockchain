@@ -39,7 +39,6 @@ func NewEnv(cfg *Config) *evm.EVM {
 		Difficulty:  cfg.Difficulty,
 		GasLimit:    cfg.GasLimit,
 	}
-
 	return evm.NewEVM(blockContext, txContext, cfg.State, cfg.ChainConfig, cfg.EVMConfig)
 }
 

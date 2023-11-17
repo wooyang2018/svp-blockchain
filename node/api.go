@@ -13,7 +13,6 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/wooyang2018/svp-blockchain/core"
-	"github.com/wooyang2018/svp-blockchain/execution/bincc"
 	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/logger"
 )
@@ -41,6 +40,7 @@ func serveNodeAPI(node *Node) {
 	r.POST("/querystate", api.queryState)
 	r.POST("/bincc", api.uploadBinChainCode)
 	r.Static("/bincc", node.config.ExecutionConfig.BinccDir)
+	r.Static("/contracts", node.config.ExecutionConfig.ContractsDir)
 
 	go func() {
 		if err := r.Run(fmt.Sprintf(":%d", node.config.APIPort)); err != nil {
@@ -169,7 +169,7 @@ func (api *nodeAPI) uploadBinChainCode(c *gin.Context) {
 		return
 	}
 	defer f.Close()
-	codeID, err := bincc.StoreCode(api.node.config.ExecutionConfig.BinccDir, f)
+	codeID, err := common.StoreCode(api.node.config.ExecutionConfig.BinccDir, f)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return

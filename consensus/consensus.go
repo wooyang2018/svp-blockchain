@@ -109,7 +109,6 @@ func (cons *Consensus) getInitialBlockAndQC() (exec *core.Block, leaf *core.Bloc
 	gns := &genesis{
 		resources: cons.resources,
 		config:    cons.config,
-		chainID:   cons.config.ChainID,
 	}
 	exec, qc = gns.run()
 	return exec, exec, qc

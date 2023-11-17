@@ -23,7 +23,7 @@ contract ENSRegistryWithFallback is ENSRegistry {
      * @return address of the resolver.
      */
     function resolver(bytes32 node) public override view returns (address) {
-        if (!recordExists(node)) {
+        if (old.recordExists(node)) {
             return old.resolver(node);
         }
 
@@ -36,7 +36,7 @@ contract ENSRegistryWithFallback is ENSRegistry {
      * @return address of the owner.
      */
     function owner(bytes32 node) public override view returns (address) {
-        if (!recordExists(node)) {
+        if (old.recordExists(node)) {
             return old.owner(node);
         }
 

@@ -25,7 +25,6 @@ import (
 type genesis struct {
 	resources *Resources
 	config    Config
-	chainID   int64
 
 	// collect votes for genesis block from all validators instead of majority
 	votes   map[string]*core.Vote
@@ -59,9 +58,10 @@ func (gns *genesis) commit() {
 		logger.I().Fatalf("sync txs of genesis block failed, %+v", err)
 	}
 	txs, old := gns.resources.TxPool.GetTxsToExecute(b0.Transactions())
-	native.DumpFile(txs[0].Hash(), gns.config.DataDir, native.FileCodeAddr)
 	logger.I().Debugw("executing genesis block...")
 	bcm, txcs := gns.resources.Execution.Execute(b0, txs)
+	// make sure txs has only one transaction
+	native.DumpFile(txs[0].Hash(), gns.config.DataDir, native.FileCodeAddr)
 	bcm.SetOldBlockTxs(old)
 	data := &storage.CommitData{
 		Block:        b0,
@@ -85,7 +85,7 @@ func (gns *genesis) propose() {
 		SetView(0).
 		SetHeight(0).
 		SetTransactions(gns.genesisTxs()).
-		SetParentHash(hashChainID(gns.chainID)).
+		SetParentHash(hashChainID(gns.config.ChainID)).
 		SetTimestamp(time.Now().UnixNano()).
 		Sign(gns.resources.Signer)
 	gns.setB0(blk)
@@ -197,7 +197,7 @@ func (gns *genesis) onReceiveProposal(blk *core.Block) error {
 		logger.I().Info("left behind, fetching genesis block...")
 		return gns.fetchGenesisBlockAndQC(blk.Proposer())
 	}
-	if !bytes.Equal(hashChainID(gns.chainID), blk.ParentHash()) {
+	if !bytes.Equal(hashChainID(gns.config.ChainID), blk.ParentHash()) {
 		return errors.New("different chain id")
 	}
 	if !gns.isLeader(blk.Proposer()) {

@@ -226,34 +226,35 @@ func TestENSRegistry(t *testing.T) {
 
 	c := CreateContract(cfg, compiled["ENSRegistry"][1], compiled["ENSRegistry"][0])
 	a.NotNil(c, "fail")
-	ret, _, err := c.Call("setRecord", [32]byte{}, common.HexToAddress("0xffffff"), common.HexToAddress("0x2"), uint64(0x10))
-	a.Nil(err, "fail")
 
-	ret, _, err = c.Call("owner", [32]byte{}) // make sure owner=msg.sender
-	a.Equal(common.HexToAddress("0xffffff"), common.BytesToAddress(ret), "The owner output is same as input")
-	a.Nil(err, "fail")
+	_, _, err := c.Call("setRecord", [32]byte{}, common.HexToAddress("0xffffff"), common.HexToAddress("0x2"), uint64(0x10))
+	a.NoError(err, "fail")
+
+	ret, _, err := c.Call("owner", [32]byte{}) // make sure owner=msg.sender
+	a.Equal(common.HexToAddress("0xffffff"), common.BytesToAddress(ret), "the owner should be same as input")
+	a.NoError(err, "fail")
 
 	ret, _, err = c.Call("resolver", [32]byte{})
-	a.Equal(common.HexToAddress("0x2"), common.BytesToAddress(ret), "The resolver output is same as input")
-	a.Nil(err, "fail")
+	a.Equal(common.HexToAddress("0x2"), common.BytesToAddress(ret), "the resolver should be same as input")
+	a.NoError(err, "fail")
 
 	ret, _, err = c.Call("ttl", [32]byte{})
-	a.Equal(uint64(0x10), byteArrayToUint64(ret), "The resolver output is same as input")
-	a.Nil(err, "fail")
+	a.Equal(uint64(0x10), byteArrayToUint64(ret), "the ttl should be same as input")
+	a.NoError(err, "fail")
 
 	ret, _, err = c.Call("recordExists", [32]byte{})
-	a.True(new(big.Int).SetBytes(ret).Cmp(big.NewInt(1)) == 0, "record exists")
-	a.Nil(err, "fail")
+	a.True(new(big.Int).SetBytes(ret).Cmp(big.NewInt(1)) == 0, "record existence should be the same")
+	a.NoError(err, "fail")
 
 	ret, _, err = c.Call("setApprovalForAll", common.HexToAddress("0x3"), true)
-	a.Nil(err, "fail")
+	a.NoError(err, "fail")
 
 	ret, _, err = c.Call("isApprovedForAll", common.HexToAddress("0xffffff"), common.HexToAddress("0x3"))
-	a.True(new(big.Int).SetBytes(ret).Cmp(big.NewInt(1)) == 0, ret, "isApprovedForAll")
-	a.Nil(err, "fail")
+	a.True(new(big.Int).SetBytes(ret).Cmp(big.NewInt(1)) == 0, "approval or not should be the same")
+	a.NoError(err, "fail")
 
-	ret, _, err = c.Call("setSubnodeRecord", [32]byte{}, [32]byte{0x44}, common.HexToAddress("0xffffff"), common.HexToAddress("0x4"), uint64(0x10))
-	a.Nil(err, "fail")
+	ret, _, err = c.Call("setSubnodeRecord", [32]byte{}, [32]byte{0x4}, common.HexToAddress("0xffffff"), common.HexToAddress("0x4"), uint64(0x10))
+	a.NoError(err, "fail")
 }
 
 func TestENSRegistryWithFallback(t *testing.T) {
@@ -264,12 +265,20 @@ func TestENSRegistryWithFallback(t *testing.T) {
 	cfg := makeConfig()
 	compiled := compileCode("../testdata/contracts/ens/ENSRegistryWithFallback.sol")
 
-	c := CreateContract(cfg, compiled["ENSRegistryWithFallback"][1], compiled["ENSRegistryWithFallback"][0], common.HexToAddress("0xfff"))
+	ens := CreateContract(cfg, compiled["ENSRegistry"][1], compiled["ENSRegistry"][0])
+	c := CreateContract(cfg, compiled["ENSRegistryWithFallback"][1], compiled["ENSRegistryWithFallback"][0], ens.Address)
 	a.NotNil(c, "fail")
 
+	_, _, err := ens.Call("setRecord", [32]byte{}, common.HexToAddress("0xffffff"), common.HexToAddress("0x2"), uint64(0x10))
+	a.NoError(err, "fail")
+
 	ret, _, err := c.Call("owner", [32]byte{})
-	a.Equal(common.HexToAddress("0xffffff"), common.BytesToAddress(ret), "The owner output is same as input")
-	a.Nil(err, "fail")
+	a.Equal(common.HexToAddress("0xffffff"), common.BytesToAddress(ret), "the owner should be same as input")
+	a.NoError(err, "fail")
+
+	ret, _, err = c.Call("resolver", [32]byte{})
+	a.Equal(common.HexToAddress("0x2"), common.BytesToAddress(ret), "the resolver should be same as input")
+	a.NoError(err, "fail")
 }
 
 func TestFIFSRegistrar(t *testing.T) {
@@ -285,46 +294,8 @@ func TestFIFSRegistrar(t *testing.T) {
 	c := CreateContract(cfg, compiled["FIFSRegistrar"][1], compiled["FIFSRegistrar"][0], ens.Address, [32]byte{})
 	a.NotNil(c, "fail")
 
-	// TODO: execution reverted error happens when calling register function due to the address of the msg.sender
-	// changed from cfg.Origin to the address of the FIFSRegistrar contract
-	t.Skip("execution reverted error happens")
-	_, _, err := c.Call("register", [32]byte{0x11}, common.HexToAddress("0xffffff")) //label owner
-	a.Nil(err, "fail")
-}
-
-func TestRegistrar(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("compiling contracts on windows is not supported")
-	}
-	a := require.New(t)
-	cfg := makeConfig()
-	compiled := compileCode("../testdata/contracts/ens/TestRegistrar.sol")
-	compiled2 := compileCode("../testdata/contracts/ens/ENSRegistry.sol")
-
-	ens := CreateContract(cfg, compiled2["ENSRegistry"][1], compiled2["ENSRegistry"][0]) //get the ens instance
-	c := CreateContract(cfg, compiled["TestRegistrar"][1], compiled["TestRegistrar"][0], ens.Address, [32]byte{})
-	a.NotNil(c, "fail")
-
-	// TODO: execution reverted error happens when calling register function due to the address of the msg.sender
-	// changed from cfg.Origin to the address of the FIFSRegistrar contract
-	t.Skip("execution reverted error happens")
-	_, _, err := c.Call("register", [32]byte{0x12}, common.HexToAddress("0x13")) //label owner
-	a.Nil(err, "fail")
-}
-
-func TestReverseRegistrar(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("compiling contracts on windows is not supported")
-	}
-	a := require.New(t)
-	cfg := makeConfig()
-	compiled := compileCode("../testdata/contracts/ens/ReverseRegistrar.sol")
-	compiled2 := compileCode("../testdata/contracts/ens/ENSRegistry.sol")
-
-	ens := CreateContract(cfg, compiled2["ENSRegistry"][1], compiled2["ENSRegistry"][0]) //get the ens instance
-
-	//TODO: test cannot be done, because NameResolver is an abstract class
-	t.Skip("execution reverted error happens")
-	c := CreateContract(cfg, compiled["ReverseRegistrar"][1], compiled["ReverseRegistrar"][0], ens.Address)
-	a.NotNil(c, "fail")
+	_, _, err := ens.Call("setApprovalForAll", c.Address, true)
+	a.NoError(err, "fail")
+	_, _, err = c.Call("register", [32]byte{0x4}, common.HexToAddress("0xffffff")) // label owner
+	a.NoError(err, "fail")
 }

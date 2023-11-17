@@ -4,22 +4,55 @@
 package evm
 
 import (
+	"bytes"
+	"encoding/hex"
+	"errors"
+	"os"
+	"path"
+	"sync"
+
 	"github.com/wooyang2018/svp-blockchain/execution/common"
 )
 
 type CodeDriver struct {
+	codeDir    string
+	mtxInstall sync.Mutex
 }
 
 var _ common.CodeDriver = (*CodeDriver)(nil)
 
-func NewCodeDriver() *CodeDriver {
-	return &CodeDriver{}
+func NewCodeDriver(codeDir string) *CodeDriver {
+	return &CodeDriver{
+		codeDir: codeDir,
+	}
 }
 
-func (c CodeDriver) Install(codeID, data []byte) error {
-	return nil
+func (drv CodeDriver) Install(codeID, data []byte) error {
+	drv.mtxInstall.Lock()
+	defer drv.mtxInstall.Unlock()
+	return drv.downloadCodeIfRequired(codeID, data)
 }
 
-func (c CodeDriver) GetInstance(codeID []byte) (common.Chaincode, error) {
+func (drv CodeDriver) GetInstance(codeID []byte) (common.Chaincode, error) {
 	return &Runner{}, nil
+}
+
+func (drv *CodeDriver) downloadCodeIfRequired(codeID, data []byte) error {
+	filepath := path.Join(drv.codeDir, hex.EncodeToString(codeID))
+	if _, err := os.Stat(filepath); err == nil {
+		return nil // code file already exist
+	}
+	resp, err := common.DownloadCode(string(data), 5)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	sum, buf, err := common.CopyAndSumCode(resp.Body)
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(codeID, sum) {
+		return errors.New("invalid code hash")
+	}
+	return common.WriteCodeFile(drv.codeDir, codeID, buf)
 }

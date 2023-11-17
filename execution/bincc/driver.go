@@ -7,14 +7,10 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
-	"io"
-	"net/http"
 	"os"
 	"path"
 	"sync"
 	"time"
-
-	"golang.org/x/crypto/sha3"
 
 	"github.com/wooyang2018/svp-blockchain/execution/common"
 )
@@ -52,68 +48,17 @@ func (drv *CodeDriver) downloadCodeIfRequired(codeID, data []byte) error {
 	if _, err := os.Stat(filepath); err == nil {
 		return nil // code file already exist
 	}
-	resp, err := drv.downloadCode(string(data), 5)
+	resp, err := common.DownloadCode(string(data), 5)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
-	sum, buf, err := copyAndSumCode(resp.Body)
+	sum, buf, err := common.CopyAndSumCode(resp.Body)
 	if err != nil {
 		return err
 	}
 	if !bytes.Equal(codeID, sum) {
 		return errors.New("invalid code hash")
 	}
-	return writeCodeFile(drv.codeDir, codeID, buf)
-}
-
-func (drv *CodeDriver) downloadCode(url string, retry int) (*http.Response, error) {
-	resp, err := http.Get(url)
-	if err == nil {
-		if resp.StatusCode != 200 {
-			err = errors.New("status not 200")
-		}
-	}
-	if err != nil {
-		if retry <= 0 {
-			return nil, err
-		}
-		time.Sleep(100 * time.Millisecond)
-		return drv.downloadCode(url, retry-1)
-	}
-	return resp, nil
-}
-
-func writeCodeFile(codeDir string, codeID []byte, r io.Reader) error {
-	filename := hex.EncodeToString(codeID)
-	filepath := path.Join(codeDir, filename)
-	f, err := os.Create(filepath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	if _, err := io.Copy(f, r); err != nil {
-		return err
-	}
-	return os.Chmod(filepath, 0755)
-}
-
-func copyAndSumCode(r io.Reader) ([]byte, *bytes.Buffer, error) {
-	buf := bytes.NewBuffer(nil)
-	h := sha3.New256()
-	if _, err := io.Copy(buf, io.TeeReader(r, h)); err != nil {
-		return nil, nil, err
-	}
-	return h.Sum(nil), buf, nil
-}
-
-func StoreCode(codeDir string, r io.Reader) ([]byte, error) {
-	codeID, buf, err := copyAndSumCode(r)
-	if err != nil {
-		return nil, err
-	}
-	if err = writeCodeFile(codeDir, codeID, buf); err != nil {
-		return nil, err
-	}
-	return codeID, nil
+	return common.WriteCodeFile(drv.codeDir, codeID, buf)
 }
