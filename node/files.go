@@ -22,7 +22,7 @@ type Peer struct {
 
 type Genesis struct {
 	Validators  []string
-	StakeQuotas []uint32
+	StakeQuotas []uint64
 	WindowSize  int
 }
 

@@ -23,13 +23,13 @@ const (
 )
 
 type window struct {
-	qcQuotas   []uint32
-	qcAcc      uint32
-	voteQuotas []uint32
-	voteAcc    uint32
+	qcQuotas   []uint64
+	qcAcc      uint64
+	voteQuotas []uint64
+	voteAcc    uint64
 
-	majority uint32
-	limit    uint32
+	majority uint64
+	limit    uint64
 	height   uint64
 	size     int
 
@@ -37,7 +37,7 @@ type window struct {
 	recover  bool
 }
 
-func (w *window) update(qc, vote uint32, height uint64) {
+func (w *window) update(qc, vote uint64, height uint64) {
 	if height > w.height {
 		w.qcAcc -= w.qcQuotas[0]
 		w.qcQuotas = w.qcQuotas[1:]
@@ -55,41 +55,43 @@ func (w *window) update(qc, vote uint32, height uint64) {
 	}
 }
 
-func (w *window) vote() (uint32, bool) {
+func (w *window) vote() (uint64, bool) {
 	switch w.strategy {
 	case AverageVote:
 		//several blocks starting with genesis block may not satisfy the rule for window voting
-		return w.limit / uint32(w.size), true
+		return w.limit / uint64(w.size), true
 	case RandomVote:
 		if !PreserveTxFlag && w.height > 50 {
 			return w.limit - w.voteAcc + w.voteQuotas[0], true
 		}
-		var pre, min, max, quota int
-		pre = int(w.voteAcc - w.voteQuotas[0])
-		if max = int(3*w.limit+3)/4 - pre; max < 0 {
+		pre := w.voteAcc - w.voteQuotas[0]
+		max := (3*w.limit+3)/4 - pre
+		if int((3*w.limit+3)/4-pre) < 0 {
 			max = 0
 		}
-		if min = int(w.limit+1)/2 - pre; min < 0 {
+		min := (w.limit+1)/2 - pre
+		if int((w.limit+1)/2-pre) < 0 {
 			min = 0
 		}
-		quota = rand.Intn(max-min+1) + min
+		quota := rand.Uint64()%(max-min+1) + min
 		time.Sleep(time.Duration(w.size-4) * 15 * time.Millisecond)
-		return uint32(quota), true
+		return quota, true
 	case OrdinaryVote: //only for experiment 3: ordinary BFT validators over f
+		//makes it impossible to exceed the stake threshold for window of height 100 to 99+w.size
 		if !w.recover && w.height >= 100 && w.height <= 99+uint64(w.size) &&
 			w.limit >= w.majority {
 			return 0, false
 		}
-		return w.limit / uint32(w.size), true
+		return w.limit / uint64(w.size), true
 	case MonopolyVote: //only for experiment 4: monopoly BFT validators with 1/2s stake
-		if !w.recover && w.height == 100 {
+		if !w.recover && w.height == 100 { //BFT block at height 100
 			if w.limit >= w.majority {
 				return w.limit - w.voteAcc + w.voteQuotas[0], true
 			} else {
 				return 0, false
 			}
 		}
-		return w.limit / uint32(w.size), true
+		return w.limit / uint64(w.size), true
 	default:
 		panic("no support voting strategy")
 	}
@@ -124,7 +126,7 @@ type status struct {
 
 	proposal   *core.Block
 	votes      map[string]*core.Vote
-	quotaCount uint32
+	quotaCount uint64
 	window     *window
 	mtx        sync.RWMutex
 }
@@ -145,21 +147,21 @@ func (s *status) getLeaderIndex() uint32      { return atomic.LoadUint32(&s.lead
 func (s *status) getViewStart() int64         { return atomic.LoadInt64(&s.viewStart) }
 func (s *status) getViewChange() int32        { return atomic.LoadInt32(&s.viewChange) }
 
-func (s *status) getQCWindow() []uint32 {
+func (s *status) getQCWindow() []uint64 {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
 	return s.window.qcQuotas
 }
 
-func (s *status) getVoteWindow() []uint32 {
+func (s *status) getVoteWindow() []uint64 {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
 	return s.window.voteQuotas
 }
 
-func (s *status) updateWindow(qc, vote uint32, height uint64) {
+func (s *status) updateWindow(qc, vote uint64, height uint64) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
@@ -173,7 +175,7 @@ func (s *status) recoverFlag() {
 	s.window.recover = true
 }
 
-func (s *status) getQuotaCount() uint32 {
+func (s *status) getQuotaCount() uint64 {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 
@@ -198,7 +200,7 @@ func (s *status) endProposal() {
 	s.quotaCount = 0
 }
 
-func (s *status) getVoteQuota() (uint32, error) {
+func (s *status) getVoteQuota() (uint64, error) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 

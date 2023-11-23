@@ -62,8 +62,8 @@ func MakeRandomKeys(count int) []*core.PrivateKey {
 	return keys
 }
 
-func MakeRandomQuotas(count int, quota int) []uint32 {
-	quotas := make([]uint32, count)
+func MakeRandomQuotas(count int, quota int) []uint64 {
+	quotas := make([]uint64, count)
 	if consensus.TwoPhaseBFTFlag {
 		for i := 0; i < count; i++ {
 			quotas[i] = 1
@@ -71,7 +71,7 @@ func MakeRandomQuotas(count int, quota int) []uint32 {
 		return quotas
 	}
 	r := rand.New(rand.NewSource(time.Now().Unix()))
-	quotas[count-1] = uint32(quota+1) / 2
+	quotas[count-1] = uint64(quota+1) / 2
 	remain := quota - int(quotas[count-1])
 	for i := 0; i < remain; i++ {
 		quotas[r.Intn(count-1)]++

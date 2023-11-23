@@ -113,7 +113,7 @@ func (bm *Benchmark) runWithLoad(tps int) error {
 		}
 		bm.downloadFiles()
 		bm.removeDB()
-		fmt.Println("Removed DB, Done\n", bm.benchmarkName)
+		fmt.Print("Removed DB, Done\n\n")
 	}
 	return bm.err
 }

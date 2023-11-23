@@ -60,9 +60,11 @@ func Run(config Config) {
 }
 
 func (node *Node) limitCPUs() {
-	runtime.GOMAXPROCS(MaxProcsNum)
-	logger.I().Debugf("setup node to use %d out of %d CPUs",
-		runtime.GOMAXPROCS(0), runtime.NumCPU())
+	if consensus.PreserveTxFlag {
+		runtime.GOMAXPROCS(MaxProcsNum)
+		logger.I().Debugf("setup node to use %d out of %d CPUs",
+			runtime.GOMAXPROCS(0), runtime.NumCPU())
+	}
 }
 
 func (node *Node) setupLogger() {

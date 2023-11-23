@@ -40,7 +40,7 @@ func (vote *Vote) Validate(rs RoleStore) error {
 	if !rs.IsValidator(sig.PublicKey()) {
 		return ErrInvalidValidator
 	}
-	if !sig.Verify(appendUint32(vote.data.BlockHash, vote.data.View, vote.data.Quota)) {
+	if !sig.Verify(appendUint64(appendUint32(vote.data.BlockHash, vote.data.View), vote.data.Quota)) {
 		return ErrInvalidSig
 	}
 	return nil
@@ -57,7 +57,7 @@ func (vote *Vote) setData(data *pb.Vote) error {
 }
 
 func (vote *Vote) View() uint32      { return vote.data.View }
-func (vote *Vote) Quota() uint32     { return vote.data.Quota }
+func (vote *Vote) Quota() uint64     { return vote.data.Quota }
 func (vote *Vote) BlockHash() []byte { return vote.data.BlockHash }
 func (vote *Vote) Voter() *PublicKey { return vote.voter.pubKey }
 

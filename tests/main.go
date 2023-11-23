@@ -54,7 +54,7 @@ var (
 	BenchLoads    = []int{2700}
 
 	OnlySetupCluster = false
-	OnlyRunCluster   = true
+	OnlyRunCluster   = false
 )
 
 func getNodeConfig() node.Config {

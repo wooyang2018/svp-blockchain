@@ -58,9 +58,11 @@ func (gns *genesis) commit() {
 		logger.I().Fatalf("sync txs of genesis block failed, %+v", err)
 	}
 	txs, old := gns.resources.TxPool.GetTxsToExecute(b0.Transactions())
+	if len(txs) != 1 {
+		logger.I().Fatalf("genesis block contains %d txs", len(txs))
+	}
 	logger.I().Debugw("executing genesis block...")
 	bcm, txcs := gns.resources.Execution.Execute(b0, txs)
-	// make sure txs has only one transaction
 	native.DumpFile(txs[0].Hash(), gns.config.DataDir, native.FileCodeAddr)
 	bcm.SetOldBlockTxs(old)
 	data := &storage.CommitData{
@@ -240,7 +242,7 @@ func (gns *genesis) requestBlockByHeight(peer *core.PublicKey, height uint64) (*
 	if err != nil {
 		return nil, fmt.Errorf("request block failed, height %d, %w", height, err)
 	}
-	if err := blk.Validate(gns.resources.RoleStore); err != nil {
+	if err = blk.Validate(gns.resources.RoleStore); err != nil {
 		return nil, fmt.Errorf("validate block failed, height %d, %w", height, err)
 	}
 	return blk, nil
@@ -251,7 +253,7 @@ func (gns *genesis) requestQC(peer *core.PublicKey, blkHash []byte) (*core.Quoru
 	if err != nil {
 		return nil, fmt.Errorf("request qc failed, %w", err)
 	}
-	if err := qc.Validate(gns.resources.RoleStore); err != nil {
+	if err = qc.Validate(gns.resources.RoleStore); err != nil {
 		return nil, fmt.Errorf("validate qc failed, %w", err)
 	}
 	return qc, nil
@@ -277,8 +279,8 @@ func (gns *genesis) acceptVote(vote *core.Vote) {
 		return
 	}
 	vlist := make([]*core.Vote, 0, len(gns.votes))
-	for _, vote := range gns.votes {
-		vlist = append(vlist, vote)
+	for _, v := range gns.votes {
+		vlist = append(vlist, v)
 	}
 	gns.setQ0(core.NewQuorumCert().Build(gns.resources.Signer, vlist))
 	logger.I().Info("created qc, broadcasting...")

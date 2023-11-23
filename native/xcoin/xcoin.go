@@ -16,7 +16,7 @@ import (
 type Input struct {
 	Method string `json:"method"`
 	Dest   []byte `json:"dest"`
-	Value  int64  `json:"value"`
+	Value  uint64 `json:"value"`
 }
 
 // XCoin chaincode
@@ -28,7 +28,7 @@ func (c *XCoin) Init(ctx common.CallContext) error {
 	if ctx.BlockHeight() != 0 {
 		return errors.New("xcoin must init at height 0")
 	}
-	m := make(map[string]int64)
+	m := make(map[string]uint64)
 	json.Unmarshal(ctx.Input(), &m)
 	for k, v := range m {
 		owner, err := base64.StdEncoding.DecodeString(k)
@@ -95,16 +95,16 @@ func queryBalance(ctx common.CallContext, input *Input) ([]byte, error) {
 	return json.Marshal(decodeBalance(ctx.GetState(input.Dest)))
 }
 
-func decodeBalance(b []byte) int64 {
+func decodeBalance(b []byte) uint64 {
 	if b == nil {
 		return 0
 	}
-	return int64(binary.BigEndian.Uint64(b))
+	return binary.BigEndian.Uint64(b)
 }
 
-func encodeBalance(value int64) []byte {
+func encodeBalance(value uint64) []byte {
 	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, uint64(value))
+	binary.BigEndian.PutUint64(b, value)
 	return b
 }
 

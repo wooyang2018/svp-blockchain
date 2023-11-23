@@ -40,7 +40,7 @@ function rename_first_dir() {
 #LoadSubmitNodes = []int{0}
 #CheckRotation = false
 #BroadcastTx = false
-#BenchDuration = 5 * time.Minute
+#BenchDuration = 1 * time.Minute
 #BenchLoads = []int{5000}
 function run_experiment_basic() {
   mkdir -p ./workdir/experiment-svp/

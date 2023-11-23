@@ -261,7 +261,7 @@ func (rot *rotator) newViewProposal() {
 
 	rot.driver.updateQCHigh(blk.QuorumCert())
 
-	var quota uint32 = 1
+	var quota uint64 = 1
 	if !TwoPhaseBFTFlag {
 		var err error
 		if quota, err = rot.status.getVoteQuota(); err != nil {

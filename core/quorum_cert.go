@@ -25,7 +25,7 @@ var (
 // QuorumCert type
 type QuorumCert struct {
 	data      *pb.QuorumCert
-	quota     uint32
+	quota     uint64
 	sigs      sigList
 	signature *Signature
 }
@@ -53,7 +53,7 @@ func (qc *QuorumCert) Validate(rs RoleStore) error {
 		if !rs.IsValidator(sig.PublicKey()) {
 			return ErrInvalidValidator
 		}
-		if !sig.Verify(appendUint32(qc.data.BlockHash, qc.data.View, qc.data.Quotas[i])) {
+		if !sig.Verify(appendUint64(appendUint32(qc.data.BlockHash, qc.data.View), qc.data.Quotas[i])) {
 			return ErrInvalidSig
 		}
 	}
@@ -90,7 +90,7 @@ func (qc *QuorumCert) setData(data *pb.QuorumCert) error {
 }
 
 func (qc *QuorumCert) Build(signer Signer, votes []*Vote) *QuorumCert {
-	qc.data.Quotas = make([]uint32, len(votes))
+	qc.data.Quotas = make([]uint64, len(votes))
 	qc.data.Signatures = make([]*pb.Signature, len(votes))
 	qc.sigs = make(sigList, len(votes))
 	qc.quota = 0
@@ -112,7 +112,7 @@ func (qc *QuorumCert) Build(signer Signer, votes []*Vote) *QuorumCert {
 	return qc
 }
 
-func (qc *QuorumCert) FindVote(signer Signer) uint32 {
+func (qc *QuorumCert) FindVote(signer Signer) uint64 {
 	dst := signer.PublicKey().String()
 	for i, v := range qc.sigs {
 		if v.PublicKey().String() == dst {
@@ -123,9 +123,9 @@ func (qc *QuorumCert) FindVote(signer Signer) uint32 {
 }
 
 func (qc *QuorumCert) View() uint32             { return qc.data.View }
-func (qc *QuorumCert) SumQuota() uint32         { return qc.quota }
+func (qc *QuorumCert) SumQuota() uint64         { return qc.quota }
 func (qc *QuorumCert) BlockHash() []byte        { return qc.data.BlockHash }
-func (qc *QuorumCert) Quotas() []uint32         { return qc.data.Quotas }
+func (qc *QuorumCert) Quotas() []uint64         { return qc.data.Quotas }
 func (qc *QuorumCert) Signatures() []*Signature { return qc.sigs }
 func (qc *QuorumCert) Proposer() *PublicKey     { return qc.signature.pubKey }
 
@@ -148,6 +148,16 @@ func appendUint32(hash []byte, data ...uint32) []byte {
 	buf := make([]byte, 4*n)
 	for i := 0; i < n; i++ {
 		binary.LittleEndian.PutUint32(buf, data[i])
+	}
+	hash = append(hash, buf...)
+	return hash
+}
+
+func appendUint64(hash []byte, data ...uint64) []byte {
+	n := len(data)
+	buf := make([]byte, 8*n)
+	for i := 0; i < n; i++ {
+		binary.LittleEndian.PutUint64(buf, data[i])
 	}
 	hash = append(hash, buf...)
 	return hash

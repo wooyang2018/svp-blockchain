@@ -22,7 +22,7 @@ const (
 
 var (
 	dest  string
-	value int64
+	value uint64
 )
 
 var balanceCmd = &cobra.Command{
@@ -72,6 +72,6 @@ func init() {
 
 	transferCmd.PersistentFlags().StringVar(&dest, FlagDest, dest, "destination public key")
 	transferCmd.MarkPersistentFlagRequired(FlagDest)
-	transferCmd.PersistentFlags().Int64Var(&value, FlagValue, value, "value of transfer command")
+	transferCmd.PersistentFlags().Uint64Var(&value, FlagValue, value, "value of transfer command")
 	transferCmd.MarkPersistentFlagRequired(FlagValue)
 }

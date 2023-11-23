@@ -125,7 +125,7 @@ func (vld *validator) voteProposal(blk *core.Block) error {
 	if err := vld.verifyBlockToVote(blk); err != nil {
 		return err
 	}
-	var quota uint32 = 1
+	var quota uint64 = 1
 	if !TwoPhaseBFTFlag {
 		var err error
 		if quota, err = vld.status.getVoteQuota(); err != nil {
