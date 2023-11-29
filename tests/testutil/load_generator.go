@@ -9,7 +9,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/wooyang2018/svp-blockchain/consensus"
 	"github.com/wooyang2018/svp-blockchain/tests/cluster"
 )
 
@@ -80,22 +79,21 @@ func (lg *LoadGenerator) BatchRun(ctx context.Context) {
 	delay := time.Second / time.Duration(lg.txPerSec/lg.jobPerTick)
 	ticker := time.NewTicker(delay)
 	defer ticker.Stop()
-	timer := time.NewTimer(10 * time.Second) //the execution time of BatchRun function
-	defer timer.Stop()
+
+	lg.paused = false
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			if lg.paused {
+				continue
+			}
 			_, txs, err := lg.client.BatchSubmitTx(lg.jobPerTick)
 			if err != nil {
 				fmt.Printf("batch submit tx failed, %+v\n", err)
 			} else {
 				lg.increaseSubmitted(int64(len(*txs)))
-			}
-		case <-timer.C:
-			if consensus.PreserveTxFlag {
-				return
 			}
 		}
 	}

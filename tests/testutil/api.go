@@ -56,7 +56,7 @@ func GetStatus(node cluster.Node) (*consensus.Status, error) {
 	}
 	defer resp.Body.Close()
 	ret := new(consensus.Status)
-	if err := json.NewDecoder(resp.Body).Decode(ret); err != nil {
+	if err = json.NewDecoder(resp.Body).Decode(ret); err != nil {
 		return nil, err
 	}
 	return ret, nil
@@ -72,7 +72,7 @@ func GetTxPoolStatus(node cluster.Node) (*txpool.Status, error) {
 	}
 	defer resp.Body.Close()
 	ret := new(txpool.Status)
-	if err := json.NewDecoder(resp.Body).Decode(ret); err != nil {
+	if err = json.NewDecoder(resp.Body).Decode(ret); err != nil {
 		return nil, err
 	}
 	return ret, nil

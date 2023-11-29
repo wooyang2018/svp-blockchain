@@ -30,7 +30,8 @@ type driver struct {
 	mtxUpdate sync.Mutex // lock for update call
 }
 
-func (d *driver) waitCommit() {
+func (d *driver) stop() {
+	d.tester.close()
 	d.mtxCommit.Lock()
 	defer d.mtxCommit.Unlock()
 	d.isExisted = true

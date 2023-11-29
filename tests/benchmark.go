@@ -271,6 +271,13 @@ func (bm *Benchmark) onTick() error {
 	go func() {
 		defer wg.Done()
 		meas.TxPoolStatus = testutil.GetTxPoolStatusAll(bm.cluster)
+		if len(meas.TxPoolStatus) >= 1 && meas.TxPoolStatus[0] != nil {
+			if meas.TxPoolStatus[0].Queue >= 30000 {
+				bm.loadGen.Pause()
+			} else if meas.TxPoolStatus[0].Queue <= 10000 {
+				bm.loadGen.UnPause()
+			}
+		}
 	}()
 	if consensus.ExecuteTxFlag {
 		wg.Add(1)

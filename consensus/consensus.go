@@ -81,7 +81,7 @@ func (cons *Consensus) start() {
 }
 
 func (cons *Consensus) stop() {
-	cons.driver.waitCommit()
+	cons.driver.stop()
 	cons.pacemaker.stop()
 	cons.validator.stop()
 	cons.rotator.stop()

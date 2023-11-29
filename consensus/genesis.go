@@ -175,7 +175,7 @@ func (gns *genesis) voteLoop() {
 }
 
 func (gns *genesis) newViewLoop() {
-	sub := gns.resources.MsgSvc.SubscribeQC(10)
+	sub := gns.resources.MsgSvc.SubscribeQC(1)
 	defer sub.Unsubscribe()
 
 	for {

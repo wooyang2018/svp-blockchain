@@ -39,7 +39,7 @@ var (
 	BroadcastTx    = true
 
 	// run tests in remote linux cluster
-	RemoteLinuxCluster    = false // if false it will use local cluster (running multiple nodes on single local machine)
+	RemoteLinuxCluster    = true // if false it will use local cluster (running multiple nodes on single local machine)
 	RemoteSetupRequired   = true
 	RemoteInstallRequired = false // if false it will not try to install dstat on remote machine
 	RemoteRunRequired     = false // if false it will not run dstat on remote machine
@@ -49,9 +49,9 @@ var (
 	RemoteNetworkLoss     = 15.0
 
 	// run benchmark, otherwise run experiments
-	RunBenchmark  = false
-	BenchDuration = 1 * time.Minute
-	BenchLoads    = []int{2700}
+	RunBenchmark  = true
+	BenchDuration = max(5*time.Minute, time.Duration(NodeCount/2))
+	BenchLoads    = []int{5000}
 
 	OnlySetupCluster = false
 	OnlyRunCluster   = false

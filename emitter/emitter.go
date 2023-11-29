@@ -60,13 +60,6 @@ func (e *Emitter) Subscribe(buffer int) *Subscription {
 	return s
 }
 
-func max(x, y int) int {
-	if x > y {
-		return x
-	}
-	return y
-}
-
 func (e *Emitter) add(s *Subscription) {
 	e.mtx.Lock()
 	defer e.mtx.Unlock()

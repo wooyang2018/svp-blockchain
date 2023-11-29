@@ -118,10 +118,10 @@ func (ftry *RemoteFactory) setup() error {
 		return err
 	}
 	fmt.Println()
-	if err := ftry.setupRemoteServers(); err != nil {
+	if err = ftry.setupRemoteServers(); err != nil {
 		return err
 	}
-	if err := ftry.sendChain(); err != nil {
+	if err = ftry.sendChain(); err != nil {
 		return err
 	}
 	return ftry.sendTemplate()
@@ -163,7 +163,7 @@ func (ftry *RemoteFactory) setupRemoteServers() error {
 			"sudo", "killall", "dstat", ";",
 			"mkdir", "-p", ftry.workDirs[i], ";",
 			"cd", ftry.workDirs[i], ";",
-			"rm", "-r", "template",
+			"rm", "-rf", "template",
 		)
 		if err := RunCommand(cmd); err != nil {
 			return err

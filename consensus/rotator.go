@@ -55,7 +55,7 @@ func (rot *rotator) stop() {
 }
 
 func (rot *rotator) newViewLoop() {
-	sub := rot.resources.MsgSvc.SubscribeQC(100)
+	sub := rot.resources.MsgSvc.SubscribeQC(10)
 	defer sub.Unsubscribe()
 
 	for {
