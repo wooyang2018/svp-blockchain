@@ -53,6 +53,7 @@ func Create2Contract(cfg *Config, jsonABI, hexCode string, salt uint64, params .
 	}
 }
 
+// CreateContract create and deploy a contract
 func CreateContract(cfg *Config, jsonABI string, hexCode string, params ...interface{}) *Contract {
 	contractBin, err := hexutil.Decode(hexCode)
 	Ensure(err)

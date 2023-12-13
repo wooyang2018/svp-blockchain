@@ -39,9 +39,9 @@ func serveNodeAPI(node *Node) {
 	r.GET("/blocks/height/:height", api.getBlockByHeight)
 	r.POST("/querystate", api.queryState)
 	r.POST("/bincc", api.uploadBinChainCode)
+	r.POST("/contract", api.uploadContractCode)
 	r.Static("/bincc", node.config.ExecutionConfig.BinccDir)
-	r.Static("/contracts", node.config.ExecutionConfig.ContractsDir)
-
+	r.Static("/contract", node.config.ExecutionConfig.ContractDir)
 	go func() {
 		if err := r.Run(fmt.Sprintf(":%d", node.config.APIPort)); err != nil {
 			logger.I().Fatalf("failed to start api %+v", err)
@@ -158,6 +158,14 @@ func (api *nodeAPI) getBlockByHeight(c *gin.Context) {
 }
 
 func (api *nodeAPI) uploadBinChainCode(c *gin.Context) {
+	uploadCode(c, api.node.config.ExecutionConfig.BinccDir)
+}
+
+func (api *nodeAPI) uploadContractCode(c *gin.Context) {
+	uploadCode(c, api.node.config.ExecutionConfig.ContractDir)
+}
+
+func uploadCode(c *gin.Context, path string) {
 	fh, err := c.FormFile("file")
 	if err != nil {
 		c.String(http.StatusBadRequest, "cannot get uploaded file")
@@ -169,7 +177,7 @@ func (api *nodeAPI) uploadBinChainCode(c *gin.Context) {
 		return
 	}
 	defer f.Close()
-	codeID, err := common.StoreCode(api.node.config.ExecutionConfig.BinccDir, f)
+	codeID, err := common.StoreCode(path, f)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return

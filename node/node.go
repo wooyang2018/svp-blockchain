@@ -84,8 +84,8 @@ func (node *Node) setupLogger() {
 func (node *Node) setupDirs() {
 	node.config.ExecutionConfig.BinccDir = path.Join(node.config.DataDir, "bincc")
 	os.Mkdir(node.config.ExecutionConfig.BinccDir, 0755)
-	node.config.ExecutionConfig.ContractsDir = path.Join(node.config.DataDir, "contracts")
-	os.Mkdir(node.config.ExecutionConfig.ContractsDir, 0755)
+	node.config.ExecutionConfig.ContractDir = path.Join(node.config.DataDir, "contracts")
+	os.Mkdir(node.config.ExecutionConfig.ContractDir, 0755)
 }
 
 func (node *Node) readFiles() {

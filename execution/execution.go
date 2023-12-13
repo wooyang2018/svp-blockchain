@@ -18,7 +18,7 @@ import (
 
 type Config struct {
 	BinccDir        string
-	ContractsDir    string
+	ContractDir     string
 	TxExecTimeout   time.Duration
 	ConcurrentLimit int
 }
@@ -49,7 +49,7 @@ func New(stateStore StateStore, config Config) *Execution {
 	exec.codeRegistry.registerDriver(common.DriverTypeBincc,
 		bincc.NewCodeDriver(exec.config.BinccDir, exec.config.TxExecTimeout))
 	exec.codeRegistry.registerDriver(common.DriverTypeEVM,
-		evm.NewCodeDriver(exec.config.ContractsDir))
+		evm.NewCodeDriver(exec.config.ContractDir))
 	return exec
 }
 
