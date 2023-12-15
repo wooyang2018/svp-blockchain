@@ -4,12 +4,8 @@
 package runtime
 
 import (
-	"fmt"
 	"math/big"
-	"os/exec"
-	"regexp"
 	"runtime"
-	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -21,7 +17,7 @@ import (
 
 func makeConfig() *Config {
 	cfg := new(Config)
-	setDefaults(cfg)
+	SetDefaults(cfg)
 
 	memback := storage.NewMemLevelDBStore()
 	cache := statedb.NewCacheDB(memback)
@@ -31,44 +27,6 @@ func makeConfig() *Config {
 	cfg.Origin = common.HexToAddress("0xffffff")
 
 	return cfg
-}
-
-// compileCode compiles the solidity code for the specified path.
-// See https://docs.soliditylang.org/zh/v0.8.17/installing-solidity.html#linux to install solc command
-func compileCode(path string) map[string][2]string {
-	cmd := exec.Command("solc",
-		"--evm-version", "paris",
-		path,
-		"--bin", "--abi", "--optimize")
-	fmt.Println(cmd.String())
-	output, err := cmd.Output()
-	if err != nil {
-		panic("compile code failed")
-	}
-
-	contracts := make(map[string][2]string)
-	pattern := regexp.MustCompile(`^======= \S* =======$`)
-	lines := strings.Split(string(output), "\n")
-	for i := 0; i < len(lines); i++ {
-		if !pattern.MatchString(lines[i]) {
-			continue
-		}
-		nameRegex := regexp.MustCompile(`:\w+`)
-		name := nameRegex.FindString(lines[i])[1:]
-		i++
-		content := [2]string{}
-		if lines[i] == "Binary:" {
-			i++
-			content[0] = "0x" + lines[i]
-		}
-		i++
-		if lines[i] == "Contract JSON ABI" {
-			i++
-			content[1] = lines[i]
-		}
-		contracts[name] = content
-	}
-	return contracts
 }
 
 func TestCreate(t *testing.T) {
@@ -82,7 +40,7 @@ func TestCreate(t *testing.T) {
 func create(t *testing.T, is2 bool) {
 	a := require.New(t)
 	cfg := makeConfig()
-	compiled := compileCode("../testdata/contracts/Storage.sol")
+	compiled := CompileCode("../testdata/contracts/Storage.sol")
 
 	var contract *Contract
 	// create with value
@@ -101,7 +59,7 @@ func create(t *testing.T, is2 bool) {
 
 	ret, _, err := contract.Call("retrieve")
 	a.Nil(err, "fail to retrive")
-	a.Equal(big.NewInt(1024), (&big.Int{}).SetBytes(ret), "fail")
+	a.Equal(big.NewInt(1024), big.NewInt(0).SetBytes(ret), "fail")
 	// before self destruction
 	a.Equal(contract.Balance(), big.NewInt(10), "fail")
 	a.Equal(contract.BalanceOf(cfg.Origin), big.NewInt(1e18-1e1), "fail")
@@ -117,7 +75,7 @@ func create(t *testing.T, is2 bool) {
 	contract.AutoCommit = true
 	ret, _, err = contract.Call("retrieve")
 	a.Nil(err, "fail")
-	a.Equal(big.NewInt(1024), (&big.Int{}).SetBytes(ret), "fail")
+	a.Equal(big.NewInt(1024), big.NewInt(0).SetBytes(ret), "fail")
 	a.False(cfg.State.Suicided[contract.Address])
 
 	// storage should be cleaned after commit
@@ -137,8 +95,8 @@ func TestContractChainDelete(t *testing.T) {
 func contractChaindelete(t *testing.T, is2 bool) {
 	a := require.New(t)
 	cfg := makeConfig()
-	callee := compileCode("../testdata/contracts/Callee.sol")
-	caller := compileCode("../testdata/contracts/Caller.sol")
+	callee := CompileCode("../testdata/contracts/Callee.sol")
+	caller := CompileCode("../testdata/contracts/Caller.sol")
 
 	var lee *Contract
 	if is2 {
@@ -183,7 +141,7 @@ func TestCreateOnDeletedAddress(t *testing.T) {
 	}
 	a := require.New(t)
 	cfg := makeConfig()
-	compiled := compileCode("../testdata/contracts/Storage.sol")
+	compiled := CompileCode("../testdata/contracts/Storage.sol")
 
 	c := Create2Contract(cfg, compiled["Storage"][1], compiled["Storage"][0], 0xffff)
 	a.NotNil(c, "fail")
@@ -222,7 +180,7 @@ func TestENSRegistry(t *testing.T) {
 	}
 	a := require.New(t)
 	cfg := makeConfig()
-	compiled := compileCode("../testdata/contracts/ens/ENSRegistry.sol")
+	compiled := CompileCode("../testdata/contracts/ens/ENSRegistry.sol")
 
 	c := CreateContract(cfg, compiled["ENSRegistry"][1], compiled["ENSRegistry"][0])
 	a.NotNil(c, "fail")
@@ -263,7 +221,7 @@ func TestENSRegistryWithFallback(t *testing.T) {
 	}
 	a := require.New(t)
 	cfg := makeConfig()
-	compiled := compileCode("../testdata/contracts/ens/ENSRegistryWithFallback.sol")
+	compiled := CompileCode("../testdata/contracts/ens/ENSRegistryWithFallback.sol")
 
 	ens := CreateContract(cfg, compiled["ENSRegistry"][1], compiled["ENSRegistry"][0])
 	c := CreateContract(cfg, compiled["ENSRegistryWithFallback"][1], compiled["ENSRegistryWithFallback"][0], ens.Address)
@@ -287,8 +245,8 @@ func TestFIFSRegistrar(t *testing.T) {
 	}
 	a := require.New(t)
 	cfg := makeConfig()
-	compiled := compileCode("../testdata/contracts/ens/FIFSRegistrar.sol")
-	compiled2 := compileCode("../testdata/contracts/ens/ENSRegistry.sol")
+	compiled := CompileCode("../testdata/contracts/ens/FIFSRegistrar.sol")
+	compiled2 := CompileCode("../testdata/contracts/ens/ENSRegistry.sol")
 
 	ens := CreateContract(cfg, compiled2["ENSRegistry"][1], compiled2["ENSRegistry"][0])
 	c := CreateContract(cfg, compiled["FIFSRegistrar"][1], compiled["FIFSRegistrar"][0], ens.Address, [32]byte{})

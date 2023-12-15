@@ -17,7 +17,11 @@
 package runtime
 
 import (
+	"fmt"
 	"math/big"
+	"os/exec"
+	"regexp"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -53,4 +57,42 @@ func Transfer(db evm.StateDB, sender, recipient common.Address, amount *big.Int)
 	db.SubBalance(sender, amount)
 	db.AddBalance(recipient, amount)
 	evm.MakeOngTransferLog(db, sender, recipient, amount)
+}
+
+// CompileCode compiles the solidity code for the specified path.
+// See https://docs.soliditylang.org/zh/v0.8.17/installing-solidity.html#linux to install solc command
+func CompileCode(path string) map[string][2]string {
+	cmd := exec.Command("solc",
+		"--evm-version", "paris",
+		path,
+		"--bin", "--abi", "--optimize")
+	fmt.Println(cmd.String())
+	output, err := cmd.Output()
+	if err != nil {
+		panic("compile code failed")
+	}
+
+	contracts := make(map[string][2]string)
+	pattern := regexp.MustCompile(`^======= \S* =======$`)
+	lines := strings.Split(string(output), "\n")
+	for i := 0; i < len(lines); i++ {
+		if !pattern.MatchString(lines[i]) {
+			continue
+		}
+		nameRegex := regexp.MustCompile(`:\w+`)
+		name := nameRegex.FindString(lines[i])[1:]
+		i++
+		content := [2]string{}
+		if lines[i] == "Binary:" {
+			i++
+			content[0] = "0x" + lines[i]
+		}
+		i++
+		if lines[i] == "Contract JSON ABI" {
+			i++
+			content[1] = lines[i]
+		}
+		contracts[name] = content
+	}
+	return contracts
 }

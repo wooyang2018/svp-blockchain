@@ -40,7 +40,7 @@ import (
 
 func TestDefaults(t *testing.T) {
 	cfg := new(Config)
-	setDefaults(cfg)
+	SetDefaults(cfg)
 
 	if cfg.Difficulty == nil {
 		t.Error("expected difficulty to be non nil")
@@ -568,7 +568,7 @@ func TestEipExampleCases(t *testing.T) {
 // state, this should not be used, since it does not reset the state between runs.
 func benchmarkNonModifyingCode(gas uint64, code []byte, name string, b *testing.B) {
 	cfg := new(Config)
-	setDefaults(cfg)
+	SetDefaults(cfg)
 	db := statedb.NewCacheDB(storage.NewMemLevelDBStore())
 	cfg.State = statedb.NewStateDB(db, common.Hash{}, common.Hash{}, statedb.NewDummy())
 	cfg.GasLimit = gas

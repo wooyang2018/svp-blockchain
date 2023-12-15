@@ -48,8 +48,8 @@ type Config struct {
 	GetHashFn   func(n uint64) common.Hash
 }
 
-// sets defaults on the config
-func setDefaults(cfg *Config) {
+// SetDefaults sets defaults on the config
+func SetDefaults(cfg *Config) {
 	if cfg.ChainConfig == nil {
 		cfg.ChainConfig = &params.ChainConfig{
 			ChainID:             big.NewInt(1),
@@ -102,7 +102,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *statedb.StateDB, error) 
 	if cfg == nil {
 		cfg = new(Config)
 	}
-	setDefaults(cfg)
+	SetDefaults(cfg)
 
 	if cfg.State == nil {
 		db := statedb.NewCacheDB(storage.NewMemLevelDBStore())
@@ -134,7 +134,7 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 	if cfg == nil {
 		cfg = new(Config)
 	}
-	setDefaults(cfg)
+	SetDefaults(cfg)
 
 	if cfg.State == nil {
 		db := statedb.NewCacheDB(storage.NewMemLevelDBStore())
@@ -160,7 +160,7 @@ func Create2(input []byte, cfg *Config, salt *uint256.Int) ([]byte, common.Addre
 	if cfg == nil {
 		cfg = new(Config)
 	}
-	setDefaults(cfg)
+	SetDefaults(cfg)
 
 	if cfg.State == nil {
 		db := statedb.NewCacheDB(storage.NewMemLevelDBStore())
@@ -188,7 +188,7 @@ func Create2(input []byte, cfg *Config, salt *uint256.Int) ([]byte, common.Addre
 // Call, unlike Execute, requires a config and also requires the State field to
 // be set.
 func Call(address common.Address, input []byte, cfg *Config) ([]byte, uint64, error) {
-	setDefaults(cfg)
+	SetDefaults(cfg)
 
 	vmenv := NewEnv(cfg)
 	sender := evm.AccountRef(cfg.Origin)

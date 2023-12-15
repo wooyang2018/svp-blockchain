@@ -14,6 +14,7 @@ import (
 	"github.com/wooyang2018/svp-blockchain/execution/evm"
 	"github.com/wooyang2018/svp-blockchain/logger"
 	"github.com/wooyang2018/svp-blockchain/native"
+	"github.com/wooyang2018/svp-blockchain/storage"
 )
 
 type Config struct {
@@ -39,7 +40,7 @@ type StateStore interface {
 	GetState(key []byte) []byte
 }
 
-func New(stateStore StateStore, config Config) *Execution {
+func New(stateStore *storage.Storage, config Config) *Execution {
 	exec := &Execution{
 		stateStore: stateStore,
 		config:     config,
