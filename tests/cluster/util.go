@@ -16,11 +16,35 @@ import (
 	"time"
 
 	"github.com/multiformats/go-multiaddr"
+	"gopkg.in/yaml.v3"
 
 	"github.com/wooyang2018/svp-blockchain/consensus"
 	"github.com/wooyang2018/svp-blockchain/core"
 	"github.com/wooyang2018/svp-blockchain/node"
 )
+
+type DockerCompose struct {
+	Version  string             `yaml:"version"`
+	Services map[string]Service `yaml:"services"`
+}
+
+type Service struct {
+	Image   string   `yaml:"image"`
+	Volumes []string `yaml:"volumes"`
+	Ports   []string `yaml:"ports"`
+	Command string   `yaml:"command"`
+}
+
+func WriteYamlFile(clusterDir string, data DockerCompose) error {
+	file, err := os.Create(path.Join(clusterDir, "docker-compose.yaml"))
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	encoder := yaml.NewEncoder(file)
+	encoder.SetIndent(2)
+	return encoder.Encode(data)
+}
 
 func WriteNodeKey(datadir string, key *core.PrivateKey) error {
 	f, err := os.Create(path.Join(datadir, node.NodekeyFile))

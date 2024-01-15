@@ -35,13 +35,31 @@ RemoteLinuxCluster = false
 OnlySetupCluster = true
 ```
 
-Then execute the following command to generate the configuration files and startup commands required to start each local node.
+Then execute the following command to generate the configuration files and startup commands required to start all local
+nodes.
 
 ```shell
 cd tests && go run .
 ```
 
 The start command for each local node is displayed directly to the console as follows. Now, you can open 7 shell windows and start each node in turn.
+
+### Docker Mode
+
+Modify the following global variables in the source code of `tests/main.go`.
+
+```
+NodeCount = 7 // your expected number of nodes
+RemoteLinuxCluster = false
+OnlySetupDocker = true
+```
+
+Then execute the following command to generate the configuration files and `docker-compose.yaml` required to start all
+containers.
+
+```shell
+cd tests && go run .
+```
 
 ### Remote Mode
 
@@ -59,7 +77,8 @@ You will also need to modify the `tests/hosts` file based on your remote node in
 
 Each line corresponds to a node's IP address, username, NIC name and working directory and is separated by a tab.
 
-Then execute the following command to generate the configuration files and startup commands required to start each remote node.
+Then execute the following command to generate the configuration files and startup commands required to start all remote
+nodes.
 
 ```shell
 cd tests && go run .

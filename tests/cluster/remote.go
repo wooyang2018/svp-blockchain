@@ -58,8 +58,11 @@ func NewRemoteFactory(params RemoteFactoryParams) (*RemoteFactory, error) {
 			return nil, err
 		}
 	}
-	fmt.Println()
 	return ftry, nil
+}
+
+func (ftry *RemoteFactory) TemplateDir() string {
+	return ftry.templateDir
 }
 
 func (ftry *RemoteFactory) ReadHosts(hostsPath string, nodeCount int) error {
@@ -117,7 +120,6 @@ func (ftry *RemoteFactory) setup() error {
 	if err = SetupTemplateDir(ftry.templateDir, keys, genesis, peers); err != nil {
 		return err
 	}
-	fmt.Println()
 	if err = ftry.setupRemoteServers(); err != nil {
 		return err
 	}

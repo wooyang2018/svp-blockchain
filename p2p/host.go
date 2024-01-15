@@ -60,7 +60,7 @@ func (host *Host) handleStream(s network.Stream) {
 		return
 	}
 	if peer := host.peerStore.Load(pubKey); peer != nil {
-		if err := peer.setConnecting(); err == nil {
+		if err = peer.setConnecting(); err == nil {
 			peer.onConnected(s)
 			return
 		}

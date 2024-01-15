@@ -22,6 +22,7 @@ type Node interface {
 
 type ClusterFactory interface {
 	SetupCluster(name string) (*Cluster, error)
+	TemplateDir() string
 }
 
 type Cluster struct {

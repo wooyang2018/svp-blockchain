@@ -15,6 +15,7 @@ require (
 	go.uber.org/zap v1.26.0
 	golang.org/x/crypto v0.16.0
 	google.golang.org/protobuf v1.31.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -133,6 +134,5 @@ require (
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/tools v0.14.0 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/blake3 v1.2.1 // indirect
 )

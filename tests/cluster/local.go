@@ -19,11 +19,12 @@ import (
 )
 
 type LocalFactoryParams struct {
-	BinPath    string
-	WorkDir    string
-	NodeCount  int
-	StakeQuota int
-	WindowSize int
+	BinPath     string
+	WorkDir     string
+	NodeCount   int
+	StakeQuota  int
+	WindowSize  int
+	SetupDocker bool
 
 	NodeConfig node.Config
 }
@@ -46,9 +47,19 @@ func NewLocalFactory(params LocalFactoryParams) (*LocalFactory, error) {
 	return ftry, nil
 }
 
-func (ftry *LocalFactory) setup() error {
-	ftry.templateDir = path.Join(ftry.params.WorkDir, "cluster_template")
-	addrs, err := ftry.makeAddrs()
+func (ftry *LocalFactory) TemplateDir() string {
+	return ftry.templateDir
+}
+
+func (ftry *LocalFactory) setup() (err error) {
+	var addrs []multiaddr.Multiaddr
+	if ftry.params.SetupDocker {
+		ftry.templateDir = path.Join(ftry.params.WorkDir, "docker_template")
+		addrs, err = ftry.makeDockerAddrs()
+	} else {
+		ftry.templateDir = path.Join(ftry.params.WorkDir, "cluster_template")
+		addrs, err = ftry.makeLocalAddrs()
+	}
 	if err != nil {
 		return err
 	}
@@ -68,7 +79,20 @@ func (ftry *LocalFactory) setup() error {
 	return SetupTemplateDir(ftry.templateDir, keys, genesis, peers)
 }
 
-func (ftry *LocalFactory) makeAddrs() ([]multiaddr.Multiaddr, error) {
+func (ftry *LocalFactory) makeDockerAddrs() ([]multiaddr.Multiaddr, error) {
+	addrs := make([]multiaddr.Multiaddr, ftry.params.NodeCount)
+	for i := range addrs {
+		addr, err := multiaddr.NewMultiaddr(
+			fmt.Sprintf("/dns4/node%d/tcp/%d", i, ftry.params.NodeConfig.Port))
+		if err != nil {
+			return nil, err
+		}
+		addrs[i] = addr
+	}
+	return addrs, nil
+}
+
+func (ftry *LocalFactory) makeLocalAddrs() ([]multiaddr.Multiaddr, error) {
 	addrs := make([]multiaddr.Multiaddr, ftry.params.NodeCount)
 	for i := range addrs {
 		addr, err := multiaddr.NewMultiaddr(
@@ -99,10 +123,15 @@ func (ftry *LocalFactory) SetupCluster(name string) (*Cluster, error) {
 			binPath: ftry.params.BinPath,
 			config:  ftry.params.NodeConfig,
 		}
-		node.config.DataDir = path.Join(clusterDir, strconv.Itoa(i))
+		if ftry.params.SetupDocker {
+			node.binPath = "/app/chain"
+			node.config.DataDir = "/app"
+		} else {
+			node.config.Port = node.config.Port + i
+			node.config.APIPort = node.config.APIPort + i
+			node.config.DataDir = path.Join(clusterDir, strconv.Itoa(i))
+		}
 		node.config.ConsensusConfig.BenchmarkPath = path.Join(node.config.DataDir, "consensus.csv")
-		node.config.Port = node.config.Port + i
-		node.config.APIPort = node.config.APIPort + i
 		nodes[i] = node
 	}
 

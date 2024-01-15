@@ -49,10 +49,11 @@ var (
 	RemoteNetworkLoss     = 15.0
 
 	// run benchmark, otherwise run experiments
-	RunBenchmark  = true
+	RunBenchmark  = false
 	BenchDuration = max(5*time.Minute, time.Duration(NodeCount/2))
 	BenchLoads    = []int{5000}
 
+	OnlySetupDocker  = false
 	OnlySetupCluster = false
 	OnlyRunCluster   = false
 )
@@ -102,17 +103,15 @@ func main() {
 		cfactory = makeLocalClusterFactory()
 	}
 
-	if OnlySetupCluster {
-		if cls, err := cfactory.SetupCluster("cluster_template"); err == nil {
-			fmt.Println("\nThe cluster startup command is as follows.")
-			for i := 0; i < cls.NodeCount(); i++ {
-				fmt.Println(cls.GetNode(i).PrintCmd())
-			}
-		} else {
-			fmt.Println(err)
-		}
+	if OnlySetupDocker {
+		setupRapidDocker(cfactory)
 		return
 	}
+	if OnlySetupCluster {
+		setupRapidCluster(cfactory)
+		return
+	}
+
 	testutil.NewLoadGenerator(makeLoadClient(), LoadTxPerSec, LoadJobPerTick)
 	if OnlyRunCluster {
 		runRapidCluster(cfactory)
@@ -139,13 +138,49 @@ func runBenchmark() {
 	bm.Run()
 }
 
-func runExperiments(cfactory cluster.ClusterFactory) {
-	r := &ExperimentRunner{
-		experiments: setupExperiments(),
-		cfactory:    cfactory,
+func setupRapidDocker(cfactory cluster.ClusterFactory) {
+	cls, err := cfactory.SetupCluster("docker_template")
+	if err != nil {
+		fmt.Println(err)
+		return
 	}
-	pass, fail := r.Run()
-	fmt.Printf("\nTotal: %d  |  Pass: %d  |  Fail: %d\n", len(r.experiments), pass, fail)
+
+	dockerCompose := cluster.DockerCompose{
+		Version:  "3",
+		Services: make(map[string]cluster.Service),
+	}
+	for i := 0; i < cls.NodeCount(); i++ {
+		name := fmt.Sprintf("node%d", i)
+		service := cluster.Service{
+			Image: "ubuntu:20.04",
+			Volumes: []string{
+				"../../../chain:/app/chain",
+				fmt.Sprintf("./%d/genesis.json:/app/genesis.json", i),
+				fmt.Sprintf("./%d/nodekey:/app/nodekey", i),
+				fmt.Sprintf("./%d/peers.json:/app/peers.json", i),
+			},
+			Ports:   []string{fmt.Sprintf("%d:%d", cls.NodeConfig().APIPort+i, cls.NodeConfig().APIPort)},
+			Command: cls.GetNode(i).PrintCmd(),
+		}
+		dockerCompose.Services[name] = service
+	}
+
+	if err = cluster.WriteYamlFile(cfactory.TemplateDir(), dockerCompose); err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println("cd ./workdir/local-clusters/docker_template && docker-compose up -d")
+}
+
+func setupRapidCluster(cfactory cluster.ClusterFactory) {
+	if cls, err := cfactory.SetupCluster("cluster_template"); err == nil {
+		fmt.Println("The cluster startup command is as follows.")
+		for i := 0; i < cls.NodeCount(); i++ {
+			fmt.Println(cls.GetNode(i).PrintCmd())
+		}
+	} else {
+		fmt.Println(err)
+	}
 }
 
 type KeepAliveRunning struct{}
@@ -161,8 +196,17 @@ func (expm *KeepAliveRunning) Run(*cluster.Cluster) error {
 func runRapidCluster(cfactory cluster.ClusterFactory) {
 	r := &ExperimentRunner{cfactory: cfactory}
 	if err := r.runSingleExperiment(&KeepAliveRunning{}); err != nil {
-		fmt.Printf("%+v\n", err)
+		fmt.Println(err)
 	}
+}
+
+func runExperiments(cfactory cluster.ClusterFactory) {
+	r := &ExperimentRunner{
+		experiments: setupExperiments(),
+		cfactory:    cfactory,
+	}
+	pass, fail := r.Run()
+	fmt.Printf("\nTotal: %d  |  Pass: %d  |  Fail: %d\n", len(r.experiments), pass, fail)
 }
 
 func printAndCheckVars() {
@@ -227,6 +271,14 @@ func printAndCheckVars() {
 	}
 	if RunBenchmark && !RemoteLinuxCluster {
 		fmt.Println("RunBenchmark ===> RemoteLinuxCluster")
+		pass = false
+	}
+	if OnlySetupDocker && RemoteLinuxCluster {
+		fmt.Println("OnlySetupDocker ===> !RemoteLinuxCluster")
+		pass = false
+	}
+	if OnlySetupDocker && RunBenchmark {
+		fmt.Println("OnlySetupDocker ===> !RunBenchmark")
 		pass = false
 	}
 	if OnlySetupCluster && RunBenchmark {
@@ -303,12 +355,13 @@ func buildPCoinBinCC() {
 
 func makeLocalClusterFactory() *cluster.LocalFactory {
 	ftry, err := cluster.NewLocalFactory(cluster.LocalFactoryParams{
-		BinPath:    "./chain",
-		WorkDir:    path.Join(WorkDir, "local-clusters"),
-		NodeCount:  NodeCount,
-		StakeQuota: StakeQuota,
-		WindowSize: WindowSize,
-		NodeConfig: getNodeConfig(),
+		BinPath:     "./chain",
+		WorkDir:     path.Join(WorkDir, "local-clusters"),
+		NodeCount:   NodeCount,
+		StakeQuota:  StakeQuota,
+		WindowSize:  WindowSize,
+		SetupDocker: OnlySetupDocker,
+		NodeConfig:  getNodeConfig(),
 	})
 	check(err)
 	return ftry
