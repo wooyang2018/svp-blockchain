@@ -35,6 +35,29 @@ type Service struct {
 	Command string   `yaml:"command"`
 }
 
+func NewDockerCompose(cls *Cluster) DockerCompose {
+	dockerCompose := DockerCompose{
+		Version:  "3",
+		Services: make(map[string]Service),
+	}
+	for i := 0; i < cls.NodeCount(); i++ {
+		curNode := cls.GetNode(i)
+		service := Service{
+			Image:   "ubuntu:20.04",
+			Volumes: []string{fmt.Sprintf("../../../chain:%s", path.Join(curNode.NodeConfig().DataDir, "chain"))},
+			Ports:   []string{fmt.Sprintf("%d:%d", curNode.NodeConfig().APIPort+i, curNode.NodeConfig().APIPort)},
+			Command: curNode.PrintCmd(),
+		}
+		for _, v := range []string{node.GenesisFile, node.NodekeyFile, node.PeersFile} {
+			filepath := path.Join(curNode.NodeConfig().DataDir, v)
+			service.Volumes = append(service.Volumes, fmt.Sprintf("./%d/%s:%s", i, v, filepath))
+		}
+		name := fmt.Sprintf("node%d", i)
+		dockerCompose.Services[name] = service
+	}
+	return dockerCompose
+}
+
 func WriteYamlFile(clusterDir string, data DockerCompose) error {
 	file, err := os.Create(path.Join(clusterDir, "docker-compose.yaml"))
 	if err != nil {

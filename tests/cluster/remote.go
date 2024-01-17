@@ -387,3 +387,7 @@ func (node *RemoteNode) PrintCmd() string {
 	AddCmdFlags(cmd, &node.config)
 	return cmd.String()
 }
+
+func (node *RemoteNode) NodeConfig() node.Config {
+	return node.config
+}

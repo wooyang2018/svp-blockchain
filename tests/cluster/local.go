@@ -124,8 +124,8 @@ func (ftry *LocalFactory) SetupCluster(name string) (*Cluster, error) {
 			config:  ftry.params.NodeConfig,
 		}
 		if ftry.params.SetupDocker {
-			node.binPath = "/app/chain"
 			node.config.DataDir = "/app"
+			node.binPath = path.Join(node.config.DataDir, "chain")
 		} else {
 			node.config.Port = node.config.Port + i
 			node.config.APIPort = node.config.APIPort + i
@@ -216,4 +216,8 @@ func (node *LocalNode) PrintCmd() string {
 	cmd := exec.Command(node.binPath)
 	AddCmdFlags(cmd, &node.config)
 	return cmd.String()
+}
+
+func (node *LocalNode) NodeConfig() node.Config {
+	return node.config
 }

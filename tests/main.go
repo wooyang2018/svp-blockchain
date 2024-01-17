@@ -39,7 +39,7 @@ var (
 	BroadcastTx    = true
 
 	// run tests in remote linux cluster
-	RemoteLinuxCluster    = true // if false it will use local cluster (running multiple nodes on single local machine)
+	RemoteLinuxCluster    = false // if false it will use local cluster (running multiple nodes on single local machine)
 	RemoteSetupRequired   = true
 	RemoteInstallRequired = false // if false it will not try to install dstat on remote machine
 	RemoteRunRequired     = false // if false it will not run dstat on remote machine
@@ -139,37 +139,16 @@ func runBenchmark() {
 }
 
 func setupRapidDocker(cfactory cluster.ClusterFactory) {
-	cls, err := cfactory.SetupCluster("docker_template")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	dockerCompose := cluster.DockerCompose{
-		Version:  "3",
-		Services: make(map[string]cluster.Service),
-	}
-	for i := 0; i < cls.NodeCount(); i++ {
-		name := fmt.Sprintf("node%d", i)
-		service := cluster.Service{
-			Image: "ubuntu:20.04",
-			Volumes: []string{
-				"../../../chain:/app/chain",
-				fmt.Sprintf("./%d/genesis.json:/app/genesis.json", i),
-				fmt.Sprintf("./%d/nodekey:/app/nodekey", i),
-				fmt.Sprintf("./%d/peers.json:/app/peers.json", i),
-			},
-			Ports:   []string{fmt.Sprintf("%d:%d", cls.NodeConfig().APIPort+i, cls.NodeConfig().APIPort)},
-			Command: cls.GetNode(i).PrintCmd(),
+	if cls, err := cfactory.SetupCluster("docker_template"); err == nil {
+		dockerCompose := cluster.NewDockerCompose(cls)
+		if err = cluster.WriteYamlFile(cfactory.TemplateDir(), dockerCompose); err == nil {
+			fmt.Printf("docker-compose -f %s up -d\n", path.Join(cfactory.TemplateDir(), "docker-compose.yaml"))
+		} else {
+			fmt.Println(err)
 		}
-		dockerCompose.Services[name] = service
-	}
-
-	if err = cluster.WriteYamlFile(cfactory.TemplateDir(), dockerCompose); err != nil {
+	} else {
 		fmt.Println(err)
-		return
 	}
-	fmt.Println("cd ./workdir/local-clusters/docker_template && docker-compose up -d")
 }
 
 func setupRapidCluster(cfactory cluster.ClusterFactory) {

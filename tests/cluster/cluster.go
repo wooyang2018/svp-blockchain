@@ -18,6 +18,7 @@ type Node interface {
 	IsRunning() bool
 	GetEndpoint() string
 	PrintCmd() string
+	NodeConfig() node.Config
 }
 
 type ClusterFactory interface {
