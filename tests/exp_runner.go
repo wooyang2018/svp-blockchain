@@ -12,6 +12,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/fatih/color"
+
 	"github.com/wooyang2018/svp-blockchain/tests/cluster"
 	"github.com/wooyang2018/svp-blockchain/tests/health"
 	"github.com/wooyang2018/svp-blockchain/tests/testutil"
@@ -28,23 +30,27 @@ type ExperimentRunner struct {
 }
 
 func (r *ExperimentRunner) Run() (pass, fail int) {
+	bold := color.New(color.Bold)
+	boldGrean := color.New(color.Bold, color.FgGreen)
+	boldRed := color.New(color.Bold, color.FgRed)
+
 	fmt.Println("\nRunning Experiments")
 	for i, expm := range r.experiments {
-		fmt.Printf("%3d. %s\n", i, expm.Name())
+		bold.Printf("%3d. %s\n", i, expm.Name())
 	}
 
 	killed := make(chan os.Signal, 1)
 	signal.Notify(killed, os.Interrupt)
 
 	for i, expm := range r.experiments {
-		fmt.Printf("\nExperiment %d. %s\n", i, expm.Name())
+		bold.Printf("\nExperiment %d. %s\n", i, expm.Name())
 		if err := r.runSingleExperiment(expm); err != nil {
 			fail++
-			fmt.Printf("FAIL %s\n", expm.Name())
+			fmt.Printf("%s %s\n", boldRed.Sprint("FAIL"), bold.Sprint(expm.Name()))
 			fmt.Println(err)
 		} else {
 			pass++
-			fmt.Printf("PASS %s\n", expm.Name())
+			fmt.Printf("%s %s\n", boldGrean.Sprint("PASS"), bold.Sprint(expm.Name()))
 		}
 		select {
 		case <-killed:
