@@ -23,7 +23,6 @@ const protocolID = "/single_pid"
 type Host struct {
 	privKey   *core.PrivateKey
 	localAddr multiaddr.Multiaddr
-
 	peerStore *PeerStore
 	libHost   host.Host
 }

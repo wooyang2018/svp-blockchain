@@ -1,7 +1,7 @@
 import os
-import yaml
 from typing import Dict, Tuple, List
 
+import yaml
 from seedemu.core import Emulator, Layer, Node
 
 ReplaceFileTemplate = """\
@@ -28,12 +28,12 @@ class PPoV(Layer):
         self.nodeCount = nodeCount
         self.dataDir = dataDir
         self.vpnodes = {}
-        self.addrs = [""] * nodeCount
-        self.commands = [""] * nodeCount
+        self.addrs = [''] * nodeCount
+        self.commands = [''] * nodeCount
         self.addDependency('Base', False, False)
 
     def getName(self) -> str:
-        return "PPoV"
+        return 'PPoV'
 
     def configure(self, emulator: Emulator):
         assert len(self.vpnodes) == self.nodeCount, 'PPoV::configure'
@@ -63,19 +63,19 @@ class PPoV(Layer):
             node: Node = obj
             if (node.getAsn(), node.getName()) in self.vpnodes:
                 vnode = self.vpnodes[(node.getAsn(), node.getName())]
-                templateDir = os.path.join("../../../workdir/local-clusters/docker_template/", str(vnode))
+                templateDir = os.path.join('../../../workdir/local-clusters/docker_template/', str(vnode))
                 self._log('rendering as{}/{} as {}{}...'.format(node.getAsn(), node.getName(), self.nodePrefix, vnode))
 
-                node.importFile("../../../chain", chainPath)
-                node.importFile(os.path.join(templateDir, "genesis.json"), os.path.join(self.dataDir, 'genesis.json'))
-                node.importFile(os.path.join(templateDir, "nodekey"), os.path.join(self.dataDir, 'nodekey'))
-                node.importFile(os.path.join(templateDir, "peers.json"), peersPath)
+                node.importFile('../../../chain', chainPath)
+                node.importFile(os.path.join(templateDir, 'genesis.json'), os.path.join(self.dataDir, 'genesis.json'))
+                node.importFile(os.path.join(templateDir, 'nodekey'), os.path.join(self.dataDir, 'nodekey'))
+                node.importFile(os.path.join(templateDir, 'peers.json'), peersPath)
                 node.setFile(addrsPath, '\n'.join(self.addrs))
                 node.setFile(replacePath, ReplaceFileTemplate.format(self.nodePrefix, peersPath, addrsPath))
 
-                node.appendStartCommand("chmod +x " + replacePath)
+                node.appendStartCommand('chmod +x ' + replacePath)
                 node.appendStartCommand(replacePath)
-                node.appendStartCommand("chmod +x " + chainPath)
+                node.appendStartCommand('chmod +x ' + chainPath)
                 node.appendStartCommand(self.commands[vnode])
 
     def bindNode(self, asn: int, pnode: str, vnode: int):

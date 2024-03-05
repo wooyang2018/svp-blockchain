@@ -23,7 +23,7 @@ import (
 
 var (
 	WorkDir    = "./workdir"
-	NodeCount  = 4
+	NodeCount  = 8
 	StakeQuota = 9999
 	WindowSize = 4
 
