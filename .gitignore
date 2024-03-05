@@ -3,6 +3,7 @@
 /tests/chain
 /tests/pcoin
 /tests/workdir
+/tests/seedemu/output
 /docs
 
 ***/.DS_Store

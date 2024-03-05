@@ -23,16 +23,16 @@ import (
 
 var (
 	WorkDir    = "./workdir"
-	NodeCount  = 4
+	NodeCount  = 8
 	StakeQuota = 9999
 	WindowSize = 4
 
-	LoadTxPerSec    = 10  //tps for client to submit tx during functional testing
-	LoadJobPerTick  = 500 //num of tasks to be completed per tick
+	LoadTxPerSec    = 10  // tps for client to submit tx during functional testing
+	LoadJobPerTick  = 500 // num of tasks to be completed per tick
 	LoadSubmitNodes = []int{}
-	LoadBatchSubmit = true //whether to enable batch transaction submission
+	LoadBatchSubmit = true // whether to enable batch transaction submission
 
-	//chaincode priority: empty > pcoin bincc > pcoin
+	// chaincode priority: empty > pcoin bincc > pcoin
 	EmptyChainCode = true  // deploy empty chaincode instead of pcoin
 	PCoinBinCC     = false // deploy pcoin chaincode as bincc type (not embeded in node)
 	CheckRotation  = true
@@ -53,7 +53,7 @@ var (
 	BenchDuration = max(5*time.Minute, time.Duration(NodeCount/2))
 	BenchLoads    = []int{5000}
 
-	OnlySetupDocker  = false
+	OnlySetupDocker  = true
 	OnlySetupCluster = false
 	OnlyRunCluster   = false
 )
