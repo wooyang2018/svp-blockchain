@@ -27,7 +27,7 @@ func NewClient(isDeploy bool) *Client {
 	var err error
 	client := &Client{}
 	if !isDeploy {
-		client.codeAddr, err = os.ReadFile(path.Join(DataPath, FileCodeAddr))
+		client.codeAddr, err = os.ReadFile(path.Join(DataPath, CodeFile))
 		check(err)
 	}
 	b, err := os.ReadFile(path.Join(DataPath, FileNodekey))
@@ -54,8 +54,7 @@ func (client *Client) QueryState(input []byte) (ret []byte) {
 	}
 	b, err := json.Marshal(query)
 	check(err)
-	resp, err := http.Post(NodeUrl+"/querystate",
-		"application/json", bytes.NewReader(b))
+	resp, err := http.Post(NodeUrl+"/querystate", "application/json", bytes.NewReader(b))
 	if err != nil || resp.StatusCode != 200 {
 		log.Fatal("query state failed")
 	}

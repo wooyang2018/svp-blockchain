@@ -11,6 +11,7 @@ import (
 	"github.com/wooyang2018/svp-blockchain/native/empty"
 	"github.com/wooyang2018/svp-blockchain/native/kvdb"
 	"github.com/wooyang2018/svp-blockchain/native/pcoin"
+	"github.com/wooyang2018/svp-blockchain/native/taddr"
 	"github.com/wooyang2018/svp-blockchain/native/xcoin"
 )
 
@@ -18,8 +19,11 @@ var (
 	CodeEmpty = bytes.Repeat([]byte{1}, 32)
 	CodeKVDB  = bytes.Repeat([]byte{2}, 32)
 	CodePCoin = bytes.Repeat([]byte{3}, 32)
-	CodeXCoin = bytes.Repeat([]byte{4}, 32)
+	CodeXCoin = bytes.Repeat([]byte{4}, 32) // built-in chaincode
+	CodeTAddr = bytes.Repeat([]byte{5}, 32) // built-in chaincode
 )
+
+const BuiltinCount = 2 // the number of built-in chaincode
 
 type CodeDriver struct{}
 
@@ -44,6 +48,8 @@ func (drv *CodeDriver) GetInstance(codeID []byte) (common.Chaincode, error) {
 		return new(pcoin.PCoin), nil
 	case string(CodeXCoin):
 		return new(xcoin.XCoin), nil
+	case string(CodeTAddr):
+		return new(taddr.TAddr), nil
 	default:
 		return nil, errors.New("unknown native chaincode id")
 	}

@@ -25,7 +25,7 @@ type Config struct {
 
 var DefaultConfig = Config{
 	Port:            15150,
-	APIPort:         9040,
+	APIPort:         9090,
 	BroadcastTx:     true,
 	StorageConfig:   storage.DefaultConfig,
 	ExecutionConfig: execution.DefaultConfig,

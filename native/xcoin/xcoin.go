@@ -5,10 +5,9 @@ package xcoin
 
 import (
 	"bytes"
-	"encoding/base64"
-	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/wooyang2018/svp-blockchain/execution/common"
 )
@@ -26,16 +25,19 @@ var _ common.Chaincode = (*XCoin)(nil)
 
 func (c *XCoin) Init(ctx common.CallContext) error {
 	if ctx.BlockHeight() != 0 {
-		return errors.New("xcoin must init at height 0")
+		return errors.New("xcoin must init at genesis")
 	}
 	m := make(map[string]uint64)
 	json.Unmarshal(ctx.Input(), &m)
 	for k, v := range m {
-		owner, err := base64.StdEncoding.DecodeString(k)
+		owner, err := common.Address32ToBytes(k)
 		if err != nil {
-			return errors.New("init xcoin failed: " + err.Error())
+			return fmt.Errorf("init xcoin failed: %w", err)
 		}
-		ctx.SetState(owner, encodeBalance(v))
+		if err = common.AssertLength(owner, 32); err != nil {
+			return err
+		}
+		ctx.SetState(owner, common.EncodeBalance(v))
 	}
 	return nil
 }
@@ -43,6 +45,9 @@ func (c *XCoin) Init(ctx common.CallContext) error {
 func (c *XCoin) Invoke(ctx common.CallContext) error {
 	input, err := parseInput(ctx.Input())
 	if err != nil {
+		return err
+	}
+	if err := common.AssertLength(input.Dest, 32); err != nil {
 		return err
 	}
 	switch input.Method {
@@ -60,6 +65,9 @@ func (c *XCoin) Query(ctx common.CallContext) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := common.AssertLength(input.Dest, 32); err != nil {
+		return nil, err
+	}
 	switch input.Method {
 	case "balance":
 		return queryBalance(ctx, input)
@@ -70,49 +78,36 @@ func (c *XCoin) Query(ctx common.CallContext) ([]byte, error) {
 
 func invokeSet(ctx common.CallContext, input *Input) error {
 	if !bytes.Equal(nil, ctx.Sender()) {
-		return errors.New("set must be internal")
+		return errors.New("method must be internal")
 	}
-	ctx.SetState(input.Dest, encodeBalance(input.Value))
+	ctx.SetState(input.Dest, common.EncodeBalance(input.Value))
 	return nil
 }
 
 func invokeTransfer(ctx common.CallContext, input *Input) error {
-	bsctx := decodeBalance(ctx.GetState(ctx.Sender()))
+	bsctx := common.DecodeBalance(ctx.GetState(ctx.Sender()))
 	if bsctx < input.Value {
 		return errors.New("not enough balance")
 	}
-	bdes := decodeBalance(ctx.GetState(input.Dest))
+	bdes := common.DecodeBalance(ctx.GetState(input.Dest))
 
 	bsctx -= input.Value
 	bdes += input.Value
 
-	ctx.SetState(ctx.Sender(), encodeBalance(bsctx))
-	ctx.SetState(input.Dest, encodeBalance(bdes))
+	ctx.SetState(ctx.Sender(), common.EncodeBalance(bsctx))
+	ctx.SetState(input.Dest, common.EncodeBalance(bdes))
 	return nil
 }
 
 func queryBalance(ctx common.CallContext, input *Input) ([]byte, error) {
-	return json.Marshal(decodeBalance(ctx.GetState(input.Dest)))
-}
-
-func decodeBalance(b []byte) uint64 {
-	if b == nil {
-		return 0
-	}
-	return binary.BigEndian.Uint64(b)
-}
-
-func encodeBalance(value uint64) []byte {
-	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, value)
-	return b
+	return json.Marshal(common.DecodeBalance(ctx.GetState(input.Dest)))
 }
 
 func parseInput(b []byte) (*Input, error) {
 	input := new(Input)
 	err := json.Unmarshal(b, input)
 	if err != nil {
-		return nil, errors.New("failed to parse input: " + err.Error())
+		return nil, fmt.Errorf("failed to parse input: %w", err)
 	}
 	return input, nil
 }

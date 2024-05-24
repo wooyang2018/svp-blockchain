@@ -145,7 +145,7 @@ func (client *PCoinClient) mintAccounts() error {
 	return nil
 }
 
-func (client *PCoinClient) Mint(dest *core.PublicKey, value int64) error {
+func (client *PCoinClient) Mint(dest *core.PublicKey, value uint64) error {
 	mintTx := client.MakeMintTx(dest, value)
 	i, err := SubmitTxAndWait(client.cluster, mintTx)
 	if err != nil {
@@ -169,12 +169,12 @@ func (client *PCoinClient) makeRandomTransfer() *core.Transaction {
 		client.dests[destIdx].PublicKey(), 1)
 }
 
-func (client *PCoinClient) QueryBalance(node cluster.Node, dest *core.PublicKey) (int64, error) {
+func (client *PCoinClient) QueryBalance(node cluster.Node, dest *core.PublicKey) (uint64, error) {
 	result, err := QueryState(node, client.MakeBalanceQuery(dest))
 	if err != nil {
 		return 0, err
 	}
-	var balance int64
+	var balance uint64
 	return balance, json.Unmarshal(result, &balance)
 }
 
@@ -212,7 +212,7 @@ func (client *PCoinClient) binccDeploymentInput() *common.DeploymentInput {
 	}
 }
 
-func (client *PCoinClient) MakeMintTx(dest *core.PublicKey, value int64) *core.Transaction {
+func (client *PCoinClient) MakeMintTx(dest *core.PublicKey, value uint64) *core.Transaction {
 	input := &pcoin.Input{
 		Method: "mint",
 		Dest:   dest.Bytes(),
@@ -227,7 +227,7 @@ func (client *PCoinClient) MakeMintTx(dest *core.PublicKey, value int64) *core.T
 }
 
 func (client *PCoinClient) MakeTransferTx(
-	sender *core.PrivateKey, dest *core.PublicKey, value int64,
+	sender *core.PrivateKey, dest *core.PublicKey, value uint64,
 ) *core.Transaction {
 	input := &pcoin.Input{
 		Method: "transfer",

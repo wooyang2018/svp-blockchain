@@ -12,10 +12,7 @@ import (
 	"github.com/wooyang2018/svp-blockchain/pb"
 )
 
-// errors
-var (
-	ErrInvalidKeySize = errors.New("invalid key size")
-)
+var ErrInvalidKeySize = errors.New("invalid key size")
 
 type Signer interface {
 	Sign(msg []byte) *Signature

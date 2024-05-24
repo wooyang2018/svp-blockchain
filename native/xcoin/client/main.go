@@ -4,13 +4,13 @@
 package main
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
 
 	"github.com/spf13/cobra"
 
+	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/native"
 	"github.com/wooyang2018/svp-blockchain/native/xcoin"
 )
@@ -30,7 +30,7 @@ var balanceCmd = &cobra.Command{
 	Short: "Query the balance of the given public key",
 	Run: func(cmd *cobra.Command, args []string) {
 		client := native.NewClient(false)
-		destBytes, _ := base64.StdEncoding.DecodeString(dest)
+		destBytes, _ := common.Address32ToBytes(dest)
 		input := &xcoin.Input{
 			Method: "balance",
 			Dest:   destBytes,
@@ -45,7 +45,7 @@ var transferCmd = &cobra.Command{
 	Short: "Transfer token to the given public key",
 	Run: func(cmd *cobra.Command, args []string) {
 		client := native.NewClient(false)
-		destBytes, _ := base64.StdEncoding.DecodeString(dest)
+		destBytes, _ := common.Address32ToBytes(dest)
 		input := &xcoin.Input{
 			Method: "transfer",
 			Dest:   destBytes,

@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/wooyang2018/svp-blockchain/execution/common"
 )
@@ -80,7 +81,7 @@ func parseInput(b []byte) (*Input, error) {
 	input := new(Input)
 	err := json.Unmarshal(b, input)
 	if err != nil {
-		return nil, errors.New("failed to parse input: " + err.Error())
+		return nil, fmt.Errorf("failed to parse input: %w", err)
 	}
 	return input, nil
 }

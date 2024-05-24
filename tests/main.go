@@ -53,9 +53,9 @@ var (
 	BenchDuration = max(5*time.Minute, time.Duration(NodeCount/2))
 	BenchLoads    = []int{5000}
 
-	OnlySetupDocker  = true
+	OnlySetupDocker  = false
 	OnlySetupCluster = false
-	OnlyRunCluster   = false
+	OnlyRunCluster   = true
 )
 
 func getNodeConfig() node.Config {

@@ -15,13 +15,16 @@ import (
 )
 
 const (
-	FileCodeAddr = "codeaddr"
-	FileNodekey  = "nodekey"
+	FileCodeXCoin   = "xcoin"
+	FileCodeTAddr   = "taddr"
+	FileCodeDefault = "default"
+	FileNodekey     = "nodekey"
 )
 
 var (
-	NodeUrl  = "http://127.0.0.1:9040"
+	NodeUrl  = "http://127.0.0.1:9090"
 	DataPath = "./"
+	CodeFile = FileCodeDefault
 )
 
 var RootCmd = &cobra.Command{
@@ -31,7 +34,7 @@ var RootCmd = &cobra.Command{
 
 var accountCmd = &cobra.Command{
 	Use:   "account",
-	Short: "Generate the nodekey file for the account",
+	Short: "Generate a nodekey file for new account",
 	Run: func(cmd *cobra.Command, args []string) {
 		owner := core.GenerateKey(nil)
 		DumpFile(owner.Bytes(), DataPath, FileNodekey)
@@ -69,8 +72,7 @@ func check(err error) {
 
 func init() {
 	RootCmd.AddCommand(accountCmd)
-	RootCmd.PersistentFlags().StringVar(&NodeUrl,
-		"node", NodeUrl, "blockchain node url")
-	RootCmd.PersistentFlags().StringVar(&DataPath,
-		"path", DataPath, "workspace data path")
+	RootCmd.PersistentFlags().StringVar(&NodeUrl, "node", NodeUrl, "blockchain node url")
+	RootCmd.PersistentFlags().StringVar(&DataPath, "path", DataPath, "workspace data path")
+	RootCmd.PersistentFlags().StringVar(&CodeFile, "code", CodeFile, "native chaincode address")
 }

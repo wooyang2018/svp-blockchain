@@ -5,6 +5,8 @@ package common
 
 import (
 	"bytes"
+	"encoding/base64"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"io"
@@ -15,6 +17,8 @@ import (
 
 	"golang.org/x/crypto/sha3"
 )
+
+var ErrAddressLength = errors.New("unexpected address length")
 
 func DownloadCode(url string, retry int) (*http.Response, error) {
 	resp, err := http.Get(url)
@@ -65,4 +69,60 @@ func StoreCode(codeDir string, r io.Reader) ([]byte, error) {
 		return nil, err
 	}
 	return codeID, nil
+}
+
+func DecodeBalance(b []byte) uint64 {
+	if b == nil {
+		return 0
+	}
+	return binary.BigEndian.Uint64(b)
+}
+
+func EncodeBalance(value uint64) []byte {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, value)
+	return b
+}
+
+func AssertLength(addr []byte, l int) error {
+	if len(addr) == 0 || len(addr) == l {
+		return nil
+	}
+	return ErrAddressLength
+}
+
+func ValidLength(addr []byte) error {
+	if len(addr) == 20 || len(addr) == 32 {
+		return nil
+	}
+	return ErrAddressLength
+}
+
+func AddressToString(addr []byte) string {
+	if len(addr) == 20 {
+		return hex.EncodeToString(addr)
+	} else if len(addr) == 32 {
+		return base64.StdEncoding.EncodeToString(addr)
+	}
+	return ""
+}
+
+func Address32ToBytes(addr string) ([]byte, error) {
+	return base64.StdEncoding.DecodeString(addr)
+}
+
+func Address20ToBytes(addr string) ([]byte, error) {
+	return hex.DecodeString(addr)
+}
+
+func AddressToBytes(addr string) ([]byte, error) {
+	res, err := Address32ToBytes(addr)
+	if err == nil && len(res) == 32 {
+		return res, nil
+	}
+	res, err = Address20ToBytes(addr)
+	if err == nil && len(res) == 20 {
+		return res, nil
+	}
+	return nil, ErrAddressLength
 }

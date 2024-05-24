@@ -6,9 +6,10 @@
 /tests/seedemu/output
 /docs
 
-***/.DS_Store
 ING
 OK
+***/.DS_Store
+__pycache__
 .vscode
 .idea
 go.sum

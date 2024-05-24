@@ -36,7 +36,7 @@ type genesis struct {
 	mtxQ0 sync.RWMutex
 
 	done chan struct{}
-	once sync.Once //guarantee channel is closed only once
+	once sync.Once // guarantee channel is closed only once
 }
 
 func (gns *genesis) run() (*core.Block, *core.QuorumCert) {
@@ -58,12 +58,12 @@ func (gns *genesis) commit() {
 		logger.I().Fatalf("sync txs of genesis block failed, %+v", err)
 	}
 	txs, old := gns.resources.TxPool.GetTxsToExecute(b0.Transactions())
-	if len(txs) != 1 {
+	if len(txs) != native.BuiltinCount {
 		logger.I().Fatalf("genesis block contains %d txs", len(txs))
 	}
 	logger.I().Debugw("executing genesis block...")
 	bcm, txcs := gns.resources.Execution.Execute(b0, txs)
-	native.DumpFile(txs[0].Hash(), gns.config.DataDir, native.FileCodeAddr)
+	gns.dumpCodeFile(txs)
 	bcm.SetOldBlockTxs(old)
 	data := &storage.CommitData{
 		Block:        b0,
@@ -76,6 +76,11 @@ func (gns *genesis) commit() {
 	}
 	logger.I().Info("committed genesis bock")
 	gns.resources.TxPool.RemoveTxs(b0.Transactions())
+}
+
+func (gns *genesis) dumpCodeFile(txs []*core.Transaction) {
+	native.DumpFile(txs[0].Hash(), gns.config.DataDir, native.FileCodeXCoin)
+	native.DumpFile(txs[1].Hash(), gns.config.DataDir, native.FileCodeTAddr)
 }
 
 func (gns *genesis) propose() {
@@ -98,29 +103,46 @@ func (gns *genesis) propose() {
 }
 
 func (gns *genesis) genesisTxs() [][]byte {
-	quotaMap := make(map[string]int64)
+	quotaMap := make(map[string]uint64)
+	addrMap := make(map[string]struct{})
 	count := gns.resources.RoleStore.ValidatorCount()
 	for i := 0; i < count; i++ {
 		pubKey := gns.resources.RoleStore.GetValidator(i)
-		quota := int64(gns.resources.RoleStore.GetValidatorQuota(pubKey))
+		quota := gns.resources.RoleStore.GetValidatorQuota(pubKey)
 		quotaMap[pubKey.String()] = quota
+		addrMap[pubKey.String()] = struct{}{}
 	}
-	input := &common.DeploymentInput{
+
+	input0 := &common.DeploymentInput{
 		CodeInfo: common.CodeInfo{
 			DriverType: common.DriverTypeNative,
 			CodeID:     native.CodeXCoin,
 		},
 	}
-	input.InitInput, _ = json.Marshal(quotaMap)
-	b, _ := json.Marshal(input)
+	input0.InitInput, _ = json.Marshal(quotaMap)
+	b0, _ := json.Marshal(input0)
 	tx0 := core.NewTransaction().
 		SetNonce(time.Now().UnixNano()).
-		SetInput(b).
+		SetInput(b0).
 		Sign(gns.resources.Signer)
-	if err := gns.resources.TxPool.SubmitTx(tx0); err != nil {
+
+	input1 := &common.DeploymentInput{
+		CodeInfo: common.CodeInfo{
+			DriverType: common.DriverTypeNative,
+			CodeID:     native.CodeTAddr,
+		},
+	}
+	input1.InitInput, _ = json.Marshal(addrMap)
+	b1, _ := json.Marshal(input1)
+	tx1 := core.NewTransaction().
+		SetNonce(time.Now().UnixNano()).
+		SetInput(b1).
+		Sign(gns.resources.Signer)
+
+	if err := gns.resources.TxPool.StoreTxs(&core.TxList{tx0, tx1}); err != nil {
 		log.Fatal(err)
 	}
-	return [][]byte{tx0.Hash()}
+	return [][]byte{tx0.Hash(), tx1.Hash()}
 }
 
 func (gns *genesis) broadcastProposalLoop() {
@@ -205,7 +227,7 @@ func (gns *genesis) onReceiveProposal(blk *core.Block) error {
 	if !gns.isLeader(blk.Proposer()) {
 		return errors.New("proposer is not leader")
 	}
-	if len(blk.Transactions()) != 1 {
+	if len(blk.Transactions()) != native.BuiltinCount {
 		return fmt.Errorf("genesis block contains %d txs", len(blk.Transactions()))
 	}
 	gns.setB0(blk)

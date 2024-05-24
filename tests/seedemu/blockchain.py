@@ -1,14 +1,13 @@
 import os
-from typing import Dict, Tuple, List
-
 import yaml
 from seedemu.core import Emulator, Layer, Node
+from typing import Dict, Tuple, List
 
 ReplaceFileTemplate = """\
 #!/bin/bash
 i=0
 while read -r replacement || [[ -n "$replacement" ]]; do 
-    sed -E -i "s/dns4\/{}$i/ip4\/$replacement/g" {}
+    sed -E -i "s/dns4\/{}$i\//ip4\/$replacement\//g" {}
     ((i++))
 done < {}
 """

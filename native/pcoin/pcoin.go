@@ -5,9 +5,9 @@ package pcoin
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/wooyang2018/svp-blockchain/execution/common"
 )
@@ -15,7 +15,7 @@ import (
 type Input struct {
 	Method string `json:"method"`
 	Dest   []byte `json:"dest"`
-	Value  int64  `json:"value"`
+	Value  uint64 `json:"value"`
 }
 
 var (
@@ -38,6 +38,9 @@ func (c *PCoin) Invoke(ctx common.CallContext) error {
 	if err != nil {
 		return err
 	}
+	if err := common.AssertLength(input.Dest, 32); err != nil {
+		return err
+	}
 	switch input.Method {
 	case "mint":
 		return invokeMint(ctx, input)
@@ -51,6 +54,9 @@ func (c *PCoin) Invoke(ctx common.CallContext) error {
 func (c *PCoin) Query(ctx common.CallContext) ([]byte, error) {
 	input, err := parseInput(ctx.Input())
 	if err != nil {
+		return nil, err
+	}
+	if err := common.AssertLength(input.Dest, 32); err != nil {
 		return nil, err
 	}
 	switch input.Method {
@@ -70,58 +76,45 @@ func invokeMint(ctx common.CallContext, input *Input) error {
 	if !bytes.Equal(minter, ctx.Sender()) {
 		return errors.New("sender must be minter")
 	}
-	total := decodeBalance(ctx.GetState(keyTotal))
-	balance := decodeBalance(ctx.GetState(input.Dest))
+	total := common.DecodeBalance(ctx.GetState(keyTotal))
+	balance := common.DecodeBalance(ctx.GetState(input.Dest))
 
 	total += input.Value
 	balance += input.Value
 
-	ctx.SetState(keyTotal, encodeBalance(total))
-	ctx.SetState(input.Dest, encodeBalance(balance))
+	ctx.SetState(keyTotal, common.EncodeBalance(total))
+	ctx.SetState(input.Dest, common.EncodeBalance(balance))
 	return nil
 }
 
 func invokeTransfer(ctx common.CallContext, input *Input) error {
-	bsctx := decodeBalance(ctx.GetState(ctx.Sender()))
+	bsctx := common.DecodeBalance(ctx.GetState(ctx.Sender()))
 	if bsctx < input.Value {
 		return errors.New("not enough balance")
 	}
-	bdes := decodeBalance(ctx.GetState(input.Dest))
+	bdes := common.DecodeBalance(ctx.GetState(input.Dest))
 
 	bsctx -= input.Value
 	bdes += input.Value
 
-	ctx.SetState(ctx.Sender(), encodeBalance(bsctx))
-	ctx.SetState(input.Dest, encodeBalance(bdes))
+	ctx.SetState(ctx.Sender(), common.EncodeBalance(bsctx))
+	ctx.SetState(input.Dest, common.EncodeBalance(bdes))
 	return nil
 }
 
 func queryTotal(ctx common.CallContext) ([]byte, error) {
-	return json.Marshal(decodeBalance(ctx.GetState(keyTotal)))
+	return json.Marshal(common.DecodeBalance(ctx.GetState(keyTotal)))
 }
 
 func queryBalance(ctx common.CallContext, input *Input) ([]byte, error) {
-	return json.Marshal(decodeBalance(ctx.GetState(input.Dest)))
-}
-
-func decodeBalance(b []byte) int64 {
-	if b == nil {
-		return 0
-	}
-	return int64(binary.BigEndian.Uint64(b))
-}
-
-func encodeBalance(value int64) []byte {
-	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, uint64(value))
-	return b
+	return json.Marshal(common.DecodeBalance(ctx.GetState(input.Dest)))
 }
 
 func parseInput(b []byte) (*Input, error) {
 	input := new(Input)
 	err := json.Unmarshal(b, input)
 	if err != nil {
-		return nil, errors.New("failed to parse input: " + err.Error())
+		return nil, fmt.Errorf("failed to parse input: %w", err)
 	}
 	return input, nil
 }
