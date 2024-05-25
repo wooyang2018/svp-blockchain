@@ -66,9 +66,9 @@ func (host *Host) newLibHost() (host.Host, host.Host, error) {
 	}
 
 	connmgr, err := connmgr.NewConnManager(
-		4, // low watermark
-		8, // high watermark
-		connmgr.WithGracePeriod(4*time.Second),
+		2, // low watermark
+		4, // high watermark
+		connmgr.WithGracePeriod(5*time.Second),
 	)
 	topicHost, err := libp2p.New(
 		libp2p.Identity(priv),
@@ -125,7 +125,7 @@ func (host *Host) ConnectPeer(peer *Peer) error {
 	return nil
 }
 
-func (host *Host) SubscribeTopicMsg() *emitter.Subscription {
+func (host *Host) SubscribeMsg() *emitter.Subscription {
 	return host.chatRoom.emitter.Subscribe(20)
 }
 

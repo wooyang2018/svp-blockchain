@@ -90,7 +90,7 @@ func TestTopicHost(t *testing.T) {
 	host1, host2, _, _ := setupTwoHost(t)
 
 	// wait message from host2
-	s1 := host1.SubscribeTopicMsg()
+	s1 := host1.SubscribeMsg()
 	var recv1 []byte
 	go func() {
 		for e := range s1.Events() {
@@ -107,7 +107,7 @@ func TestTopicHost(t *testing.T) {
 	asrt.Equal(msg, recv1)
 
 	// wait message from host1
-	s2 := host2.SubscribeTopicMsg()
+	s2 := host2.SubscribeMsg()
 	var recv2 []byte
 	go func() {
 		for e := range s2.Events() {

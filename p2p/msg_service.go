@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/wooyang2018/svp-blockchain/core"
@@ -32,10 +33,12 @@ const (
 )
 
 type msgReceiver func(peer *Peer, data []byte)
+type topicReceiver func(data []byte)
 
 type MsgService struct {
-	host      *Host
-	receivers map[MsgType]msgReceiver
+	host           *Host
+	pointReceivers map[MsgType]msgReceiver
+	topicReceivers map[MsgType]topicReceiver
 
 	proposalEmitter *emitter.Emitter
 	voteEmitter     *emitter.Emitter
@@ -53,10 +56,12 @@ func NewMsgService(host *Host) *MsgService {
 	for _, peer := range svc.host.PeerStore().List() {
 		go svc.listenPeer(peer)
 	}
+	go svc.listenTopic(host)
 
 	svc.reqHandlers = make(map[pb.Request_Type]ReqHandler)
 	svc.setEmitters()
 	svc.setMsgReceivers()
+	svc.setTopicReceivers()
 	return svc
 }
 
@@ -185,12 +190,17 @@ func (svc *MsgService) setEmitters() {
 }
 
 func (svc *MsgService) setMsgReceivers() {
-	svc.receivers = make(map[MsgType]msgReceiver)
-	svc.receivers[MsgTypeProposal] = svc.onReceiveProposal
-	svc.receivers[MsgTypeVote] = svc.onReceiveVote
-	svc.receivers[MsgTypeQC] = svc.onReceiveQC
-	svc.receivers[MsgTypeTxList] = svc.onReceiveTxList
-	svc.receivers[MsgTypeRequest] = svc.onReceiveRequest
+	svc.pointReceivers = make(map[MsgType]msgReceiver)
+	svc.pointReceivers[MsgTypeProposal] = svc.onReceiveProposal
+	svc.pointReceivers[MsgTypeVote] = svc.onReceiveVote
+	svc.pointReceivers[MsgTypeQC] = svc.onReceiveQC
+	svc.pointReceivers[MsgTypeTxList] = svc.onReceiveTxList
+	svc.pointReceivers[MsgTypeRequest] = svc.onReceiveRequest
+}
+
+func (svc *MsgService) setTopicReceivers() {
+	svc.topicReceivers = make(map[MsgType]topicReceiver)
+	svc.topicReceivers[MsgTypeProposal] = svc.onReceiveProposal2
 }
 
 func (svc *MsgService) listenPeer(peer *Peer) {
@@ -200,8 +210,22 @@ func (svc *MsgService) listenPeer(peer *Peer) {
 		if len(msg) < 2 {
 			continue // invalid message
 		}
-		if receiver, found := svc.receivers[MsgType(msg[0])]; found {
+		if receiver, found := svc.pointReceivers[MsgType(msg[0])]; found {
 			receiver(peer, msg[1:])
+		} else {
+			logger.I().Error("msg service received invalid point message")
+		}
+	}
+}
+
+func (svc *MsgService) listenTopic(host *Host) {
+	sub := host.SubscribeMsg()
+	for e := range sub.Events() {
+		msg := e.(*pubsub.Message)
+		if receiver, found := svc.topicReceivers[MsgType(msg.Data[0])]; found {
+			receiver(msg.Data[1:])
+		} else {
+			logger.I().Error("msg service received invalid topic message")
 		}
 	}
 }
@@ -210,6 +234,15 @@ func (svc *MsgService) onReceiveProposal(peer *Peer, data []byte) {
 	blk := core.NewBlock()
 	if err := blk.Unmarshal(data); err != nil {
 		logger.I().Errorw("msg service receive proposal failed", "error", err)
+		return
+	}
+	svc.proposalEmitter.Emit(blk)
+}
+
+func (svc *MsgService) onReceiveProposal2(data []byte) {
+	blk := core.NewBlock()
+	if err := blk.Unmarshal(data); err != nil {
+		logger.I().Errorw("msg service receive proposal2 failed", "error", err)
 		return
 	}
 	svc.proposalEmitter.Emit(blk)
@@ -264,10 +297,7 @@ func (svc *MsgService) onReceiveRequest(peer *Peer, data []byte) {
 }
 
 func (svc *MsgService) broadcastData(msgType MsgType, data []byte) error {
-	for _, peer := range svc.host.PeerStore().List() {
-		peer.WriteMsg(append([]byte{byte(msgType)}, data...))
-	}
-	return nil
+	return svc.host.chatRoom.Publish(append([]byte{byte(msgType)}, data...))
 }
 
 func (svc *MsgService) sendData(pubKey *core.PublicKey, msgType MsgType, data []byte) error {
@@ -278,7 +308,8 @@ func (svc *MsgService) sendData(pubKey *core.PublicKey, msgType MsgType, data []
 	return peer.WriteMsg(append([]byte{byte(msgType)}, data...))
 }
 
-func (svc *MsgService) requestData(pubKey *core.PublicKey, reqType pb.Request_Type, reqData []byte) ([]byte, error) {
+func (svc *MsgService) requestData(pubKey *core.PublicKey,
+	reqType pb.Request_Type, reqData []byte) ([]byte, error) {
 	peer := svc.host.PeerStore().Load(pubKey)
 	if peer == nil {
 		return nil, errors.New("peer not found")
