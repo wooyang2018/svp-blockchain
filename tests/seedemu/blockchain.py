@@ -65,7 +65,6 @@ class PPoV(Layer):
                 templateDir = os.path.join('../../../workdir/local-clusters/docker_template/', str(vnode))
                 self._log('rendering as{}/{} as {}{}...'.format(node.getAsn(), node.getName(), self.nodePrefix, vnode))
 
-                node.importFile('../../../chain', chainPath)
                 node.importFile(os.path.join(templateDir, 'genesis.json'), os.path.join(self.dataDir, 'genesis.json'))
                 node.importFile(os.path.join(templateDir, 'nodekey'), os.path.join(self.dataDir, 'nodekey'))
                 node.importFile(os.path.join(templateDir, 'peers.json'), peersPath)

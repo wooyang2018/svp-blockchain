@@ -27,14 +27,18 @@ for i in range(0, 2 ** dimension - 1):
             as150.createNetwork(
                 'net' + bin(i).replace('0b', '').zfill(dimension) + '-' + bin(j).replace('0b', '').zfill(dimension))
 
-netList = as150.getNetworks()
+docker = Docker(internetMapEnabled=True)
+image = DockerImage(name='chain_bin', local=True, software=[])
+docker.addImage(image)
 
 # Create 2^d rnodes
 # eg. node00,...,node11
+netList = as150.getNetworks()
 for i in range(0, 2 ** dimension):
     nodeIndex = bin(i).replace('0b', '').zfill(dimension)
     node = as150.createRouter('node' + nodeIndex)
-    ppov.bindNode(150, 'node' + nodeIndex, i)  # Bind ppovNode to rnode
+    ppov.bindNode(150, 'node' + nodeIndex, i)  # Bind ppov node to rnode
+    docker.setImageOverride(node, 'chain_bin')
     for netItem in netList:
         if nodeIndex in netItem:
             node.joinNetwork(netItem)
@@ -46,5 +50,11 @@ emu.addLayer(ospf)
 emu.addLayer(ppov)
 emu.render()
 
-# Compilation
-emu.compile(Docker(), './output', True)
+# Generate the Docker files
+outputDir = 'output'
+emu.compile(docker, outputDir, True)
+
+# Copy the image folder to the output folder
+os.system('mkdir ' + outputDir + '/chain_bin/')
+os.system('cp -r Dockerfile ' + outputDir + '/chain_bin/')
+os.system('cp -r ../chain ' + outputDir + '/chain_bin/')
