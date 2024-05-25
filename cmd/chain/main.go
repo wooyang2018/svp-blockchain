@@ -36,15 +36,22 @@ func init() {
 		consensus.FlagDataDir, "d", "", "blockchain data directory")
 	rootCmd.MarkPersistentFlagRequired(consensus.FlagDataDir)
 
-	rootCmd.Flags().IntVarP(&nodeConfig.Port,
-		consensus.FlagPort, "p", nodeConfig.Port, "p2p port")
-
-	rootCmd.Flags().IntVarP(&nodeConfig.APIPort,
-		consensus.FlagAPIPort, "P", nodeConfig.APIPort, "node api port")
+	rootCmd.Flags().Int64Var(&nodeConfig.ConsensusConfig.ChainID,
+		consensus.FlagChainID, nodeConfig.ConsensusConfig.ChainID,
+		"chain id is used to create genesis block")
 
 	rootCmd.Flags().BoolVar(&nodeConfig.BroadcastTx,
 		consensus.FlagBroadcastTx, false,
 		"whether to broadcast transaction")
+
+	rootCmd.Flags().IntVar(&nodeConfig.PointPort,
+		consensus.FlagPointPort, nodeConfig.PointPort, "node point port")
+
+	rootCmd.Flags().IntVar(&nodeConfig.TopicPort,
+		consensus.FlagTopicPort, nodeConfig.TopicPort, "node topic port")
+
+	rootCmd.Flags().IntVarP(&nodeConfig.APIPort,
+		consensus.FlagAPIPort, "p", nodeConfig.APIPort, "node api port")
 
 	rootCmd.Flags().Uint8Var(&nodeConfig.StorageConfig.MerkleBranchFactor,
 		consensus.FlagMerkleBranchFactor, nodeConfig.StorageConfig.MerkleBranchFactor,
@@ -57,10 +64,6 @@ func init() {
 	rootCmd.Flags().IntVar(&nodeConfig.ExecutionConfig.ConcurrentLimit,
 		consensus.FlagExecConcurrentLimit, nodeConfig.ExecutionConfig.ConcurrentLimit,
 		"concurrent tx execution limit")
-
-	rootCmd.Flags().Int64Var(&nodeConfig.ConsensusConfig.ChainID,
-		consensus.FlagChainID, nodeConfig.ConsensusConfig.ChainID,
-		"chain id is used to create genesis block")
 
 	rootCmd.Flags().IntVar(&nodeConfig.ConsensusConfig.BlockTxLimit,
 		consensus.FlagBlockTxLimit, nodeConfig.ConsensusConfig.BlockTxLimit,

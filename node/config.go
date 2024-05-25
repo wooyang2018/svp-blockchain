@@ -9,12 +9,13 @@ import (
 	"github.com/wooyang2018/svp-blockchain/storage"
 )
 
-const MaxProcsNum = 8 //set corresponding num of CPUs when benchmark test
+const MaxProcsNum = 8 // set corresponding num of CPUs when benchmark test
 
 type Config struct {
 	Debug       bool
 	DataDir     string
-	Port        int
+	PointPort   int
+	TopicPort   int
 	APIPort     int
 	BroadcastTx bool
 
@@ -24,7 +25,8 @@ type Config struct {
 }
 
 var DefaultConfig = Config{
-	Port:            15150,
+	PointPort:       15150,
+	TopicPort:       16160,
 	APIPort:         9090,
 	BroadcastTx:     true,
 	StorageConfig:   storage.DefaultConfig,

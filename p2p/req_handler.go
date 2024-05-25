@@ -14,7 +14,7 @@ import (
 
 type ReqHandler interface {
 	Type() pb.Request_Type
-	HandleReq(sender *core.PublicKey, data []byte) ([]byte, error)
+	HandleReq(data []byte) ([]byte, error)
 }
 
 type TxListReqHandler struct {
@@ -27,7 +27,7 @@ func (hdlr *TxListReqHandler) Type() pb.Request_Type {
 	return pb.Request_TxList
 }
 
-func (hdlr *TxListReqHandler) HandleReq(sender *core.PublicKey, data []byte) ([]byte, error) {
+func (hdlr *TxListReqHandler) HandleReq(data []byte) ([]byte, error) {
 	req := new(pb.HashList)
 	if err := proto.Unmarshal(data, req); err != nil {
 		return nil, err
@@ -49,7 +49,7 @@ func (hdlr *BlockReqHandler) Type() pb.Request_Type {
 	return pb.Request_Block
 }
 
-func (hdlr *BlockReqHandler) HandleReq(sender *core.PublicKey, data []byte) ([]byte, error) {
+func (hdlr *BlockReqHandler) HandleReq(data []byte) ([]byte, error) {
 	block, err := hdlr.GetBlock(data)
 	if err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func (hdlr *QCReqHandler) Type() pb.Request_Type {
 	return pb.Request_QC
 }
 
-func (hdlr *QCReqHandler) HandleReq(sender *core.PublicKey, data []byte) ([]byte, error) {
+func (hdlr *QCReqHandler) HandleReq(data []byte) ([]byte, error) {
 	qc, err := hdlr.GetQC(data)
 	if err != nil {
 		return nil, err
@@ -85,7 +85,7 @@ func (hdlr *BlockByHeightReqHandler) Type() pb.Request_Type {
 	return pb.Request_BlockByHeight
 }
 
-func (hdlr *BlockByHeightReqHandler) HandleReq(sender *core.PublicKey, data []byte) ([]byte, error) {
+func (hdlr *BlockByHeightReqHandler) HandleReq(data []byte) ([]byte, error) {
 	height := binary.BigEndian.Uint64(data)
 	block, err := hdlr.GetBlockByHeight(height)
 	if err != nil {

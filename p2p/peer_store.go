@@ -6,17 +6,21 @@ package p2p
 import (
 	"sync"
 
+	"github.com/libp2p/go-libp2p/core/peer"
+
 	"github.com/wooyang2018/svp-blockchain/core"
 )
 
 type PeerStore struct {
 	peers map[string]*Peer
 	mtx   sync.RWMutex
+	ids   map[peer.ID]struct{}
 }
 
 func NewPeerStore() *PeerStore {
 	return &PeerStore{
 		peers: make(map[string]*Peer),
+		ids:   make(map[peer.ID]struct{}),
 	}
 }
 
@@ -30,6 +34,11 @@ func (s *PeerStore) Store(p *Peer) *Peer {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 	s.peers[p.PublicKey().String()] = p
+	id, err := getIDFromPublicKey(p.PublicKey())
+	if err != nil {
+		panic(nil)
+	}
+	s.ids[id] = struct{}{}
 	return p
 }
 
@@ -39,6 +48,11 @@ func (s *PeerStore) Delete(pubKey *core.PublicKey) *Peer {
 
 	p := s.peers[pubKey.String()]
 	delete(s.peers, pubKey.String())
+	id, err := getIDFromPublicKey(p.PublicKey())
+	if err != nil {
+		panic(nil)
+	}
+	delete(s.ids, id)
 	return p
 }
 
@@ -59,5 +73,15 @@ func (s *PeerStore) LoadOrStore(p *Peer) (actual *Peer, loaded bool) {
 		return actual, loaded
 	}
 	s.peers[p.PublicKey().String()] = p
+	id, err := getIDFromPublicKey(p.PublicKey())
+	if err != nil {
+		panic(nil)
+	}
+	s.ids[id] = struct{}{}
 	return p, false
+}
+
+func (s *PeerStore) IsValidID(id peer.ID) bool {
+	_, ok := s.ids[id]
+	return ok
 }

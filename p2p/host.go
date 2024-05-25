@@ -6,51 +6,76 @@ package p2p
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/libp2p/go-libp2p"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/peerstore"
+	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
 	"github.com/multiformats/go-multiaddr"
 
 	"github.com/wooyang2018/svp-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/emitter"
+	"github.com/wooyang2018/svp-blockchain/logger"
 )
 
-const protocolID = "/single_pid"
+const protocolID = "/point2point"
 
 type Host struct {
 	privKey   *core.PrivateKey
-	localAddr multiaddr.Multiaddr
 	peerStore *PeerStore
-	libHost   host.Host
+
+	pointAddr multiaddr.Multiaddr
+	pointHost host.Host
+
+	topicAddr multiaddr.Multiaddr
+	topicHost host.Host
+	chatRoom  *ChatRoom
 }
 
-func NewHost(privKey *core.PrivateKey, localAddr multiaddr.Multiaddr) (*Host, error) {
+func NewHost(privKey *core.PrivateKey, pointAddr, topicAddr multiaddr.Multiaddr) (*Host, error) {
 	host := new(Host)
 	host.privKey = privKey
-	host.localAddr = localAddr
+	host.pointAddr = pointAddr
+	host.topicAddr = topicAddr
 	host.peerStore = NewPeerStore()
 
-	libHost, err := host.newLibHost()
+	pointHost, topicHost, err := host.newLibHost()
 	if err != nil {
 		return nil, err
 	}
-	host.libHost = libHost
-	host.libHost.SetStreamHandler(protocolID, host.handleStream)
+	pointHost.SetStreamHandler(protocolID, host.handleStream)
+	host.pointHost = pointHost
+	host.topicHost = topicHost
+
 	return host, nil
 }
 
-func (host *Host) newLibHost() (host.Host, error) {
+func (host *Host) newLibHost() (host.Host, host.Host, error) {
 	priv, err := crypto.UnmarshalEd25519PrivateKey(host.privKey.Bytes())
-	if err != nil {
-		return nil, err
-	}
-	return libp2p.New(
+	pointHost, err := libp2p.New(
 		libp2p.Identity(priv),
-		libp2p.ListenAddrs(host.localAddr),
+		libp2p.ListenAddrs(host.pointAddr),
 	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	connmgr, err := connmgr.NewConnManager(
+		4, // low watermark
+		8, // high watermark
+		connmgr.WithGracePeriod(4*time.Second),
+	)
+	topicHost, err := libp2p.New(
+		libp2p.Identity(priv),
+		libp2p.ListenAddrs(host.topicAddr),
+		libp2p.ConnectionManager(connmgr),
+	)
+	return pointHost, topicHost, nil
 }
 
 func (host *Host) handleStream(s network.Stream) {
@@ -67,17 +92,41 @@ func (host *Host) handleStream(s network.Stream) {
 	s.Close() // cannot find peer in the store (peer not allowed to connect)
 }
 
-func (host *Host) connectPeer(peer *Peer) {
+func (host *Host) JoinChatRoom() error {
+	ctx := context.Background()
+	// create a new PubSub service using the GossipSub router
+	ps, err := pubsub.NewGossipSub(ctx, host.topicHost)
+	if err != nil {
+		return err
+	}
+	// setup local mDNS discovery
+	if err = setupDiscovery(host.topicHost, host.peerStore); err != nil {
+		return err
+	}
+	// join the chat room
+	if host.chatRoom, err = JoinChatRoom(ctx, ps, host.topicHost.ID()); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (host *Host) ConnectPeer(peer *Peer) error {
 	// prevent simultaneous connections from both hosts
 	if err := peer.setConnecting(); err != nil {
-		return
+		return err
 	}
 	s, err := host.newStream(peer)
 	if err != nil {
 		peer.disconnect()
-		return
+		logger.I().Errorw("failed to reconnect peer", "error", err)
+		return err
 	}
 	peer.onConnected(s)
+	return nil
+}
+
+func (host *Host) SubscribeTopicMsg() *emitter.Subscription {
+	return host.chatRoom.emitter.Subscribe(20)
 }
 
 func (host *Host) newStream(peer *Peer) (network.Stream, error) {
@@ -85,14 +134,13 @@ func (host *Host) newStream(peer *Peer) (network.Stream, error) {
 	if err != nil {
 		return nil, err
 	}
-	host.libHost.Peerstore().AddAddr(id, peer.Addr(), peerstore.PermanentAddrTTL)
-	return host.libHost.NewStream(context.Background(), id, protocolID)
+	host.pointHost.Peerstore().AddAddr(id, peer.PointAddr(), peerstore.PermanentAddrTTL)
+	return host.pointHost.NewStream(context.Background(), id, protocolID)
 }
 
 func (host *Host) AddPeer(peer *Peer) {
 	peer.host = host
 	peer, _ = host.peerStore.LoadOrStore(peer)
-	go host.connectPeer(peer)
 }
 
 func (host *Host) PeerStore() *PeerStore {

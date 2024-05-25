@@ -52,13 +52,13 @@ func (ftry *LocalFactory) TemplateDir() string {
 }
 
 func (ftry *LocalFactory) setup() (err error) {
-	var addrs []multiaddr.Multiaddr
+	var pointAddrs, topicAddrs []multiaddr.Multiaddr
 	if ftry.params.SetupDocker {
 		ftry.templateDir = path.Join(ftry.params.WorkDir, "docker_template")
-		addrs, err = ftry.makeDockerAddrs()
+		pointAddrs, topicAddrs, err = ftry.makeDockerAddrs()
 	} else {
 		ftry.templateDir = path.Join(ftry.params.WorkDir, "cluster_template")
-		addrs, err = ftry.makeLocalAddrs()
+		pointAddrs, topicAddrs, err = ftry.makeLocalAddrs()
 	}
 	if err != nil {
 		return err
@@ -75,34 +75,42 @@ func (ftry *LocalFactory) setup() (err error) {
 		genesis.Validators[i] = v.PublicKey().String()
 		genesis.StakeQuotas[i] = quotas[i]
 	}
-	peers := MakePeers(keys, addrs)
+	peers := MakePeers(keys, pointAddrs, topicAddrs)
 	return SetupTemplateDir(ftry.templateDir, keys, genesis, peers)
 }
 
-func (ftry *LocalFactory) makeDockerAddrs() ([]multiaddr.Multiaddr, error) {
-	addrs := make([]multiaddr.Multiaddr, ftry.params.NodeCount)
-	for i := range addrs {
-		addr, err := multiaddr.NewMultiaddr(
-			fmt.Sprintf("/dns4/node%d/tcp/%d", i, ftry.params.NodeConfig.Port))
+func (ftry *LocalFactory) makeDockerAddrs() ([]multiaddr.Multiaddr, []multiaddr.Multiaddr, error) {
+	n := ftry.params.NodeCount
+	pointAddrs, topicAddrs := make([]multiaddr.Multiaddr, n), make([]multiaddr.Multiaddr, n)
+	for i := 0; i < n; i++ {
+		pointAddr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/dns4/node%d/tcp/%d",
+			i, ftry.params.NodeConfig.PointPort))
+		topicAddr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/dns4/node%d/tcp/%d",
+			i, ftry.params.NodeConfig.TopicPort))
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		addrs[i] = addr
+		pointAddrs[i] = pointAddr
+		topicAddrs[i] = topicAddr
 	}
-	return addrs, nil
+	return pointAddrs, topicAddrs, nil
 }
 
-func (ftry *LocalFactory) makeLocalAddrs() ([]multiaddr.Multiaddr, error) {
-	addrs := make([]multiaddr.Multiaddr, ftry.params.NodeCount)
-	for i := range addrs {
-		addr, err := multiaddr.NewMultiaddr(
-			fmt.Sprintf("/ip4/127.0.0.1/tcp/%d", ftry.params.NodeConfig.Port+i))
+func (ftry *LocalFactory) makeLocalAddrs() ([]multiaddr.Multiaddr, []multiaddr.Multiaddr, error) {
+	n := ftry.params.NodeCount
+	pointAddrs, topicAddrs := make([]multiaddr.Multiaddr, n), make([]multiaddr.Multiaddr, n)
+	for i := 0; i < n; i++ {
+		pointAddr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/127.0.0.1/tcp/%d",
+			ftry.params.NodeConfig.PointPort+i))
+		topicAddr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/127.0.0.1/tcp/%d",
+			ftry.params.NodeConfig.TopicPort+i))
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		addrs[i] = addr
+		pointAddrs[i] = pointAddr
+		topicAddrs[i] = topicAddr
 	}
-	return addrs, nil
+	return pointAddrs, topicAddrs, nil
 }
 
 func (ftry *LocalFactory) SetupCluster(name string) (*Cluster, error) {
@@ -127,7 +135,8 @@ func (ftry *LocalFactory) SetupCluster(name string) (*Cluster, error) {
 			node.config.DataDir = "/app"
 			node.binPath = path.Join(node.config.DataDir, "chain")
 		} else {
-			node.config.Port = node.config.Port + i
+			node.config.PointPort = node.config.PointPort + i
+			node.config.TopicPort = node.config.TopicPort + i
 			node.config.APIPort = node.config.APIPort + i
 			node.config.DataDir = path.Join(clusterDir, strconv.Itoa(i))
 		}

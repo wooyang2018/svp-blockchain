@@ -5,18 +5,19 @@ package consensus
 
 import "time"
 
-const ExecuteTxFlag = true    //set to false when benchmark test
-const PreserveTxFlag = false  //set to true when benchmark test
-const TwoPhaseBFTFlag = false //set to true to execute two-phase BFT protocol
+const ExecuteTxFlag = true    // set to false when benchmark test
+const PreserveTxFlag = false  // set to true when benchmark test
+const TwoPhaseBFTFlag = false // set to true to execute two-phase BFT protocol
 
 const (
-	FlagDebug   = "debug"
-	FlagDataDir = "dataDir"
-
-	FlagPort    = "port"
-	FlagAPIPort = "apiPort"
-
+	FlagDebug       = "debug"
+	FlagDataDir     = "dataDir"
+	FlagChainID     = "chainID"
 	FlagBroadcastTx = "broadcastTx"
+
+	FlagPointPort = "pointPort"
+	FlagTopicPort = "topicPort"
+	FlagAPIPort   = "apiPort"
 
 	// storage section
 	FlagMerkleBranchFactor = "storage-merkleBranchFactor"
@@ -26,7 +27,6 @@ const (
 	FlagExecConcurrentLimit = "execution-concurrentLimit"
 
 	// consensus section
-	FlagChainID       = "consensus-chainID"
 	FlagBlockTxLimit  = "consensus-blockTxLimit"
 	FlagTxWaitTime    = "consensus-txWaitTime"
 	FlagViewWidth     = "consensus-viewWidth"

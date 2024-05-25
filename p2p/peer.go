@@ -27,7 +27,6 @@ const (
 	PeerStatusDisconnected PeerStatus = iota
 	PeerStatusConnecting
 	PeerStatusConnected
-	PeerStatusBlocked
 )
 
 const (
@@ -38,9 +37,10 @@ const (
 
 // Peer type
 type Peer struct {
-	pubKey *core.PublicKey
-	addr   multiaddr.Multiaddr
-	status PeerStatus
+	pubKey    *core.PublicKey
+	pointAddr multiaddr.Multiaddr
+	topicAddr multiaddr.Multiaddr
+	status    PeerStatus
 
 	rwc     io.ReadWriteCloser
 	emitter *emitter.Emitter
@@ -55,13 +55,13 @@ type Peer struct {
 	host *Host
 }
 
-// NewPeer godoc
-func NewPeer(pubKey *core.PublicKey, addr multiaddr.Multiaddr) *Peer {
+func NewPeer(pubKey *core.PublicKey, pointAddr, topicAddr multiaddr.Multiaddr) *Peer {
 	p := &Peer{
-		pubKey:  pubKey,
-		addr:    addr,
-		status:  PeerStatusDisconnected,
-		emitter: emitter.New(),
+		pubKey:    pubKey,
+		pointAddr: pointAddr,
+		topicAddr: topicAddr,
+		status:    PeerStatusDisconnected,
+		emitter:   emitter.New(),
 	}
 	p.resetReconnectInterval()
 	return p
@@ -72,9 +72,9 @@ func (p *Peer) PublicKey() *core.PublicKey {
 	return p.pubKey
 }
 
-// Addr return network address of peer
-func (p *Peer) Addr() multiaddr.Multiaddr {
-	return p.addr
+// PointAddr return network address of peer
+func (p *Peer) PointAddr() multiaddr.Multiaddr {
+	return p.pointAddr
 }
 
 func (p *Peer) Status() PeerStatus {
@@ -89,7 +89,7 @@ func (p *Peer) disconnect() {
 	defer p.mtxStatus.Unlock()
 
 	if p.status == PeerStatusConnected {
-		logger.I().Infow("peer disconnected", "addr", p.addr)
+		logger.I().Infow("peer disconnected", "pointAddr", p.pointAddr)
 	}
 	p.status = PeerStatusDisconnected
 	rwc := p.getRWC()
@@ -104,7 +104,7 @@ func (p *Peer) reconnectAfterInterval() {
 		(time.Duration(rand.Intn(500)) * time.Millisecond)
 
 	time.AfterFunc(reconnInterval, func() {
-		p.host.connectPeer(p)
+		p.host.ConnectPeer(p)
 	})
 }
 
@@ -116,7 +116,7 @@ func (p *Peer) setConnecting() error {
 		return errors.New("status must be disconnected")
 	}
 	p.status = PeerStatusConnecting
-	logger.I().Infow("connecting", "addr", p.addr)
+	logger.I().Infow("connecting", "pointAddr", p.pointAddr)
 	return nil
 }
 
@@ -124,7 +124,7 @@ func (p *Peer) onConnected(rwc io.ReadWriteCloser) {
 	p.mtxStatus.Lock()
 	defer p.mtxStatus.Unlock()
 
-	logger.I().Infow("peer connected", "addr", p.addr)
+	logger.I().Infow("peer connected", "pointAddr", p.pointAddr)
 	p.status = PeerStatusConnected
 	p.setRWC(rwc)
 	p.resetReconnectInterval()

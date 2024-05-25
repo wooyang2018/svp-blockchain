@@ -129,13 +129,15 @@ func MakeRandomQuotas(count int, quota int) []uint64 {
 	return quotas
 }
 
-func MakePeers(keys []*core.PrivateKey, addrs []multiaddr.Multiaddr) []node.Peer {
-	vlds := make([]node.Peer, len(addrs))
-	// create validator infos (pubkey + addr)
-	for i, addr := range addrs {
+func MakePeers(keys []*core.PrivateKey, pointAddrs, topicAddrs []multiaddr.Multiaddr) []node.Peer {
+	n := len(pointAddrs)
+	vlds := make([]node.Peer, n)
+	// create validator infos (pubkey + pointAddr + topicAddr)
+	for i := 0; i < n; i++ {
 		vlds[i] = node.Peer{
-			PubKey: keys[i].PublicKey().Bytes(),
-			Addr:   addr.String(),
+			PubKey:    keys[i].PublicKey().Bytes(),
+			PointAddr: pointAddrs[i].String(),
+			TopicAddr: topicAddrs[i].String(),
 		}
 	}
 	return vlds
@@ -171,16 +173,19 @@ func RunCommand(cmd *exec.Cmd) error {
 }
 
 func AddCmdFlags(cmd *exec.Cmd, config *node.Config) {
-	cmd.Args = append(cmd.Args, "-d", config.DataDir)
-	cmd.Args = append(cmd.Args, "-p", strconv.Itoa(config.Port))
-	cmd.Args = append(cmd.Args, "-P", strconv.Itoa(config.APIPort))
-
 	if config.Debug {
 		cmd.Args = append(cmd.Args, "--"+consensus.FlagDebug)
 	}
 	if config.BroadcastTx {
 		cmd.Args = append(cmd.Args, "--"+consensus.FlagBroadcastTx)
 	}
+	cmd.Args = append(cmd.Args, "--"+consensus.FlagDataDir, config.DataDir)
+	cmd.Args = append(cmd.Args, "--"+consensus.FlagChainID,
+		strconv.Itoa(int(config.ConsensusConfig.ChainID)))
+
+	cmd.Args = append(cmd.Args, "--"+consensus.FlagPointPort, strconv.Itoa(config.PointPort))
+	cmd.Args = append(cmd.Args, "--"+consensus.FlagTopicPort, strconv.Itoa(config.TopicPort))
+	cmd.Args = append(cmd.Args, "--"+consensus.FlagAPIPort, strconv.Itoa(config.APIPort))
 
 	cmd.Args = append(cmd.Args, "--"+consensus.FlagMerkleBranchFactor,
 		strconv.Itoa(int(config.StorageConfig.MerkleBranchFactor)))
@@ -190,9 +195,6 @@ func AddCmdFlags(cmd *exec.Cmd, config *node.Config) {
 	)
 	cmd.Args = append(cmd.Args, "--"+consensus.FlagExecConcurrentLimit,
 		strconv.Itoa(config.ExecutionConfig.ConcurrentLimit))
-
-	cmd.Args = append(cmd.Args, "--"+consensus.FlagChainID,
-		strconv.Itoa(int(config.ConsensusConfig.ChainID)))
 
 	cmd.Args = append(cmd.Args, "--"+consensus.FlagBlockTxLimit,
 		strconv.Itoa(config.ConsensusConfig.BlockTxLimit))

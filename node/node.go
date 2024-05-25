@@ -127,23 +127,32 @@ func (node *Node) setupRoleStore() {
 }
 
 func (node *Node) setupHost() {
-	ln, err := net.Listen("tcp4", fmt.Sprintf(":%d", node.config.Port))
-	if err != nil {
-		logger.I().Fatalw("cannot listen on port", "port", node.config.Port)
-	}
-	ln.Close()
-	addr, _ := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", node.config.Port))
-	host, err := p2p.NewHost(node.privKey, addr)
+	checkPort(node.config.PointPort)
+	checkPort(node.config.TopicPort)
+	pointAddr, _ := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", node.config.PointPort))
+	topicAddr, _ := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", node.config.TopicPort))
+	host, err := p2p.NewHost(node.privKey, pointAddr, topicAddr)
 	if err != nil {
 		logger.I().Fatalw("cannot create p2p host", "error", err)
 	}
 	for _, p := range node.peers {
 		if !p.PublicKey().Equal(node.privKey.PublicKey()) {
 			host.AddPeer(p)
+			host.ConnectPeer(p)
 		}
 	}
-	logger.I().Infow("setup p2p host", "port", node.config.Port)
+	host.JoinChatRoom()
 	node.host = host
+	logger.I().Infow("setup p2p host", "point port", node.config.PointPort,
+		"topic port", node.config.TopicPort, "broadcastTx", node.config.BroadcastTx)
+}
+
+func checkPort(port int) {
+	ln, err := net.Listen("tcp4", fmt.Sprintf(":%d", port))
+	if err != nil {
+		logger.I().Fatalf("cannot listen on port %d\n", port)
+	}
+	ln.Close()
 }
 
 func (node *Node) setupConsensus() {

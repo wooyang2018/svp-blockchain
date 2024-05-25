@@ -16,8 +16,8 @@ import (
 
 func setupMsgServiceWithLoopBackPeers() (*MsgService, [][]byte, []*Peer) {
 	peers := make([]*Peer, 2)
-	peers[0] = NewPeer(core.GenerateKey(nil).PublicKey(), nil)
-	peers[1] = NewPeer(core.GenerateKey(nil).PublicKey(), nil)
+	peers[0] = NewPeer(core.GenerateKey(nil).PublicKey(), nil, nil)
+	peers[1] = NewPeer(core.GenerateKey(nil).PublicKey(), nil, nil)
 
 	s1 := peers[0].SubscribeMsg()
 	s2 := peers[1].SubscribeMsg()

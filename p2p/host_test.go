@@ -7,49 +7,53 @@ import (
 	"testing"
 	"time"
 
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/wooyang2018/svp-blockchain/core"
 )
 
-func TestHost(t *testing.T) {
+func setupTwoHost(t *testing.T) (*Host, *Host, *Peer, *Peer) {
 	asrt := assert.New(t)
 
 	priv1 := core.GenerateKey(nil)
 	priv2 := core.GenerateKey(nil)
 
-	addr1, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/25001")
-	addr2, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/25002")
+	pointAddr1, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/25001")
+	pointAddr2, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/25002")
+	topicAddr1, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/26001")
+	topicAddr2, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/26002")
 
-	host1, err := NewHost(priv1, addr1)
-	if !asrt.NoError(err) {
-		return
-	}
-	host2, err := NewHost(priv2, addr2)
-	if !asrt.NoError(err) {
-		return
-	}
+	peer1 := NewPeer(priv1.PublicKey(), pointAddr1, topicAddr1)
+	peer2 := NewPeer(priv2.PublicKey(), pointAddr2, topicAddr2)
 
-	host1.AddPeer(NewPeer(priv2.PublicKey(), addr2))
-	host2.AddPeer(NewPeer(priv1.PublicKey(), addr2))
+	host1, err := NewHost(priv1, pointAddr1, topicAddr1)
+	asrt.NoError(err)
+	host2, err := NewHost(priv2, pointAddr2, topicAddr2)
+	asrt.NoError(err)
+
+	host1.AddPeer(peer2)
+	host2.AddPeer(peer1)
+
+	asrt.NoError(host1.ConnectPeer(peer2))
+
+	asrt.NoError(host1.JoinChatRoom())
+	asrt.NoError(host2.JoinChatRoom())
 
 	time.Sleep(2 * time.Second)
+	asrt.Equal(PeerStatusConnected, peer1.Status())
+	asrt.Equal(PeerStatusConnected, peer2.Status())
 
-	p1 := host2.PeerStore().Load(priv1.PublicKey())
-	p2 := host1.PeerStore().Load(priv2.PublicKey())
+	return host1, host2, peer1, peer2
+}
 
-	if !asrt.NotNil(p1) {
-		return
-	}
-	if !asrt.NotNil(p2) {
-		return
-	}
-	asrt.Equal(PeerStatusConnected, p1.Status())
-	asrt.Equal(PeerStatusConnected, p2.Status())
+func TestPointHost(t *testing.T) {
+	asrt := assert.New(t)
+	_, _, peer1, peer2 := setupTwoHost(t)
 
 	// wait message from host2
-	s1 := p1.SubscribeMsg()
+	s1 := peer1.SubscribeMsg()
 	var recv1 []byte
 	go func() {
 		for e := range s1.Events() {
@@ -59,14 +63,13 @@ func TestHost(t *testing.T) {
 
 	// send message from host1
 	msg := []byte("hello")
-	p2.WriteMsg(msg)
+	peer2.WriteMsg(msg)
 
 	time.Sleep(10 * time.Millisecond)
-
 	asrt.Equal(msg, recv1)
 
 	// wait message from host1
-	s2 := p2.SubscribeMsg()
+	s2 := peer2.SubscribeMsg()
 	var recv2 []byte
 	go func() {
 		for e := range s2.Events() {
@@ -75,29 +78,66 @@ func TestHost(t *testing.T) {
 	}()
 
 	// send message from host2
-	p1.WriteMsg(msg)
+	msg = []byte("world")
+	peer1.WriteMsg(msg)
 
 	time.Sleep(10 * time.Millisecond)
-
 	asrt.Equal(msg, recv2)
+}
+
+func TestTopicHost(t *testing.T) {
+	asrt := assert.New(t)
+	host1, host2, _, _ := setupTwoHost(t)
+
+	// wait message from host2
+	s1 := host1.SubscribeTopicMsg()
+	var recv1 []byte
+	go func() {
+		for e := range s1.Events() {
+			data := e.(*pubsub.Message)
+			recv1 = data.Data
+		}
+	}()
+
+	// send message from host1
+	msg := []byte("hello")
+	asrt.NoError(host2.chatRoom.Publish(msg))
+
+	time.Sleep(10 * time.Millisecond)
+	asrt.Equal(msg, recv1)
+
+	// wait message from host1
+	s2 := host2.SubscribeTopicMsg()
+	var recv2 []byte
+	go func() {
+		for e := range s2.Events() {
+			data := e.(*pubsub.Message)
+			recv2 = data.Data
+		}
+	}()
+
+	// send message from host2
+	msg = []byte("world")
+	asrt.NoError(host1.chatRoom.Publish(msg))
+
+	time.Sleep(10 * time.Millisecond)
+	asrt.Equal(msg, recv2)
+}
+
+func TestAddPeer(t *testing.T) {
+	asrt := assert.New(t)
+	host1, host2, _, peer2 := setupTwoHost(t)
 
 	priv3 := core.GenerateKey(nil)
-	host1.AddPeer(NewPeer(priv3.PublicKey(), addr2)) // invalid key
+	peer3 := NewPeer(priv3.PublicKey(), peer2.pointAddr, peer2.topicAddr)
+	host1.AddPeer(peer3) // invalid key
+	asrt.Error(host1.ConnectPeer(peer3))
+	asrt.Equal(PeerStatusDisconnected, peer3.Status())
 
-	time.Sleep(2 * time.Second)
-
-	p3 := host1.PeerStore().Load(priv3.PublicKey())
-	if asrt.NotNil(p3) {
-		asrt.Equal(PeerStatusDisconnected, p3.Status())
-	}
-
-	addr3, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/25003")
-	host2.AddPeer(NewPeer(priv3.PublicKey(), addr3)) // not reachable host
-
-	time.Sleep(2 * time.Second)
-
-	p4 := host2.PeerStore().Load(priv3.PublicKey())
-	if asrt.NotNil(p4) {
-		asrt.Equal(PeerStatusDisconnected, p4.Status())
-	}
+	pointAddr3, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/25003")
+	topicAddr3, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/26003")
+	peer3 = NewPeer(priv3.PublicKey(), pointAddr3, topicAddr3)
+	host2.AddPeer(peer3) // not reachable host
+	asrt.Error(host2.ConnectPeer(peer3))
+	asrt.Equal(PeerStatusDisconnected, peer3.Status())
 }
