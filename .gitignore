@@ -4,6 +4,7 @@
 /tests/pcoin
 /tests/workdir
 /tests/seedemu/output
+/tests/seedemu/__pycache__
 /docs
 
 ING
@@ -13,4 +14,3 @@ __pycache__
 .vscode
 .idea
 go.sum
-qodana.yaml

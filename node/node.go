@@ -57,6 +57,7 @@ func Run(config Config) {
 	<-c
 	logger.I().Info("node killed")
 	node.consensus.Stop()
+	node.host.Close()
 }
 
 func (node *Node) limitCPUs() {
@@ -111,8 +112,9 @@ func (node *Node) readFiles() {
 func (node *Node) setupComponents() {
 	node.setupRoleStore()
 	node.setupHost()
-	node.storage = storage.New(path.Join(node.config.DataDir, "db"), node.config.StorageConfig)
+	node.host.SetLeader(0)
 	node.msgSvc = p2p.NewMsgService(node.host)
+	node.storage = storage.New(path.Join(node.config.DataDir, "db"), node.config.StorageConfig)
 	node.execution = execution.New(node.storage, node.config.ExecutionConfig)
 	node.txpool = txpool.New(node.storage, node.execution, node.msgSvc, node.config.BroadcastTx)
 	node.setupConsensus()
@@ -132,19 +134,21 @@ func (node *Node) setupHost() {
 	pointAddr, _ := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", node.config.PointPort))
 	topicAddr, _ := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", node.config.TopicPort))
 	host, err := p2p.NewHost(node.privKey, pointAddr, topicAddr)
+	host.SetPeers(node.peers)
 	if err != nil {
 		logger.I().Fatalw("cannot create p2p host", "error", err)
 	}
 	for _, p := range node.peers {
 		if !p.PublicKey().Equal(node.privKey.PublicKey()) {
 			host.AddPeer(p)
-			host.ConnectPeer(p)
 		}
 	}
-	host.JoinChatRoom()
+	if err = host.JoinChatRoom(); err != nil {
+		logger.I().Errorw("failed to join chatroom", "error", err)
+	}
 	node.host = host
-	logger.I().Infow("setup p2p host", "point port", node.config.PointPort,
-		"topic port", node.config.TopicPort, "broadcastTx", node.config.BroadcastTx)
+	logger.I().Infow("setup p2p host", "point port",
+		node.config.PointPort, "topic port", node.config.TopicPort)
 }
 
 func checkPort(port int) {
@@ -162,6 +166,7 @@ func (node *Node) setupConsensus() {
 		RoleStore: node.roleStore,
 		Storage:   node.storage,
 		MsgSvc:    node.msgSvc,
+		Host:      node.host,
 		TxPool:    node.txpool,
 		Execution: node.execution,
 	}, node.config.ConsensusConfig)

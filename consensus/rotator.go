@@ -146,7 +146,7 @@ func (rot *rotator) approveViewLeader(view uint32, proposer uint32) {
 	rot.status.setLeaderIndex(proposer)
 	rot.status.setViewStart()
 	if !TwoPhaseBFTFlag && view == 2 {
-		rot.status.recoverFlag() //only for experiments to verify security
+		rot.status.recoverFlag() // only for experiments to verify security
 	}
 	rot.timeoutCount = 0
 	rot.highQCCount = 0
@@ -202,7 +202,7 @@ func (rot *rotator) onLeaderTimeout() {
 	faultyCount := rot.resources.RoleStore.ValidatorCount() - rot.resources.RoleStore.MajorityValidatorCount()
 	if rot.timeoutCount > faultyCount {
 		rot.leaderTimer.Stop()
-		rot.status.setViewChange(-1) //failed to change view when leader timeout
+		rot.status.setViewChange(-1) // failed to change view when leader timeout
 	} else {
 		rot.leaderTimer.Reset(rot.config.LeaderTimeout)
 	}
@@ -223,11 +223,12 @@ func (rot *rotator) changeView(view uint32) {
 		rot.status.setViewChange(1)
 
 		nextLeader := rot.resources.RoleStore.GetValidator(int(nextIdx))
+		rot.resources.Host.SetLeader(int(nextIdx))
 		rot.resources.MsgSvc.SendQC(nextLeader, rot.status.getQCHigh())
 		rot.highQCCount++
 
 		select {
-		case <-rot.newViewCh: //wait to receive n-f qcs
+		case <-rot.newViewCh: // wait to receive n-f qcs
 		case <-time.After(2 * time.Second):
 		}
 	}

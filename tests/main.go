@@ -55,7 +55,7 @@ var (
 
 	OnlySetupDocker  = false
 	OnlySetupCluster = false
-	OnlyRunCluster   = true
+	OnlyRunCluster   = false
 )
 
 func getNodeConfig() node.Config {
@@ -63,8 +63,8 @@ func getNodeConfig() node.Config {
 	config.Debug = true
 	config.BroadcastTx = BroadcastTx
 	if !CheckRotation {
-		config.ConsensusConfig.ViewWidth = 1 * time.Hour
-		config.ConsensusConfig.LeaderTimeout = 1 * time.Hour
+		config.ConsensusConfig.ViewWidth = 24 * time.Hour
+		config.ConsensusConfig.LeaderTimeout = 24 * time.Hour
 	}
 	return config
 }

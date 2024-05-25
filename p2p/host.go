@@ -28,9 +28,11 @@ const protocolID = "/point2point"
 type Host struct {
 	privKey   *core.PrivateKey
 	peerStore *PeerStore
+	peers     []*Peer
 
-	pointAddr multiaddr.Multiaddr
-	pointHost host.Host
+	pointAddr  multiaddr.Multiaddr
+	pointHost  host.Host
+	consLeader *Peer
 
 	topicAddr multiaddr.Multiaddr
 	topicHost host.Host
@@ -103,26 +105,48 @@ func (host *Host) JoinChatRoom() error {
 	if err = setupDiscovery(host.topicHost, host.peerStore); err != nil {
 		return err
 	}
-	// join the chat room
+	// join the chatroom
 	if host.chatRoom, err = JoinChatRoom(ctx, ps, host.topicHost.ID()); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (host *Host) ConnectPeer(peer *Peer) error {
+func (host *Host) Close() {
+	if err := host.pointHost.Close(); err != nil {
+		logger.I().Error(err)
+	}
+	if err := host.topicHost.Close(); err != nil {
+		logger.I().Error(err)
+	}
+}
+
+func (host *Host) SetPeers(peers []*Peer) {
+	host.peers = peers
+}
+
+func (host *Host) SetLeader(idx int) {
+	host.consLeader = host.peers[idx]
+	if !host.consLeader.pubKey.Equal(host.privKey.PublicKey()) {
+		host.ConnectLeader()
+	}
+}
+
+func (host *Host) ConnectLeader() {
+	leader := host.consLeader
 	// prevent simultaneous connections from both hosts
-	if err := peer.setConnecting(); err != nil {
-		return err
+	if err := leader.setConnecting(); err != nil {
+		logger.I().Error(err)
+		return
 	}
-	s, err := host.newStream(peer)
+	s, err := host.newStream(leader)
 	if err != nil {
-		peer.disconnect()
-		logger.I().Errorw("failed to reconnect peer", "error", err)
-		return err
+		leader.disconnect()
+		logger.I().Errorw("failed to reconnect leader", "error", err)
+		return
 	}
-	peer.onConnected(s)
-	return nil
+	leader.onConnected(s)
+	return
 }
 
 func (host *Host) SubscribeMsg() *emitter.Subscription {
@@ -130,6 +154,7 @@ func (host *Host) SubscribeMsg() *emitter.Subscription {
 }
 
 func (host *Host) newStream(peer *Peer) (network.Stream, error) {
+	logger.I().Debugw("newing stream to peer", "pubkey", peer.PublicKey())
 	id, err := getIDFromPublicKey(peer.PublicKey())
 	if err != nil {
 		return nil, err
@@ -139,8 +164,8 @@ func (host *Host) newStream(peer *Peer) (network.Stream, error) {
 }
 
 func (host *Host) AddPeer(peer *Peer) {
+	host.peerStore.Store(peer)
 	peer.host = host
-	peer, _ = host.peerStore.LoadOrStore(peer)
 }
 
 func (host *Host) PeerStore() *PeerStore {

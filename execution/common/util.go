@@ -31,7 +31,7 @@ func DownloadCode(url string, retry int) (*http.Response, error) {
 		if retry <= 0 {
 			return nil, err
 		}
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(500 * time.Millisecond)
 		return DownloadCode(url, retry-1)
 	}
 	return resp, nil

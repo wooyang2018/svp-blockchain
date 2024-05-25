@@ -132,8 +132,7 @@ func (self *LevelDBStore) BatchCommit() error {
 
 // Close leveldb
 func (self *LevelDBStore) Close() error {
-	err := self.db.Close()
-	return err
+	return self.db.Close()
 }
 
 // NewIterator return a iterator of leveldb with the key prefix

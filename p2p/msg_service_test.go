@@ -14,41 +14,6 @@ import (
 	"github.com/wooyang2018/svp-blockchain/core"
 )
 
-func setupMsgServiceWithLoopBackPeers() (*MsgService, [][]byte, []*Peer) {
-	peers := make([]*Peer, 2)
-	peers[0] = NewPeer(core.GenerateKey(nil).PublicKey(), nil, nil)
-	peers[1] = NewPeer(core.GenerateKey(nil).PublicKey(), nil, nil)
-
-	s1 := peers[0].SubscribeMsg()
-	s2 := peers[1].SubscribeMsg()
-
-	raws := make([][]byte, 2)
-
-	go func() {
-		for e := range s1.Events() {
-			raws[0] = e.([]byte)
-		}
-	}()
-
-	go func() {
-		for e := range s2.Events() {
-			raws[1] = e.([]byte)
-		}
-	}()
-
-	host := new(Host)
-	host.peerStore = NewPeerStore()
-
-	peers[0].onConnected(newRWCLoopBack())
-	peers[1].onConnected(newRWCLoopBack())
-	host.peerStore.Store(peers[0])
-	host.peerStore.Store(peers[1])
-
-	svc := NewMsgService(host)
-	time.Sleep(time.Millisecond)
-	return svc, raws, peers
-}
-
 func newTestProposal(priv core.Signer) (*core.Vote, *core.QuorumCert, *core.Block) {
 	blk0 := core.NewBlock().
 		SetHeight(9).
@@ -65,8 +30,11 @@ func newTestProposal(priv core.Signer) (*core.Vote, *core.QuorumCert, *core.Bloc
 func TestBroadcastProposal(t *testing.T) {
 	asrt := assert.New(t)
 
-	svc, raws, _ := setupMsgServiceWithLoopBackPeers()
-	sub := svc.SubscribeProposal(5)
+	host1, host2, _, _ := setupTwoHost(t)
+	svc1 := NewMsgService(host1)
+	svc2 := NewMsgService(host2)
+	sub := svc1.SubscribeProposal(5)
+
 	var recvBlk *core.Block
 	var recvCount int
 	go func() {
@@ -77,31 +45,26 @@ func TestBroadcastProposal(t *testing.T) {
 	}()
 
 	_, _, blk := newTestProposal(core.GenerateKey(nil))
-	err := svc.BroadcastProposal(blk)
+	err := svc2.BroadcastProposal(blk)
+	asrt.NoError(err)
 
-	if !asrt.NoError(err) {
-		return
-	}
-
-	time.Sleep(time.Millisecond)
-
-	asrt.NotNil(raws[0])
-	asrt.Equal(raws[0], raws[1])
-
-	asrt.EqualValues(MsgTypeProposal, raws[0][0])
-
-	asrt.Equal(2, recvCount)
-	if asrt.NotNil(recvBlk) {
+	time.Sleep(10 * time.Millisecond)
+	if asrt.Equal(1, recvCount) && asrt.NotNil(recvBlk) {
 		asrt.Equal(blk.Height(), recvBlk.Height())
 	}
+
+	host1.Close()
+	host2.Close()
 }
 
 func TestSendVote(t *testing.T) {
 	asrt := assert.New(t)
 
-	svc, raws, peers := setupMsgServiceWithLoopBackPeers()
+	host1, host2, peer1, _ := setupTwoHost(t)
+	svc1 := NewMsgService(host1)
+	svc2 := NewMsgService(host2)
+	sub := svc1.SubscribeVote(5)
 
-	sub := svc.SubscribeVote(5)
 	var recvVote *core.Vote
 	go func() {
 		for e := range sub.Events() {
@@ -110,29 +73,26 @@ func TestSendVote(t *testing.T) {
 	}()
 
 	vote, _, _ := newTestProposal(core.GenerateKey(nil))
-	err := svc.SendVote(peers[0].PublicKey(), vote)
+	err := svc2.SendVote(peer1.PublicKey(), vote)
+	asrt.NoError(err)
 
-	if !asrt.NoError(err) {
-		return
-	}
-
-	time.Sleep(time.Millisecond)
-
-	asrt.NotNil(raws[0])
-	asrt.Nil(raws[1])
-	asrt.EqualValues(MsgTypeVote, raws[0][0])
-
+	time.Sleep(10 * time.Millisecond)
 	if asrt.NotNil(recvVote) {
 		asrt.Equal(vote.BlockHash(), recvVote.BlockHash())
 	}
+
+	host1.Close()
+	host2.Close()
 }
 
 func TestSendNewView(t *testing.T) {
 	asrt := assert.New(t)
 
-	svc, raws, peers := setupMsgServiceWithLoopBackPeers()
+	host1, host2, peer1, _ := setupTwoHost(t)
+	svc1 := NewMsgService(host1)
+	svc2 := NewMsgService(host2)
+	sub := svc1.SubscribeQC(5)
 
-	sub := svc.SubscribeQC(5)
 	var recvQC *core.QuorumCert
 	go func() {
 		for e := range sub.Events() {
@@ -141,28 +101,26 @@ func TestSendNewView(t *testing.T) {
 	}()
 
 	_, qc, _ := newTestProposal(core.GenerateKey(nil))
-	err := svc.SendQC(peers[0].PublicKey(), qc)
+	err := svc2.SendQC(peer1.PublicKey(), qc)
+	asrt.NoError(err)
 
-	if !asrt.NoError(err) {
-		return
-	}
-
-	time.Sleep(time.Millisecond)
-
-	asrt.NotNil(raws[0])
-	asrt.Nil(raws[1])
-	asrt.EqualValues(MsgTypeQC, raws[0][0])
-
+	time.Sleep(10 * time.Millisecond)
 	if asrt.NotNil(recvQC) {
 		asrt.Equal(qc.BlockHash(), recvQC.BlockHash())
 	}
+
+	host1.Close()
+	host2.Close()
 }
 
 func TestBroadcastTxList(t *testing.T) {
 	asrt := assert.New(t)
 
-	svc, raws, _ := setupMsgServiceWithLoopBackPeers()
-	sub := svc.SubscribeTxList(5)
+	host1, host2, _, _ := setupTwoHost(t)
+	svc1 := NewMsgService(host1)
+	svc2 := NewMsgService(host2)
+	sub := svc1.SubscribeTxList(5)
+
 	var recvTxs *core.TxList
 	var recvCount int
 	go func() {
@@ -176,23 +134,17 @@ func TestBroadcastTxList(t *testing.T) {
 		core.NewTransaction().SetNonce(1).Sign(core.GenerateKey(nil)),
 		core.NewTransaction().SetNonce(2).Sign(core.GenerateKey(nil)),
 	}
-	err := svc.BroadcastTxList(txs)
+	err := svc2.BroadcastTxList(txs)
+	asrt.NoError(err)
 
-	if !asrt.NoError(err) {
-		return
-	}
-
-	time.Sleep(time.Millisecond)
-
-	asrt.NotNil(raws[0])
-	asrt.Equal(raws[0], raws[1])
-	asrt.EqualValues(MsgTypeTxList, raws[0][0])
-
-	asrt.Equal(2, recvCount)
-	if asrt.NotNil(recvTxs) {
+	time.Sleep(10 * time.Millisecond)
+	if asrt.Equal(1, recvCount) && asrt.NotNil(recvTxs) {
 		asrt.Equal((*txs)[0].Nonce(), (*recvTxs)[0].Nonce())
 		asrt.Equal((*txs)[1].Nonce(), (*recvTxs)[1].Nonce())
 	}
+
+	host1.Close()
+	host2.Close()
 }
 
 func TestRequestBlock(t *testing.T) {
@@ -207,16 +159,22 @@ func TestRequestBlock(t *testing.T) {
 			return nil, errors.New("block not found")
 		},
 	}
-	svc, _, peers := setupMsgServiceWithLoopBackPeers()
-	svc.SetReqHandler(blkReqHandler)
 
-	recvBlk, err := svc.RequestBlock(peers[0].PublicKey(), blk.Hash())
+	host1, host2, peer1, _ := setupTwoHost(t)
+	svc1 := NewMsgService(host1)
+	svc2 := NewMsgService(host2)
+	svc1.SetReqHandler(blkReqHandler)
+
+	recvBlk, err := svc2.RequestBlock(peer1.PublicKey(), blk.Hash())
 	if asrt.NoError(err) && asrt.NotNil(recvBlk) {
 		asrt.Equal(blk.Height(), recvBlk.Height())
 	}
 
-	_, err = svc.RequestBlock(peers[0].PublicKey(), []byte{1})
+	_, err = svc2.RequestBlock(peer1.PublicKey(), []byte{1})
 	asrt.Error(err)
+
+	host1.Close()
+	host2.Close()
 }
 
 func TestRequestTxList(t *testing.T) {
@@ -232,12 +190,18 @@ func TestRequestTxList(t *testing.T) {
 			return txs, nil
 		},
 	}
-	svc, _, peers := setupMsgServiceWithLoopBackPeers()
-	svc.SetReqHandler(txListReqHandler)
 
-	recvTxs, err := svc.RequestTxList(peers[0].PublicKey(), [][]byte{{1}, {2}})
+	host1, host2, peer1, _ := setupTwoHost(t)
+	svc1 := NewMsgService(host1)
+	svc2 := NewMsgService(host2)
+	svc1.SetReqHandler(txListReqHandler)
+
+	recvTxs, err := svc2.RequestTxList(peer1.PublicKey(), [][]byte{{1}, {2}})
 	if asrt.NoError(err) && asrt.NotNil(recvTxs) {
 		asrt.Equal((*txs)[0].Nonce(), (*recvTxs)[0].Nonce())
 		asrt.Equal((*txs)[1].Nonce(), (*recvTxs)[1].Nonce())
 	}
+
+	host1.Close()
+	host2.Close()
 }

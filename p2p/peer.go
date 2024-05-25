@@ -49,8 +49,9 @@ type Peer struct {
 	mtxStatus sync.RWMutex
 	mtxWrite  sync.Mutex
 
-	reconnectInterval time.Duration
-	mtxRecon          sync.RWMutex
+	reconInterval  time.Duration
+	fastReconCount int
+	mtxRecon       sync.RWMutex
 
 	host *Host
 }
@@ -104,7 +105,9 @@ func (p *Peer) reconnectAfterInterval() {
 		(time.Duration(rand.Intn(500)) * time.Millisecond)
 
 	time.AfterFunc(reconnInterval, func() {
-		p.host.ConnectPeer(p)
+		if p.host != nil {
+			p.host.ConnectLeader()
+		}
 	})
 }
 
@@ -198,17 +201,22 @@ func (p *Peer) getRWC() io.ReadWriteCloser {
 func (p *Peer) resetReconnectInterval() {
 	p.mtxRecon.Lock()
 	defer p.mtxRecon.Unlock()
-	p.reconnectInterval = 300 * time.Millisecond
+	p.reconInterval = 1 * time.Second
+	p.fastReconCount = 3
 }
 
 func (p *Peer) increaseReconnectInterval() time.Duration {
 	p.mtxRecon.Lock()
 	defer p.mtxRecon.Unlock()
 
-	p.reconnectInterval *= 2
-	maxInterval := 10 * time.Second
-	if p.reconnectInterval > maxInterval {
-		p.reconnectInterval = maxInterval
+	if p.fastReconCount > 0 {
+		p.fastReconCount--
+		return p.reconInterval
 	}
-	return p.reconnectInterval
+	p.reconInterval *= 2
+	maxInterval := 32 * time.Second
+	if p.reconInterval > maxInterval {
+		p.reconInterval = maxInterval
+	}
+	return p.reconInterval
 }

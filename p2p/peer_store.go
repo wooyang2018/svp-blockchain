@@ -13,14 +13,14 @@ import (
 
 type PeerStore struct {
 	peers map[string]*Peer
+	idSet map[peer.ID]struct{}
 	mtx   sync.RWMutex
-	ids   map[peer.ID]struct{}
 }
 
 func NewPeerStore() *PeerStore {
 	return &PeerStore{
 		peers: make(map[string]*Peer),
-		ids:   make(map[peer.ID]struct{}),
+		idSet: make(map[peer.ID]struct{}),
 	}
 }
 
@@ -36,23 +36,22 @@ func (s *PeerStore) Store(p *Peer) *Peer {
 	s.peers[p.PublicKey().String()] = p
 	id, err := getIDFromPublicKey(p.PublicKey())
 	if err != nil {
-		panic(nil)
+		panic(err)
 	}
-	s.ids[id] = struct{}{}
+	s.idSet[id] = struct{}{}
 	return p
 }
 
 func (s *PeerStore) Delete(pubKey *core.PublicKey) *Peer {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
-
 	p := s.peers[pubKey.String()]
 	delete(s.peers, pubKey.String())
 	id, err := getIDFromPublicKey(p.PublicKey())
 	if err != nil {
-		panic(nil)
+		panic(err)
 	}
-	delete(s.ids, id)
+	delete(s.idSet, id)
 	return p
 }
 
@@ -75,13 +74,13 @@ func (s *PeerStore) LoadOrStore(p *Peer) (actual *Peer, loaded bool) {
 	s.peers[p.PublicKey().String()] = p
 	id, err := getIDFromPublicKey(p.PublicKey())
 	if err != nil {
-		panic(nil)
+		panic(err)
 	}
-	s.ids[id] = struct{}{}
+	s.idSet[id] = struct{}{}
 	return p, false
 }
 
 func (s *PeerStore) IsValidID(id peer.ID) bool {
-	_, ok := s.ids[id]
+	_, ok := s.idSet[id]
 	return ok
 }

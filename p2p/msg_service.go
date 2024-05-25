@@ -45,8 +45,7 @@ type MsgService struct {
 	qcEmitter       *emitter.Emitter
 	txListEmitter   *emitter.Emitter
 
-	reqHandlers map[pb.Request_Type]ReqHandler
-
+	reqHandlers  map[pb.Request_Type]ReqHandler
 	reqClientSeq uint32
 }
 
@@ -201,6 +200,8 @@ func (svc *MsgService) setMsgReceivers() {
 func (svc *MsgService) setTopicReceivers() {
 	svc.topicReceivers = make(map[MsgType]topicReceiver)
 	svc.topicReceivers[MsgTypeProposal] = svc.onReceiveProposal2
+	svc.topicReceivers[MsgTypeTxList] = svc.onReceiveTxList2
+	svc.topicReceivers[MsgTypeQC] = svc.onReceiveQC2
 }
 
 func (svc *MsgService) listenPeer(peer *Peer) {
@@ -266,9 +267,28 @@ func (svc *MsgService) onReceiveQC(peer *Peer, data []byte) {
 	svc.qcEmitter.Emit(qc)
 }
 
+func (svc *MsgService) onReceiveQC2(data []byte) {
+	qc := core.NewQuorumCert()
+	if err := qc.Unmarshal(data); err != nil {
+		logger.I().Errorw("msg service receive qc2 failed", "error", err)
+		return
+	}
+	svc.qcEmitter.Emit(qc)
+}
+
 func (svc *MsgService) onReceiveTxList(peer *Peer, data []byte) {
 	txList := core.NewTxList()
 	if err := txList.Unmarshal(data); err != nil {
+		logger.I().Errorw("msg service receive txs failed", "error", err)
+		return
+	}
+	svc.txListEmitter.Emit(txList)
+}
+
+func (svc *MsgService) onReceiveTxList2(data []byte) {
+	txList := core.NewTxList()
+	if err := txList.Unmarshal(data); err != nil {
+		logger.I().Errorw("msg service receive txs2 failed", "error", err)
 		return
 	}
 	svc.txListEmitter.Emit(txList)

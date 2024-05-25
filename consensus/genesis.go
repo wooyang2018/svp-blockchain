@@ -320,7 +320,7 @@ func (gns *genesis) broadcastQC() {
 		if err := gns.resources.MsgSvc.BroadcastQC(gns.getQ0()); err != nil {
 			logger.I().Errorf("broadcast qc failed ,%+v", err)
 		}
-		time.Sleep(time.Second)
+		time.Sleep(1 * time.Second)
 	}
 }
 

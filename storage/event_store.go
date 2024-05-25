@@ -19,8 +19,8 @@ var UseNumber = true
 
 // eventStore saves event notifies gen by smart contract execution
 type eventStore struct {
-	dbDir string        //Store path
-	store *LevelDBStore //Store handler
+	dbDir string        // Store path
+	store *LevelDBStore // Store handler
 }
 
 // NewEventStore return event store instance
@@ -177,7 +177,7 @@ func (this *eventStore) getCurrentBlockKey() []byte {
 }
 
 func genEventNotifyByBlockKey(height uint32) []byte {
-	key := make([]byte, 5, 5)
+	key := make([]byte, 5)
 	key[0] = byte(EVENT_NOTIFY)
 	binary.LittleEndian.PutUint32(key[1:], height)
 	return key

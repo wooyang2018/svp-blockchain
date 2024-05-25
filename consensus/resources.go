@@ -71,6 +71,7 @@ type Resources struct {
 	RoleStore core.RoleStore
 	Storage   Storage
 	MsgSvc    MsgService
+	Host      *p2p.Host
 	TxPool    TxPool
 	Execution Execution
 }

@@ -86,7 +86,7 @@ func (cr *ChatRoom) readLoop() {
 }
 
 func (cr *ChatRoom) printLoop() {
-	for range time.Tick(20 * time.Second) {
+	for range time.Tick(60 * time.Second) {
 		logger.I().Infof("chatroom has %d connections", len(cr.ListPeers()))
 	}
 }
@@ -107,8 +107,14 @@ func (n *discoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
 		logger.I().Warnw("found invalid peer", "peerID", pi.ID)
 		return
 	}
-	if err := n.h.Connect(context.Background(), pi); err != nil {
-		logger.I().Errorf("failed to connect to peer %s: %v\n", pi.ID, err)
+	count := 5
+	for i := 1; i <= count; i++ {
+		if err := n.h.Connect(context.Background(), pi); err != nil {
+			logger.I().Error(err)
+			time.Sleep(time.Duration(i) * time.Second)
+		} else {
+			break
+		}
 	}
 }
 

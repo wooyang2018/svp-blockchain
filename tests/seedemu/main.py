@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
+import os
 from seedemu import *
-
 from blockchain import PPoV
 
 # Dimension of hypercube topology
@@ -24,8 +24,8 @@ for i in range(0, 2 ** dimension - 1):
     for j in range(i + 1, 2 ** dimension):
         diff = i ^ j
         if diff == 1 << (diff.bit_length() - 1):
-            as150.createNetwork(
-                'net' + bin(i).replace('0b', '').zfill(dimension) + '-' + bin(j).replace('0b', '').zfill(dimension))
+            as150.createNetwork(bin(i).replace('0b', '').zfill(
+                dimension) + '-' + bin(j).replace('0b', '').zfill(dimension))
 
 docker = Docker(internetMapEnabled=True)
 image = DockerImage(name='chain_bin', local=True, software=[])

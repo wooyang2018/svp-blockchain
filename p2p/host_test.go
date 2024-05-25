@@ -17,31 +17,32 @@ import (
 func setupTwoHost(t *testing.T) (*Host, *Host, *Peer, *Peer) {
 	asrt := assert.New(t)
 
+	pointAddr1, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/15151")
+	topicAddr1, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/16161")
+	pointAddr2, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/15152")
+	topicAddr2, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/16162")
+
 	priv1 := core.GenerateKey(nil)
-	priv2 := core.GenerateKey(nil)
-
-	pointAddr1, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/25001")
-	pointAddr2, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/25002")
-	topicAddr1, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/26001")
-	topicAddr2, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/26002")
-
 	peer1 := NewPeer(priv1.PublicKey(), pointAddr1, topicAddr1)
-	peer2 := NewPeer(priv2.PublicKey(), pointAddr2, topicAddr2)
-
 	host1, err := NewHost(priv1, pointAddr1, topicAddr1)
 	asrt.NoError(err)
+
+	priv2 := core.GenerateKey(nil)
+	peer2 := NewPeer(priv2.PublicKey(), pointAddr2, topicAddr2)
 	host2, err := NewHost(priv2, pointAddr2, topicAddr2)
 	asrt.NoError(err)
 
 	host1.AddPeer(peer2)
+	host1.SetPeers([]*Peer{peer1, peer2})
 	host2.AddPeer(peer1)
+	host2.SetPeers([]*Peer{peer1, peer2})
 
-	asrt.NoError(host1.ConnectPeer(peer2))
-
+	host1.SetLeader(0)
+	host2.SetLeader(0)
 	asrt.NoError(host1.JoinChatRoom())
 	asrt.NoError(host2.JoinChatRoom())
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(1 * time.Second)
 	asrt.Equal(PeerStatusConnected, peer1.Status())
 	asrt.Equal(PeerStatusConnected, peer2.Status())
 
@@ -50,7 +51,7 @@ func setupTwoHost(t *testing.T) (*Host, *Host, *Peer, *Peer) {
 
 func TestPointHost(t *testing.T) {
 	asrt := assert.New(t)
-	_, _, peer1, peer2 := setupTwoHost(t)
+	host1, host2, peer1, peer2 := setupTwoHost(t)
 
 	// wait message from host2
 	s1 := peer1.SubscribeMsg()
@@ -83,6 +84,9 @@ func TestPointHost(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 	asrt.Equal(msg, recv2)
+
+	host1.Close()
+	host2.Close()
 }
 
 func TestTopicHost(t *testing.T) {
@@ -122,22 +126,7 @@ func TestTopicHost(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 	asrt.Equal(msg, recv2)
-}
 
-func TestAddPeer(t *testing.T) {
-	asrt := assert.New(t)
-	host1, host2, _, peer2 := setupTwoHost(t)
-
-	priv3 := core.GenerateKey(nil)
-	peer3 := NewPeer(priv3.PublicKey(), peer2.pointAddr, peer2.topicAddr)
-	host1.AddPeer(peer3) // invalid key
-	asrt.Error(host1.ConnectPeer(peer3))
-	asrt.Equal(PeerStatusDisconnected, peer3.Status())
-
-	pointAddr3, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/25003")
-	topicAddr3, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/26003")
-	peer3 = NewPeer(priv3.PublicKey(), pointAddr3, topicAddr3)
-	host2.AddPeer(peer3) // not reachable host
-	asrt.Error(host2.ConnectPeer(peer3))
-	asrt.Equal(PeerStatusDisconnected, peer3.Status())
+	host1.Close()
+	host2.Close()
 }
