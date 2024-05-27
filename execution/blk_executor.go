@@ -9,6 +9,7 @@ import (
 
 	"github.com/wooyang2018/svp-blockchain/core"
 	"github.com/wooyang2018/svp-blockchain/emitter"
+	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/logger"
 )
 
@@ -17,7 +18,7 @@ type blkExecutor struct {
 	concurrentLimit int
 
 	codeRegistry *codeRegistry
-	state        StateStore
+	state        common.StateStore
 	blk          *core.Block
 	txs          []*core.Transaction
 

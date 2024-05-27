@@ -49,7 +49,7 @@ func (reg *codeRegistry) deploy(codeAddr []byte, input *common.DeploymentInput,
 	return driver.GetInstance(input.CodeInfo.CodeID)
 }
 
-func (reg *codeRegistry) getInstance(codeAddr []byte, state stateGetter,
+func (reg *codeRegistry) getInstance(codeAddr []byte, state common.StateGetter,
 ) (common.Chaincode, error) {
 	info, err := reg.getCodeInfo(codeAddr, state)
 	if err != nil {
@@ -79,7 +79,7 @@ func (reg *codeRegistry) setCodeInfo(codeAddr []byte, codeInfo *common.CodeInfo,
 	return nil
 }
 
-func (reg *codeRegistry) getCodeInfo(codeAddr []byte, state stateGetter) (*common.CodeInfo, error) {
+func (reg *codeRegistry) getCodeInfo(codeAddr []byte, state common.StateGetter) (*common.CodeInfo, error) {
 	b := state.GetState(codeAddr)
 	info := new(common.CodeInfo)
 	err := json.Unmarshal(b, info)

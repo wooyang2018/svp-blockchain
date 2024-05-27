@@ -17,7 +17,6 @@ import (
 
 	"github.com/wooyang2018/svp-blockchain/evm"
 	"github.com/wooyang2018/svp-blockchain/evm/runtime"
-	ethrunt "github.com/wooyang2018/svp-blockchain/evm/runtime"
 	"github.com/wooyang2018/svp-blockchain/evm/statedb"
 	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/storage"
@@ -69,7 +68,7 @@ func (r *Runner) parseInput(raw []byte) (string, []interface{}) {
 
 // Init deploys the solidity contract and binds the eth address.
 func (r *Runner) Init(ctx common.CallContext) error {
-	vmenv := ethrunt.NewEnv(r.config)
+	vmenv := runtime.NewEnv(r.config)
 	sender := evm.AccountRef(r.config.Origin)
 	contractBin, _ := hexutil.Decode(r.hexCode)
 	contractAbi, _ := abi.JSON(strings.NewReader(r.jsonABI))
@@ -95,7 +94,7 @@ func (r *Runner) Init(ctx common.CallContext) error {
 }
 
 func (r *Runner) Invoke(ctx common.CallContext) error {
-	vmenv := ethrunt.NewEnv(r.config)
+	vmenv := runtime.NewEnv(r.config)
 	sender := evm.AccountRef(r.config.Origin)
 	address := ethcomm.BytesToAddress(ctx.GetState(keyAddr))
 	contractAbi, _ := abi.JSON(bytes.NewReader(ctx.GetState(keyAbi)))

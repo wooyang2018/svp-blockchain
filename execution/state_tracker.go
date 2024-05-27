@@ -4,22 +4,18 @@
 package execution
 
 import (
-	"bytes"
 	"sync"
 
 	"github.com/wooyang2018/svp-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/execution/common"
 )
-
-type stateGetter interface {
-	GetState(key []byte) []byte
-}
 
 // stateTracker tracks state changes in key order
 // get latest changed state for each key
 // get state from base state getter if no changes occured for a key
 type stateTracker struct {
 	keyPrefix []byte
-	baseState stateGetter
+	baseState common.StateGetter
 
 	trackDep     bool
 	dependencies map[string]struct{} // getState calls
@@ -29,7 +25,7 @@ type stateTracker struct {
 	mtxDep sync.RWMutex
 }
 
-func newStateTracker(state stateGetter, keyPrefix []byte) *stateTracker {
+func newStateTracker(state common.StateGetter, keyPrefix []byte) *stateTracker {
 	return &stateTracker{
 		keyPrefix: keyPrefix,
 		baseState: state,
@@ -100,7 +96,7 @@ func (trk *stateTracker) getStateChanges() []*core.StateChange {
 }
 
 func (trk *stateTracker) getState(key []byte) []byte {
-	key = concatBytes(trk.keyPrefix, key)
+	key = common.ConcatBytes(trk.keyPrefix, key)
 	trk.setDependency(key)
 	if value, ok := trk.changes[string(key)]; ok {
 		return value
@@ -118,20 +114,7 @@ func (trk *stateTracker) setDependency(key []byte) {
 }
 
 func (trk *stateTracker) setState(key, value []byte) {
-	key = concatBytes(trk.keyPrefix, key)
+	key = common.ConcatBytes(trk.keyPrefix, key)
 	keyStr := string(key)
 	trk.changes[keyStr] = value
-}
-
-func concatBytes(srcs ...[]byte) []byte {
-	buf := bytes.NewBuffer(nil)
-	size := 0
-	for _, src := range srcs {
-		size += len(src)
-	}
-	buf.Grow(size)
-	for _, src := range srcs {
-		buf.Write(src)
-	}
-	return buf.Bytes()
 }

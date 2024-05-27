@@ -126,3 +126,16 @@ func AddressToBytes(addr string) ([]byte, error) {
 	}
 	return nil, ErrAddressLength
 }
+
+func ConcatBytes(srcs ...[]byte) []byte {
+	buf := bytes.NewBuffer(nil)
+	size := 0
+	for _, src := range srcs {
+		size += len(src)
+	}
+	buf.Grow(size)
+	for _, src := range srcs {
+		buf.Write(src)
+	}
+	return buf.Bytes()
+}

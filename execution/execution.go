@@ -30,14 +30,9 @@ var DefaultConfig = Config{
 }
 
 type Execution struct {
-	stateStore   StateStore
+	stateStore   common.StateStore
 	config       Config
 	codeRegistry *codeRegistry
-}
-
-type StateStore interface {
-	VerifyState(key []byte) []byte
-	GetState(key []byte) []byte
 }
 
 func New(stateStore *storage.Storage, config Config) *Execution {
@@ -51,7 +46,17 @@ func New(stateStore *storage.Storage, config Config) *Execution {
 		bincc.NewCodeDriver(exec.config.BinccDir, exec.config.TxExecTimeout))
 	exec.codeRegistry.registerDriver(common.DriverTypeEVM,
 		evm.NewCodeDriver(exec.config.ContractDir))
+	common.Storage = stateStore
+	common.Drivers = exec.codeRegistry.drivers
 	return exec
+}
+
+func (exec *Execution) Drivers() map[common.DriverType]common.CodeDriver {
+	return exec.codeRegistry.drivers
+}
+
+func (exec *Execution) StateStore() common.StateStore {
+	return exec.stateStore
 }
 
 func (exec *Execution) Execute(blk *core.Block, txs []*core.Transaction) (
@@ -107,7 +112,7 @@ func (exec *Execution) Query(query *common.QueryData) (val []byte, err error) {
 	}
 	return cc.Query(&callContextQuery{
 		input:       query.Input,
-		stateGetter: newStateVerifier(exec.stateStore, query.CodeAddr),
+		StateGetter: newStateVerifier(exec.stateStore, query.CodeAddr),
 	})
 }
 
