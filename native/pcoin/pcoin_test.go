@@ -63,9 +63,7 @@ func TestMint(t *testing.T) {
 	ctx.MockInput, _ = json.Marshal(input)
 	b, err := jctx.Query(ctx)
 	asrt.NoError(err)
-	var balance int64
-	json.Unmarshal(b, &balance)
-	asrt.EqualValues(100, balance)
+	asrt.EqualValues(100, common.DecodeBalance(b))
 
 	input = &Input{
 		Method: "balance",
@@ -74,9 +72,7 @@ func TestMint(t *testing.T) {
 	ctx.MockInput, _ = json.Marshal(input)
 	b, err = jctx.Query(ctx)
 	asrt.NoError(err)
-	balance = 0
-	json.Unmarshal(b, &balance)
-	asrt.EqualValues(100, balance)
+	asrt.EqualValues(100, common.DecodeBalance(b))
 }
 
 func TestTransfer(t *testing.T) {
@@ -114,22 +110,16 @@ func TestTransfer(t *testing.T) {
 	input.Method = "total"
 	ctx.MockInput, _ = json.Marshal(input)
 	b, _ := jctx.Query(ctx)
-	var balance int64
-	json.Unmarshal(b, &balance)
-	asrt.EqualValues(100, balance, "total should not change")
+	asrt.EqualValues(100, common.DecodeBalance(b))
 
 	input.Method = "balance"
 	input.Dest = vlds[2].Bytes()
 	ctx.MockInput, _ = json.Marshal(input)
 	b, _ = jctx.Query(ctx)
-	balance = 0
-	json.Unmarshal(b, &balance)
-	asrt.EqualValues(90, balance)
+	asrt.EqualValues(90, common.DecodeBalance(b))
 
 	input.Dest = vlds[3].Bytes()
 	ctx.MockInput, _ = json.Marshal(input)
 	b, _ = jctx.Query(ctx)
-	balance = 0
-	json.Unmarshal(b, &balance)
-	asrt.EqualValues(10, balance)
+	asrt.EqualValues(10, common.DecodeBalance(b))
 }

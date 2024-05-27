@@ -97,11 +97,11 @@ func (self *CacheDB) DeleteContract(address common.Address, height uint32) {
 }
 
 func (self *CacheDB) SetContractDestroyed(addr common.Address, height uint32) {
-	//TODO 待实现
+	panic("todo")
 }
 
 func (self *CacheDB) UnsetContractDestroyed(addr common.Address, height uint32) {
-	//TODO 待实现
+	panic("todo")
 }
 
 func (self *CacheDB) Get(key []byte) ([]byte, error) {

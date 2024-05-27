@@ -22,7 +22,6 @@ type OngBalanceHandle interface {
 	GetBalance(cache *CacheDB, addr common.Address) (*big.Int, error)
 }
 
-// TODO 待实现
 type Dummy struct {
 	Val map[common.Address]*big.Int
 }

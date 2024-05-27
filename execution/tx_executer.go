@@ -15,7 +15,7 @@ import (
 )
 
 type txExecutor struct {
-	codeRegistry *codeRegistry
+	codeRegistry codeRegistry
 
 	timeout time.Duration
 	txTrk   *stateTracker

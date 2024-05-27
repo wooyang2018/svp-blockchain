@@ -32,7 +32,7 @@ var DefaultConfig = Config{
 type Execution struct {
 	stateStore   common.StateStore
 	config       Config
-	codeRegistry *codeRegistry
+	codeRegistry codeRegistry
 }
 
 func New(stateStore *storage.Storage, config Config) *Execution {
@@ -47,12 +47,12 @@ func New(stateStore *storage.Storage, config Config) *Execution {
 	exec.codeRegistry.registerDriver(common.DriverTypeEVM,
 		evm.NewCodeDriver(exec.config.ContractDir))
 	common.Storage = stateStore
-	common.Drivers = exec.codeRegistry.drivers
+	common.Drivers = exec.codeRegistry
 	return exec
 }
 
 func (exec *Execution) Drivers() map[common.DriverType]common.CodeDriver {
-	return exec.codeRegistry.drivers
+	return exec.codeRegistry
 }
 
 func (exec *Execution) StateStore() common.StateStore {

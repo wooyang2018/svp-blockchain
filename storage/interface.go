@@ -3,10 +3,6 @@
 
 package storage
 
-import (
-	"github.com/wooyang2018/svp-blockchain/evm/common"
-)
-
 type StoreIterator interface {
 	Next() bool    // Next item. If item available return true, otherwise return false
 	First() bool   // First item. If item available return true, otherwise return false
@@ -28,18 +24,6 @@ type PersistStore interface {
 	BatchCommit() error                      //Commit batch to store
 	Close() error                            //Close store
 	NewIterator(prefix []byte) StoreIterator //Return the iterator of store
-}
-
-// EventStore save event notify
-type EventStore interface {
-	//SaveEventNotifyByTx save event notify gen by smart contract execution
-	SaveEventNotifyByTx(txHash common.Uint256, notify *ExecuteNotify) error
-	//Save transaction hashes which have event notify gen
-	SaveEventNotifyByBlock(height uint32, txHashs []common.Uint256)
-	//GetEventNotifyByTx return event notify by transaction hash
-	GetEventNotifyByTx(txHash common.Uint256) (*ExecuteNotify, error)
-	//Commit event notify to store
-	Commit() error
 }
 
 type Setter interface {

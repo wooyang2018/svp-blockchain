@@ -17,7 +17,7 @@ type blkExecutor struct {
 	txTimeout       time.Duration
 	concurrentLimit int
 
-	codeRegistry *codeRegistry
+	codeRegistry codeRegistry
 	state        common.StateStore
 	blk          *core.Block
 	txs          []*core.Transaction

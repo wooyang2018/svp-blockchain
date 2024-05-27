@@ -15,14 +15,15 @@ import (
 
 func makeInitCtx() (*common.MockCallContext, []*core.PublicKey) {
 	vlds := make([]*core.PublicKey, 4)
-	input := make(map[string]int64)
+	values := make(map[string]uint64)
 	for i := range vlds {
 		vlds[i] = core.GenerateKey(nil).PublicKey()
-		input[vlds[i].String()] = 100
+		values[vlds[i].String()] = 100
 	}
 	ctx := new(common.MockCallContext)
 	ctx.MockState = common.NewMockState()
 	ctx.MockSender = vlds[0].Bytes()
+	input := InitInput{values}
 	ctx.MockInput, _ = json.Marshal(input)
 	return ctx, vlds
 }
@@ -56,16 +57,13 @@ func TestTransfer(t *testing.T) {
 	input.Dest = vlds[1].Bytes()
 	ctx.MockInput, _ = json.Marshal(input)
 	b, _ := jctx.Query(ctx)
-	balance := 0
-	json.Unmarshal(b, &balance)
-	asrt.EqualValues(90, balance)
+	asrt.EqualValues(90, common.DecodeBalance(b))
 
 	// query balance vlds[2]
 	input.Dest = vlds[2].Bytes()
 	ctx.MockInput, _ = json.Marshal(input)
 	b, _ = jctx.Query(ctx)
-	json.Unmarshal(b, &balance)
-	asrt.EqualValues(110, balance)
+	asrt.EqualValues(110, common.DecodeBalance(b))
 }
 
 func TestSetBalance(t *testing.T) {
@@ -95,7 +93,5 @@ func TestSetBalance(t *testing.T) {
 	input.Dest = vlds[3].Bytes()
 	ctx.MockInput, _ = json.Marshal(input)
 	b, _ := jctx.Query(ctx)
-	balance := 0
-	json.Unmarshal(b, &balance)
-	asrt.EqualValues(90, balance)
+	asrt.EqualValues(90, common.DecodeBalance(b))
 }

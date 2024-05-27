@@ -30,8 +30,8 @@ const (
 	ETH_CODE                                             // eth contract code:hash -> bytes
 	ETH_ACCOUNT                                          // eth account: address -> [nonce, codeHash]
 	ETH_FILTER_START                                     // support eth filter height
-	EVENT_NOTIFY              DataEntryPrefix = 0x14     //Event notify key prefix
-	SYS_CURRENT_BLOCK         DataEntryPrefix = 0x10     //Current block key prefix
+	EVENT_NOTIFY                                         // event notify key prefix
+	SYS_CURRENT_BLOCK                                    // current block key prefix
 )
 
 var ErrNotFound = errors.New("not found")

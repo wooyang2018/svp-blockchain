@@ -15,14 +15,15 @@ import (
 
 func makeInitCtx() (*common.MockCallContext, []*core.PublicKey) {
 	vlds := make([]*core.PublicKey, 4)
-	input := make(map[string]struct{})
+	values := make([]string, 4)
 	for i := range vlds {
 		vlds[i] = core.GenerateKey(nil).PublicKey()
-		input[vlds[i].String()] = struct{}{}
+		values[i] = vlds[i].String()
 	}
 	ctx := new(common.MockCallContext)
 	ctx.MockState = common.NewMockState()
 	ctx.MockSender = vlds[0].Bytes()
+	input := InitInput{values}
 	ctx.MockInput, _ = json.Marshal(input)
 	return ctx, vlds
 }

@@ -33,7 +33,7 @@ var (
 	LoadBatchSubmit = true // whether to enable batch transaction submission
 
 	// chaincode priority: empty > pcoin bincc > pcoin
-	EmptyChainCode = true  // deploy empty chaincode instead of pcoin
+	EmptyChainCode = false // deploy empty chaincode instead of pcoin
 	PCoinBinCC     = false // deploy pcoin chaincode as bincc type (not embeded in node)
 	CheckRotation  = true
 	BroadcastTx    = true

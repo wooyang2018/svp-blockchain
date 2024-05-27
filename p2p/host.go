@@ -24,6 +24,7 @@ import (
 )
 
 const protocolID = "/point2point"
+const low, high = 2, 4 // low and high watermark
 
 type Host struct {
 	privKey   *core.PrivateKey
@@ -67,9 +68,7 @@ func (host *Host) newLibHost() (host.Host, host.Host, error) {
 		return nil, nil, err
 	}
 
-	connmgr, err := connmgr.NewConnManager(
-		2, // low watermark
-		4, // high watermark
+	connmgr, err := connmgr.NewConnManager(low, high,
 		connmgr.WithGracePeriod(5*time.Second),
 	)
 	topicHost, err := libp2p.New(

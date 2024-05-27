@@ -30,7 +30,6 @@ func TestTxExecutor(t *testing.T) {
 	txDep := core.NewTransaction().SetInput(b).Sign(priv)
 
 	blk := core.NewBlock().SetHeight(10).Sign(priv)
-
 	trk := newStateTracker(newMapStateStore(), nil)
 	reg := newCodeRegistry()
 	texe := txExecutor{
@@ -78,9 +77,7 @@ func TestTxExecutor(t *testing.T) {
 	ccInput.Dest = priv.PublicKey().Bytes()
 	ccInput.Value = 100
 	b, _ = json.Marshal(ccInput)
-
 	txInvoke := core.NewTransaction().SetCodeAddr(txDep.Hash()).SetInput(b).Sign(priv)
-
 	texe.tx = txInvoke
 	txc = texe.execute()
 
@@ -89,15 +86,11 @@ func TestTxExecutor(t *testing.T) {
 	ccInput.Method = "balance"
 	ccInput.Value = 0
 	b, _ = json.Marshal(ccInput)
-
 	b, err = cc.Query(&callContextTx{
 		input:        b,
 		stateTracker: trk.spawn(txDep.Hash()),
 	})
 
-	var balance int64
-	json.Unmarshal(b, &balance)
-
 	asrt.NoError(err)
-	asrt.EqualValues(100, balance)
+	asrt.EqualValues(100, common.DecodeBalance(b))
 }

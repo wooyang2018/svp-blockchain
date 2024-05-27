@@ -36,7 +36,7 @@ var balanceCmd = &cobra.Command{
 			Dest:   destBytes,
 		}
 		rawBytes, _ := json.Marshal(input)
-		fmt.Println(string(client.QueryState(rawBytes)))
+		fmt.Println(common.DecodeBalance(client.QueryState(rawBytes)))
 	},
 }
 

@@ -38,7 +38,7 @@ func (c *PCoin) Invoke(ctx common.CallContext) error {
 	if err != nil {
 		return err
 	}
-	if err := common.AssertLength(input.Dest, 32); err != nil {
+	if err = common.AssertLength(input.Dest, 32); err != nil {
 		return err
 	}
 	switch input.Method {
@@ -56,16 +56,16 @@ func (c *PCoin) Query(ctx common.CallContext) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := common.AssertLength(input.Dest, 32); err != nil {
+	if err = common.AssertLength(input.Dest, 32); err != nil {
 		return nil, err
 	}
 	switch input.Method {
 	case "minter":
 		return ctx.GetState(keyMinter), nil
 	case "total":
-		return queryTotal(ctx)
+		return ctx.GetState(keyTotal), nil
 	case "balance":
-		return queryBalance(ctx, input)
+		return ctx.GetState(input.Dest), nil
 	default:
 		return nil, errors.New("method not found")
 	}
@@ -100,14 +100,6 @@ func invokeTransfer(ctx common.CallContext, input *Input) error {
 	ctx.SetState(ctx.Sender(), common.EncodeBalance(bsctx))
 	ctx.SetState(input.Dest, common.EncodeBalance(bdes))
 	return nil
-}
-
-func queryTotal(ctx common.CallContext) ([]byte, error) {
-	return json.Marshal(common.DecodeBalance(ctx.GetState(keyTotal)))
-}
-
-func queryBalance(ctx common.CallContext, input *Input) ([]byte, error) {
-	return json.Marshal(common.DecodeBalance(ctx.GetState(input.Dest)))
 }
 
 func parseInput(b []byte) (*Input, error) {

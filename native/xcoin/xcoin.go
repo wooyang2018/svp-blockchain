@@ -18,6 +18,10 @@ type Input struct {
 	Value  uint64 `json:"value"`
 }
 
+type InitInput struct {
+	Values map[string]uint64 `json:"values"`
+}
+
 // XCoin chaincode
 type XCoin struct{}
 
@@ -27,9 +31,11 @@ func (c *XCoin) Init(ctx common.CallContext) error {
 	if ctx.BlockHeight() != 0 {
 		return errors.New("xcoin must init at genesis")
 	}
-	m := make(map[string]uint64)
-	json.Unmarshal(ctx.Input(), &m)
-	for k, v := range m {
+	input, err := parseInitInput(ctx.Input())
+	if err != nil {
+		return err
+	}
+	for k, v := range input.Values {
 		owner, err := common.Address32ToBytes(k)
 		if err != nil {
 			return fmt.Errorf("init xcoin failed: %w", err)
@@ -47,7 +53,7 @@ func (c *XCoin) Invoke(ctx common.CallContext) error {
 	if err != nil {
 		return err
 	}
-	if err := common.AssertLength(input.Dest, 32); err != nil {
+	if err = common.AssertLength(input.Dest, 32); err != nil {
 		return err
 	}
 	switch input.Method {
@@ -65,12 +71,12 @@ func (c *XCoin) Query(ctx common.CallContext) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := common.AssertLength(input.Dest, 32); err != nil {
+	if err = common.AssertLength(input.Dest, 32); err != nil {
 		return nil, err
 	}
 	switch input.Method {
 	case "balance":
-		return queryBalance(ctx, input)
+		return ctx.GetState(input.Dest), nil
 	default:
 		return nil, errors.New("method not found")
 	}
@@ -99,15 +105,20 @@ func invokeTransfer(ctx common.CallContext, input *Input) error {
 	return nil
 }
 
-func queryBalance(ctx common.CallContext, input *Input) ([]byte, error) {
-	return json.Marshal(common.DecodeBalance(ctx.GetState(input.Dest)))
-}
-
 func parseInput(b []byte) (*Input, error) {
 	input := new(Input)
 	err := json.Unmarshal(b, input)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse input: %w", err)
+	}
+	return input, nil
+}
+
+func parseInitInput(b []byte) (*InitInput, error) {
+	input := new(InitInput)
+	err := json.Unmarshal(b, input)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse init input: %w", err)
 	}
 	return input, nil
 }

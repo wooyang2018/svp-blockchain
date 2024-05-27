@@ -19,6 +19,8 @@ import (
 	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/logger"
 	"github.com/wooyang2018/svp-blockchain/native"
+	"github.com/wooyang2018/svp-blockchain/native/taddr"
+	"github.com/wooyang2018/svp-blockchain/native/xcoin"
 	"github.com/wooyang2018/svp-blockchain/storage"
 )
 
@@ -103,14 +105,14 @@ func (gns *genesis) propose() {
 }
 
 func (gns *genesis) genesisTxs() [][]byte {
-	quotaMap := make(map[string]uint64)
-	addrMap := make(map[string]struct{})
 	count := gns.resources.RoleStore.ValidatorCount()
+	values0 := make(map[string]uint64)
+	values1 := make([]string, count)
 	for i := 0; i < count; i++ {
 		pubKey := gns.resources.RoleStore.GetValidator(i)
 		quota := gns.resources.RoleStore.GetValidatorQuota(pubKey)
-		quotaMap[pubKey.String()] = quota
-		addrMap[pubKey.String()] = struct{}{}
+		values0[pubKey.String()] = quota
+		values1[i] = pubKey.String()
 	}
 
 	input0 := &common.DeploymentInput{
@@ -119,7 +121,7 @@ func (gns *genesis) genesisTxs() [][]byte {
 			CodeID:     native.CodeXCoin,
 		},
 	}
-	input0.InitInput, _ = json.Marshal(quotaMap)
+	input0.InitInput, _ = json.Marshal(xcoin.InitInput{values0})
 	b0, _ := json.Marshal(input0)
 	tx0 := core.NewTransaction().
 		SetNonce(time.Now().UnixNano()).
@@ -132,7 +134,7 @@ func (gns *genesis) genesisTxs() [][]byte {
 			CodeID:     native.CodeTAddr,
 		},
 	}
-	input1.InitInput, _ = json.Marshal(addrMap)
+	input1.InitInput, _ = json.Marshal(taddr.InitInput{values1})
 	b1, _ := json.Marshal(input1)
 	tx1 := core.NewTransaction().
 		SetNonce(time.Now().UnixNano()).

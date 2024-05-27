@@ -174,8 +174,7 @@ func (client *PCoinClient) QueryBalance(node cluster.Node, dest *core.PublicKey)
 	if err != nil {
 		return 0, err
 	}
-	var balance uint64
-	return balance, json.Unmarshal(result, &balance)
+	return common.DecodeBalance(result), nil
 }
 
 func (client *PCoinClient) MakeDeploymentTx(minter *core.PrivateKey) *core.Transaction {

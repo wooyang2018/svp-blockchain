@@ -13,25 +13,22 @@ import (
 
 var codeRegistryAddr = bytes.Repeat([]byte{0}, 32)
 
-type codeRegistry struct {
-	drivers map[common.DriverType]common.CodeDriver
-}
+type codeRegistry map[common.DriverType]common.CodeDriver
 
-func newCodeRegistry() *codeRegistry {
-	reg := new(codeRegistry)
-	reg.drivers = make(map[common.DriverType]common.CodeDriver)
+func newCodeRegistry() codeRegistry {
+	reg := make(map[common.DriverType]common.CodeDriver)
 	return reg
 }
 
-func (reg *codeRegistry) registerDriver(driverType common.DriverType, driver common.CodeDriver) error {
-	if _, found := reg.drivers[driverType]; found {
+func (reg codeRegistry) registerDriver(driverType common.DriverType, driver common.CodeDriver) error {
+	if _, found := reg[driverType]; found {
 		return errors.New("driver already registered")
 	}
-	reg.drivers[driverType] = driver
+	reg[driverType] = driver
 	return nil
 }
 
-func (reg *codeRegistry) install(input *common.DeploymentInput) error {
+func (reg codeRegistry) install(input *common.DeploymentInput) error {
 	driver, err := reg.getDriver(input.CodeInfo.DriverType)
 	if err != nil {
 		return err
@@ -39,7 +36,7 @@ func (reg *codeRegistry) install(input *common.DeploymentInput) error {
 	return driver.Install(input.CodeInfo.CodeID, input.InstallData)
 }
 
-func (reg *codeRegistry) deploy(codeAddr []byte, input *common.DeploymentInput,
+func (reg codeRegistry) deploy(codeAddr []byte, input *common.DeploymentInput,
 	st *stateTracker) (common.Chaincode, error) {
 	driver, err := reg.getDriver(input.CodeInfo.DriverType)
 	if err != nil {
@@ -49,7 +46,7 @@ func (reg *codeRegistry) deploy(codeAddr []byte, input *common.DeploymentInput,
 	return driver.GetInstance(input.CodeInfo.CodeID)
 }
 
-func (reg *codeRegistry) getInstance(codeAddr []byte, state common.StateGetter,
+func (reg codeRegistry) getInstance(codeAddr []byte, state common.StateGetter,
 ) (common.Chaincode, error) {
 	info, err := reg.getCodeInfo(codeAddr, state)
 	if err != nil {
@@ -62,15 +59,16 @@ func (reg *codeRegistry) getInstance(codeAddr []byte, state common.StateGetter,
 	return driver.GetInstance(info.CodeID)
 }
 
-func (reg *codeRegistry) getDriver(driverType common.DriverType) (common.CodeDriver, error) {
-	driver, ok := reg.drivers[driverType]
+func (reg codeRegistry) getDriver(driverType common.DriverType) (common.CodeDriver, error) {
+	driver, ok := reg[driverType]
 	if !ok {
 		return nil, errors.New("unknown chaincode driver type")
 	}
 	return driver, nil
 }
 
-func (reg *codeRegistry) setCodeInfo(codeAddr []byte, codeInfo *common.CodeInfo, st *stateTracker) error {
+func (reg codeRegistry) setCodeInfo(codeAddr []byte, codeInfo *common.CodeInfo,
+	st *stateTracker) error {
 	b, err := json.Marshal(codeInfo)
 	if err != nil {
 		return err
@@ -79,7 +77,8 @@ func (reg *codeRegistry) setCodeInfo(codeAddr []byte, codeInfo *common.CodeInfo,
 	return nil
 }
 
-func (reg *codeRegistry) getCodeInfo(codeAddr []byte, state common.StateGetter) (*common.CodeInfo, error) {
+func (reg codeRegistry) getCodeInfo(codeAddr []byte, state common.StateGetter,
+) (*common.CodeInfo, error) {
 	b := state.GetState(codeAddr)
 	info := new(common.CodeInfo)
 	err := json.Unmarshal(b, info)

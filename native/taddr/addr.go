@@ -19,6 +19,10 @@ type Input struct {
 	Addr   []byte `json:"addr"`
 }
 
+type InitInput struct {
+	Values []string `json:"values"`
+}
+
 // TAddr chaincode to resolve the conversion between addr20 and addr32
 type TAddr struct{}
 
@@ -28,10 +32,12 @@ func (c *TAddr) Init(ctx common.CallContext) error {
 	if ctx.BlockHeight() != 0 {
 		return errors.New("taddr chaincode must init at genesis")
 	}
-	m := make(map[string]struct{})
-	json.Unmarshal(ctx.Input(), &m)
-	for k := range m {
-		addr, err := common.Address32ToBytes(k)
+	input, err := parseInitInput(ctx.Input())
+	if err != nil {
+		return err
+	}
+	for _, v := range input.Values {
+		addr, err := common.Address32ToBytes(v)
 		if err != nil {
 			return fmt.Errorf("init taddr chaincode failed: %w", err)
 		}
@@ -116,6 +122,15 @@ func parseInput(b []byte) (*Input, error) {
 	err := json.Unmarshal(b, input)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse input: %w", err)
+	}
+	return input, nil
+}
+
+func parseInitInput(b []byte) (*InitInput, error) {
+	input := new(InitInput)
+	err := json.Unmarshal(b, input)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse init input: %w", err)
 	}
 	return input, nil
 }
