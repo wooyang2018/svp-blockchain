@@ -69,5 +69,4 @@ func BenchmarkZeroCopySink(ben *testing.B) {
 			sink.WriteByte(22)
 		}
 	}
-
 }

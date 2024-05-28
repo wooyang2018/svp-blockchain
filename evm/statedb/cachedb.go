@@ -4,9 +4,9 @@
 package statedb
 
 import (
+	ethcomm "github.com/ethereum/go-ethereum/common"
 	"github.com/syndtr/goleveldb/leveldb/util"
 
-	"github.com/wooyang2018/svp-blockchain/evm/common"
 	"github.com/wooyang2018/svp-blockchain/storage"
 )
 
@@ -68,7 +68,7 @@ func (self *CacheDB) Put(key []byte, value []byte) {
 	self.put(storage.STORAGE, key, value)
 }
 
-func (self *CacheDB) GenAccountStateKey(addr common.Address, key []byte) []byte {
+func (self *CacheDB) GenAccountStateKey(addr ethcomm.Address, key []byte) []byte {
 	k := make([]byte, 0, 1+20+32)
 	k = append(k, byte(storage.STORAGE))
 	k = append(k, addr[:]...)
@@ -80,28 +80,6 @@ func (self *CacheDB) GenAccountStateKey(addr common.Address, key []byte) []byte 
 func (self *CacheDB) put(prefix storage.DataEntryPrefix, key []byte, value []byte) {
 	self.keyScratch = makePrefixedKey(self.keyScratch, byte(prefix), key)
 	self.memdb.Put(self.keyScratch, value)
-}
-
-func (self *CacheDB) IsContractDestroyed(addr common.Address) (bool, error) {
-	value, err := self.get(storage.DESTROYED, addr[:])
-	if err != nil {
-		return true, err
-	}
-
-	return len(value) != 0, nil
-}
-
-func (self *CacheDB) DeleteContract(address common.Address, height uint32) {
-	self.delete(storage.CONTRACT, address[:])
-	self.SetContractDestroyed(address, height)
-}
-
-func (self *CacheDB) SetContractDestroyed(addr common.Address, height uint32) {
-	panic("todo")
-}
-
-func (self *CacheDB) UnsetContractDestroyed(addr common.Address, height uint32) {
-	panic("todo")
 }
 
 func (self *CacheDB) Get(key []byte) ([]byte, error) {
@@ -155,31 +133,7 @@ func (self *Iter) Key() []byte {
 	return key
 }
 
-func (self *CacheDB) MigrateContractStorage(oldAddress, newAddress common.Address, height uint32) error {
-	self.DeleteContract(oldAddress, height)
-
-	iter := self.NewIterator(oldAddress[:])
-	for has := iter.First(); has; has = iter.Next() {
-		key := iter.Key()
-		val := iter.Value()
-
-		newkey := serializeStorageKey(newAddress, key[20:])
-
-		self.Put(newkey, val)
-		self.Delete(key)
-	}
-
-	iter.Release()
-
-	return iter.Error()
-}
-
-func (self *CacheDB) CleanContractStorage(addr common.Address, height uint32) error {
-	self.DeleteContract(addr, height)
-	return self.CleanContractStorageData(addr)
-}
-
-func (self *CacheDB) CleanContractStorageData(addr common.Address) error {
+func (self *CacheDB) CleanContractStorageData(addr ethcomm.Address) error {
 	iter := self.NewIterator(addr[:])
 
 	for has := iter.First(); has; has = iter.Next() {
@@ -188,11 +142,4 @@ func (self *CacheDB) CleanContractStorageData(addr common.Address) error {
 	iter.Release()
 
 	return iter.Error()
-}
-
-func serializeStorageKey(address common.Address, key []byte) []byte {
-	res := make([]byte, 0, len(address[:])+len(key))
-	res = append(res, address[:]...)
-	res = append(res, key...)
-	return res
 }

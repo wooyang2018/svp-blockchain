@@ -25,9 +25,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/holiman/uint256"
-
-	"github.com/wooyang2018/svp-blockchain/evm/params"
 )
 
 type TwoOperandTestcase struct {

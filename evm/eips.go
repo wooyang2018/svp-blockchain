@@ -19,9 +19,8 @@ package evm
 import (
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/holiman/uint256"
-
-	"github.com/wooyang2018/svp-blockchain/evm/params"
 )
 
 var activators = map[int]func(*JumpTable){

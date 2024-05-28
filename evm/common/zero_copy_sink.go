@@ -7,10 +7,32 @@ import (
 	"bytes"
 	"encoding/binary"
 	"math"
+
+	ethcomm "github.com/ethereum/go-ethereum/common"
 )
+
+type Serializable interface {
+	Serialization(sink *ZeroCopySink)
+}
+
+func SerializeToBytes(values ...Serializable) []byte {
+	sink := NewZeroCopySink(nil)
+	for _, val := range values {
+		val.Serialization(sink)
+	}
+	return sink.Bytes()
+}
 
 type ZeroCopySink struct {
 	buf []byte
+}
+
+// NewZeroCopySink returns a new ZeroCopySink reading from b.
+func NewZeroCopySink(b []byte) *ZeroCopySink {
+	if b == nil {
+		b = make([]byte, 0, 512)
+	}
+	return &ZeroCopySink{b}
 }
 
 // tryGrowByReslice is a inlineable version of grow for the fast-case where the
@@ -49,8 +71,6 @@ func (self *ZeroCopySink) WriteBytes(p []byte) {
 	copy(data, p)
 }
 
-func (self *ZeroCopySink) Size() uint64 { return uint64(len(self.buf)) }
-
 func (self *ZeroCopySink) NextBytes(n uint64) (data []byte) {
 	m, ok := self.tryGrowByReslice(int(n))
 	if !ok {
@@ -60,8 +80,6 @@ func (self *ZeroCopySink) NextBytes(n uint64) (data []byte) {
 	return
 }
 
-// Backs up a number of bytes, so that the next call to NextXXX() returns data again
-// that was already returned by the last call to NextXXX().
 func (self *ZeroCopySink) BackUp(n uint64) {
 	l := len(self.buf) - int(n)
 	self.buf = self.buf[:l]
@@ -123,12 +141,12 @@ func (self *ZeroCopySink) WriteString(data string) (size uint64) {
 	return self.WriteVarBytes([]byte(data))
 }
 
-func (self *ZeroCopySink) WriteAddress(addr Address) {
-	self.WriteBytes(addr[:])
+func (self *ZeroCopySink) WriteAddress(addr ethcomm.Address) {
+	self.WriteBytes(addr.Bytes())
 }
 
-func (self *ZeroCopySink) WriteHash(hash Uint256) {
-	self.WriteBytes(hash[:])
+func (self *ZeroCopySink) WriteHash(hash ethcomm.Hash) {
+	self.WriteBytes(hash.Bytes())
 }
 
 func (self *ZeroCopySink) WriteVarUint(data uint64) (size uint64) {
@@ -153,13 +171,7 @@ func (self *ZeroCopySink) WriteVarUint(data uint64) (size uint64) {
 	return
 }
 
-// NewReader returns a new ZeroCopySink reading from b.
-func NewZeroCopySink(b []byte) *ZeroCopySink {
-	if b == nil {
-		b = make([]byte, 0, 512)
-	}
-	return &ZeroCopySink{b}
-}
+func (self *ZeroCopySink) Size() uint64 { return uint64(len(self.buf)) }
 
 func (self *ZeroCopySink) Bytes() []byte { return self.buf }
 

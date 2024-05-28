@@ -5,6 +5,7 @@ package statedb
 
 import (
 	"github.com/syndtr/goleveldb/leveldb/comparer"
+	"github.com/syndtr/goleveldb/leveldb/util"
 
 	"github.com/wooyang2018/svp-blockchain/storage"
 )
@@ -183,4 +184,139 @@ func (iter *JoinIter) Error() error {
 		return iter.memdb.Error()
 	}
 	return nil
+}
+
+type dbIter struct {
+	util.BasicReleaser
+	p          *MemDB
+	slice      *util.Range
+	node       int
+	forward    bool
+	key, value []byte
+	err        error
+}
+
+func (i *dbIter) fill(checkStart, checkLimit bool) bool {
+	if i.node != 0 {
+		n := i.p.nodeData[i.node]
+		m := n + i.p.nodeData[i.node+nKey]
+		i.key = i.p.kvData[n:m]
+		if i.slice != nil {
+			switch {
+			case checkLimit && i.slice.Limit != nil && i.p.cmp.Compare(i.key, i.slice.Limit) >= 0:
+				fallthrough
+			case checkStart && i.slice.Start != nil && i.p.cmp.Compare(i.key, i.slice.Start) < 0:
+				i.node = 0
+				goto bail
+			}
+		}
+		i.value = i.p.kvData[m : m+i.p.nodeData[i.node+nVal]]
+		return true
+	}
+bail:
+	i.key = nil
+	i.value = nil
+	return false
+}
+
+func (i *dbIter) Valid() bool {
+	return i.node != 0
+}
+
+func (i *dbIter) First() bool {
+	if i.Released() {
+		i.err = ErrIterReleased
+		return false
+	}
+
+	i.forward = true
+	if i.slice != nil && i.slice.Start != nil {
+		i.node, _ = i.p.findGE(i.slice.Start, false)
+	} else {
+		i.node = i.p.nodeData[nNext]
+	}
+	return i.fill(false, true)
+}
+
+func (i *dbIter) Last() bool {
+	if i.Released() {
+		i.err = ErrIterReleased
+		return false
+	}
+
+	i.forward = false
+	if i.slice != nil && i.slice.Limit != nil {
+		i.node = i.p.findLT(i.slice.Limit)
+	} else {
+		i.node = i.p.findLast()
+	}
+	return i.fill(true, false)
+}
+
+func (i *dbIter) Seek(key []byte) bool {
+	if i.Released() {
+		i.err = ErrIterReleased
+		return false
+	}
+
+	i.forward = true
+	if i.slice != nil && i.slice.Start != nil && i.p.cmp.Compare(key, i.slice.Start) < 0 {
+		key = i.slice.Start
+	}
+	i.node, _ = i.p.findGE(key, false)
+	return i.fill(false, true)
+}
+
+func (i *dbIter) Next() bool {
+	if i.Released() {
+		i.err = ErrIterReleased
+		return false
+	}
+
+	if i.node == 0 {
+		if !i.forward {
+			return i.First()
+		}
+		return false
+	}
+	i.forward = true
+	i.node = i.p.nodeData[i.node+nNext]
+	return i.fill(false, true)
+}
+
+func (i *dbIter) Prev() bool {
+	if i.Released() {
+		i.err = ErrIterReleased
+		return false
+	}
+
+	if i.node == 0 {
+		if i.forward {
+			return i.Last()
+		}
+		return false
+	}
+	i.forward = false
+	i.node = i.p.findLT(i.key)
+	return i.fill(true, false)
+}
+
+func (i *dbIter) Key() []byte {
+	return i.key
+}
+
+func (i *dbIter) Value() []byte {
+	return i.value
+}
+
+func (i *dbIter) Error() error { return i.err }
+
+func (i *dbIter) Release() {
+	if !i.Released() {
+		i.p = nil
+		i.node = 0
+		i.key = nil
+		i.value = nil
+		i.BasicReleaser.Release()
+	}
 }

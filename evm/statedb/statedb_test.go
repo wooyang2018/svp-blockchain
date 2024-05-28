@@ -4,7 +4,6 @@
 package statedb
 
 import (
-	"math/big"
 	"testing"
 
 	ethcomm "github.com/ethereum/go-ethereum/common"
@@ -15,30 +14,13 @@ import (
 	"github.com/wooyang2018/svp-blockchain/storage"
 )
 
-type dummy struct{}
-
-func (d dummy) SubBalance(cache *CacheDB, addr common.Address, val *big.Int) error {
-	return nil
-}
-func (d dummy) AddBalance(cache *CacheDB, addr common.Address, val *big.Int) error {
-	return nil
-}
-func (d dummy) SetBalance(cache *CacheDB, addr common.Address, val *big.Int) error {
-	return nil
-}
-func (d dummy) GetBalance(cache *CacheDB, addr common.Address) (*big.Int, error) {
-	return big.NewInt(0), nil
-}
-
-var _ OngBalanceHandle = dummy{}
-
 func TestEtherAccount(t *testing.T) {
 	a := require.New(t)
 
 	memback := storage.NewMemLevelDBStore()
 	cache := NewCacheDB(memback)
 	// don't consider ong yet
-	sd := NewStateDB(cache, ethcomm.Hash{}, ethcomm.Hash{}, dummy{})
+	sd := NewStateDB(cache, ethcomm.Hash{}, ethcomm.Hash{}, NewDummy())
 	a.NotNil(sd, "fail")
 
 	h := crypto.Keccak256Hash([]byte("hello"))

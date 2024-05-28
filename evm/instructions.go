@@ -18,11 +18,11 @@ package evm
 
 import (
 	ethcomm "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/holiman/uint256"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/wooyang2018/svp-blockchain/evm/common"
-	"github.com/wooyang2018/svp-blockchain/evm/params"
 )
 
 func opAdd(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]byte, error) {

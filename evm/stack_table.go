@@ -16,9 +16,7 @@
 
 package evm
 
-import (
-	"github.com/wooyang2018/svp-blockchain/evm/params"
-)
+import "github.com/ethereum/go-ethereum/params"
 
 func minSwapStack(n int) int {
 	return minStack(n, n)

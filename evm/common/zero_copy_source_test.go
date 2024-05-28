@@ -4,7 +4,6 @@
 package common
 
 import (
-	"bytes"
 	"crypto/rand"
 	"testing"
 
@@ -26,25 +25,6 @@ func BenchmarkZeroCopySource(b *testing.B) {
 			source.NextBytes(20)
 		}
 	}
-
-}
-
-func BenchmarkDerserialize(b *testing.B) {
-	const N = 12000
-	buf := make([]byte, N)
-	rand.Read(buf)
-
-	for i := 0; i < b.N; i++ {
-		reader := bytes.NewBuffer(buf)
-		for j := 0; j < N/100; j++ {
-			ReadUint16(reader)
-			ReadByte(reader)
-			ReadUint64(reader)
-			ReadVarUint(reader, 0)
-			ReadBytes(reader, 20)
-		}
-	}
-
 }
 
 func TestReadFromNil(t *testing.T) {

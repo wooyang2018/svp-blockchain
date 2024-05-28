@@ -21,12 +21,12 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
+	ethcomm "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/holiman/uint256"
 
 	"github.com/wooyang2018/svp-blockchain/evm"
-	"github.com/wooyang2018/svp-blockchain/evm/params"
 	"github.com/wooyang2018/svp-blockchain/evm/statedb"
 	"github.com/wooyang2018/svp-blockchain/storage"
 )
@@ -35,8 +35,8 @@ import (
 type Config struct {
 	ChainConfig *params.ChainConfig
 	Difficulty  *big.Int
-	Origin      common.Address
-	Coinbase    common.Address
+	Origin      ethcomm.Address
+	Coinbase    ethcomm.Address
 	BlockNumber *big.Int
 	Time        *big.Int
 	GasLimit    uint64
@@ -45,7 +45,7 @@ type Config struct {
 	Debug       bool
 	EVMConfig   evm.Config
 	State       *statedb.StateDB
-	GetHashFn   func(n uint64) common.Hash
+	GetHashFn   func(n uint64) ethcomm.Hash
 }
 
 // SetDefaults sets defaults on the config
@@ -64,7 +64,6 @@ func SetDefaults(cfg *Config) {
 			PetersburgBlock:     new(big.Int),
 			IstanbulBlock:       new(big.Int),
 			MuirGlacierBlock:    new(big.Int),
-			YoloV2Block:         nil,
 		}
 	}
 
@@ -87,8 +86,8 @@ func SetDefaults(cfg *Config) {
 		cfg.BlockNumber = new(big.Int)
 	}
 	if cfg.GetHashFn == nil {
-		cfg.GetHashFn = func(n uint64) common.Hash {
-			return common.BytesToHash(crypto.Keccak256([]byte(new(big.Int).SetUint64(n).String())))
+		cfg.GetHashFn = func(n uint64) ethcomm.Hash {
+			return ethcomm.BytesToHash(crypto.Keccak256([]byte(new(big.Int).SetUint64(n).String())))
 		}
 	}
 }
@@ -106,10 +105,10 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *statedb.StateDB, error) 
 
 	if cfg.State == nil {
 		db := statedb.NewCacheDB(storage.NewMemLevelDBStore())
-		cfg.State = statedb.NewStateDB(db, common.Hash{}, common.Hash{}, statedb.NewDummy())
+		cfg.State = statedb.NewStateDB(db, ethcomm.Hash{}, ethcomm.Hash{}, statedb.NewDummy())
 	}
 	var (
-		address = common.BytesToAddress([]byte("contract"))
+		address = ethcomm.BytesToAddress([]byte("contract"))
 		vmenv   = NewEnv(cfg)
 		sender  = evm.AccountRef(cfg.Origin)
 	)
@@ -120,7 +119,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *statedb.StateDB, error) 
 	// Call the code with the given configuration.
 	ret, _, err := vmenv.Call(
 		sender,
-		common.BytesToAddress([]byte("contract")),
+		ethcomm.BytesToAddress([]byte("contract")),
 		input,
 		cfg.GasLimit,
 		cfg.Value,
@@ -130,7 +129,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *statedb.StateDB, error) 
 }
 
 // Create executes the code using the EVM create method
-func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
+func Create(input []byte, cfg *Config) ([]byte, ethcomm.Address, uint64, error) {
 	if cfg == nil {
 		cfg = new(Config)
 	}
@@ -138,7 +137,7 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 
 	if cfg.State == nil {
 		db := statedb.NewCacheDB(storage.NewMemLevelDBStore())
-		cfg.State = statedb.NewStateDB(db, common.Hash{}, common.Hash{}, statedb.NewDummy())
+		cfg.State = statedb.NewStateDB(db, ethcomm.Hash{}, ethcomm.Hash{}, statedb.NewDummy())
 	}
 	var (
 		vmenv  = NewEnv(cfg)
@@ -156,7 +155,7 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 }
 
 // Create2 executes the code using the EVM create2 method
-func Create2(input []byte, cfg *Config, salt *uint256.Int) ([]byte, common.Address, uint64, error) {
+func Create2(input []byte, cfg *Config, salt *uint256.Int) ([]byte, ethcomm.Address, uint64, error) {
 	if cfg == nil {
 		cfg = new(Config)
 	}
@@ -164,7 +163,7 @@ func Create2(input []byte, cfg *Config, salt *uint256.Int) ([]byte, common.Addre
 
 	if cfg.State == nil {
 		db := statedb.NewCacheDB(storage.NewMemLevelDBStore())
-		cfg.State = statedb.NewStateDB(db, common.Hash{}, common.Hash{}, statedb.NewDummy())
+		cfg.State = statedb.NewStateDB(db, ethcomm.Hash{}, ethcomm.Hash{}, statedb.NewDummy())
 	}
 	var (
 		vmenv  = NewEnv(cfg)
@@ -187,7 +186,7 @@ func Create2(input []byte, cfg *Config, salt *uint256.Int) ([]byte, common.Addre
 //
 // Call, unlike Execute, requires a config and also requires the State field to
 // be set.
-func Call(address common.Address, input []byte, cfg *Config) ([]byte, uint64, error) {
+func Call(address ethcomm.Address, input []byte, cfg *Config) ([]byte, uint64, error) {
 	SetDefaults(cfg)
 
 	vmenv := NewEnv(cfg)

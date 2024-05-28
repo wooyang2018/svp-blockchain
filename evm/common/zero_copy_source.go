@@ -7,6 +7,15 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
+	"math"
+
+	"github.com/ethereum/go-ethereum/common"
+)
+
+const (
+	UINT16_SIZE = 2
+	UINT32_SIZE = 4
+	UINT64_SIZE = 8
 )
 
 var ErrIrregularData = errors.New("irregular data")
@@ -14,6 +23,11 @@ var ErrIrregularData = errors.New("irregular data")
 type ZeroCopySource struct {
 	s   []byte
 	off uint64 // current reading index
+}
+
+// NewZeroCopySource returns a new ZeroCopySource reading from b.
+func NewZeroCopySource(b []byte) *ZeroCopySource {
+	return &ZeroCopySource{b, 0}
 }
 
 // Len returns the number of bytes of the unread portion of the slice.
@@ -49,17 +63,6 @@ func (self *ZeroCopySource) NextBytes(n uint64) (data []byte, eof bool) {
 	return
 }
 
-func (self *ZeroCopySource) Skip(n uint64) (eof bool) {
-	m := uint64(len(self.s))
-	end, overflow := SafeAdd(self.off, n)
-	if overflow || end > m {
-		end = m
-		eof = true
-	}
-	self.off = end
-	return
-}
-
 func (self *ZeroCopySource) NextByte() (data byte, eof bool) {
 	if self.off >= uint64(len(self.s)) {
 		return 0, true
@@ -86,12 +89,6 @@ func (self *ZeroCopySource) NextBool() (data bool, irregular bool, eof bool) {
 		irregular = true
 	}
 	return
-}
-
-// Backs up a number of bytes, so that the next call to NextXXX() returns data again
-// that was already returned by the last call to NextXXX().
-func (self *ZeroCopySource) BackUp(n uint64) {
-	self.off -= n
 }
 
 func (self *ZeroCopySource) NextUint16() (data uint16, eof bool) {
@@ -192,9 +189,9 @@ func (self *ZeroCopySource) ReadVarUint() (uint64, error) {
 	return length, nil
 }
 
-func (self *ZeroCopySource) NextAddress() (data Address, eof bool) {
+func (self *ZeroCopySource) NextAddress() (data common.Address, eof bool) {
 	var buf []byte
-	buf, eof = self.NextBytes(ADDR_LEN)
+	buf, eof = self.NextBytes(common.AddressLength)
 	if eof {
 		return
 	}
@@ -202,9 +199,9 @@ func (self *ZeroCopySource) NextAddress() (data Address, eof bool) {
 	return
 }
 
-func (self *ZeroCopySource) NextHash() (data Uint256, eof bool) {
+func (self *ZeroCopySource) NextHash() (data common.Hash, eof bool) {
 	var buf []byte
-	buf, eof = self.NextBytes(UINT256_SIZE)
+	buf, eof = self.NextBytes(common.HashLength)
 	if eof {
 		return
 	}
@@ -272,7 +269,6 @@ func getVarUintSize(value uint64) uint64 {
 	}
 }
 
-// NewZeroCopySource returns a new ZeroCopySource reading from b.
-func NewZeroCopySource(b []byte) *ZeroCopySource {
-	return &ZeroCopySource{b, 0}
+func SafeAdd(x, y uint64) (uint64, bool) {
+	return x + y, y > math.MaxUint64-x
 }

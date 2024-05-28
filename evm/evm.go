@@ -23,10 +23,10 @@ import (
 
 	ethcomm "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/holiman/uint256"
 
 	"github.com/wooyang2018/svp-blockchain/evm/common"
-	"github.com/wooyang2018/svp-blockchain/evm/params"
 )
 
 // emptyCodeHash is used by create to ensure deployment is disallowed to already
@@ -46,8 +46,6 @@ type (
 // ActivePrecompiles returns the addresses of the precompiles enabled with the current configuration
 func (evm *EVM) ActivePrecompiles() []ethcomm.Address {
 	switch {
-	case evm.chainRules.IsYoloV2:
-		return PrecompiledAddressesYoloV2
 	case evm.chainRules.IsIstanbul:
 		return PrecompiledAddressesIstanbul
 	case evm.chainRules.IsByzantium:
@@ -60,8 +58,6 @@ func (evm *EVM) ActivePrecompiles() []ethcomm.Address {
 func (evm *EVM) precompile(addr ethcomm.Address) (PrecompiledContract, bool) {
 	var precompiles map[ethcomm.Address]PrecompiledContract
 	switch {
-	case evm.chainRules.IsYoloV2:
-		precompiles = PrecompiledContractsYoloV2
 	case evm.chainRules.IsIstanbul:
 		precompiles = PrecompiledContractsIstanbul
 	case evm.chainRules.IsByzantium:
@@ -90,6 +86,7 @@ type BlockContext struct {
 	BlockNumber *big.Int        // Provides information for NUMBER
 	Time        *big.Int        // Provides information for TIME
 	Difficulty  *big.Int        // Provides information for DIFFICULTY
+	Random      *ethcomm.Hash   // Provides information for RANDOM
 }
 
 // TxContext provides the EVM with information about a transaction.
@@ -146,7 +143,7 @@ func NewEVM(blockCtx BlockContext, txCtx TxContext, statedb StateDB,
 		StateDB:     statedb,
 		vmConfig:    vmConfig,
 		chainConfig: chainConfig,
-		chainRules:  chainConfig.Rules(blockCtx.BlockNumber),
+		chainRules:  chainConfig.Rules(blockCtx.BlockNumber, blockCtx.Random != nil),
 	}
 	evm.interpreter = NewEVMInterpreter(evm, vmConfig)
 	return evm

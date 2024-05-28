@@ -64,5 +64,4 @@ func TestCacheDB(t *testing.T) {
 		assert.NotNil(t, raw)
 		assert.Equal(t, []byte(val), raw)
 	}
-
 }

@@ -12,8 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 )
 
-var _ = (*structLogMarshaling)(nil)
-
 // MarshalJSON marshals as JSON.
 func (s StructLog) MarshalJSON() ([]byte, error) {
 	type StructLog struct {

@@ -27,13 +27,12 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
-
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/asm"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
 
 	"github.com/wooyang2018/svp-blockchain/evm"
-	"github.com/wooyang2018/svp-blockchain/evm/params"
 	"github.com/wooyang2018/svp-blockchain/evm/statedb"
 	"github.com/wooyang2018/svp-blockchain/storage"
 )
@@ -498,7 +497,7 @@ func TestEipExampleCases(t *testing.T) {
 
 	{
 		code := []byte{
-			byte(evm.PUSH9), 0x00, 0x00, 0x00, 0x00, 0x0, 0x00, 0x00, 0x00, (4 + 8),
+			byte(evm.PUSH9), 0x00, 0x00, 0x00, 0x00, 0x0, 0x00, 0x00, 0x00, 4 + 8,
 			byte(evm.JUMPSUB),
 			byte(evm.STOP),
 			byte(evm.BEGINSUB),
@@ -514,7 +513,7 @@ func TestEipExampleCases(t *testing.T) {
 	// out the trace.
 	{
 		code := []byte{
-			byte(evm.PUSH9), 0x01, 0x00, 0x00, 0x00, 0x0, 0x00, 0x00, 0x00, (4 + 8),
+			byte(evm.PUSH9), 0x01, 0x00, 0x00, 0x00, 0x0, 0x00, 0x00, 0x00, 4 + 8,
 			byte(evm.JUMPSUB),
 			byte(evm.STOP),
 			byte(evm.BEGINSUB),

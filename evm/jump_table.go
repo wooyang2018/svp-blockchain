@@ -17,7 +17,7 @@
 package evm
 
 import (
-	"github.com/wooyang2018/svp-blockchain/evm/params"
+	"github.com/ethereum/go-ethereum/params"
 )
 
 type (
@@ -56,20 +56,10 @@ var (
 	byzantiumInstructionSet        = newByzantiumInstructionSet()
 	constantinopleInstructionSet   = newConstantinopleInstructionSet()
 	istanbulInstructionSet         = newIstanbulInstructionSet()
-	yoloV2InstructionSet           = newYoloV2InstructionSet()
 )
 
 // JumpTable contains the EVM opcodes supported at a given fork.
 type JumpTable [256]*operation
-
-// newYoloV2InstructionSet creates an instructionset containing
-// - "EIP-2315: Simple Subroutines"
-// - "EIP-2929: Gas cost increases for state access opcodes"
-func newYoloV2InstructionSet() JumpTable {
-	instructionSet := newIstanbulInstructionSet()
-	enable2315(&instructionSet) // Subroutines - https://eips.ethereum.org/EIPS/eip-2315
-	return instructionSet
-}
 
 // newIstanbulInstructionSet returns the frontier, homestead
 // byzantium, contantinople and petersburg instructions.
@@ -345,7 +335,7 @@ func newFrontierInstructionSet() JumpTable {
 		},
 		SHA3: {
 			execute:     opSha3,
-			constantGas: params.Sha3Gas,
+			constantGas: params.Keccak256Gas,
 			dynamicGas:  gasSha3,
 			minStack:    minStack(2, 1),
 			maxStack:    maxStack(2, 1),
