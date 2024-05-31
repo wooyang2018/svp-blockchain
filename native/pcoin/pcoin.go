@@ -88,6 +88,10 @@ func invokeMint(ctx common.CallContext, input *Input) error {
 }
 
 func invokeTransfer(ctx common.CallContext, input *Input) error {
+	if bytes.Equal(ctx.Sender(), input.Dest) {
+		return errors.New("self-transfer is prohibited")
+	}
+
 	bsctx := common.DecodeBalance(ctx.GetState(ctx.Sender()))
 	if bsctx < input.Value {
 		return errors.New("not enough balance")

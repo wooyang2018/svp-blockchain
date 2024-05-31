@@ -6,7 +6,6 @@ package evm
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -44,7 +43,7 @@ func NewRunner(jsonABI, hexCode string, store storage.PersistStore, ctx common.C
 	runtime.SetDefaults(cfg)                          // TODO convert other call context to config
 	cfg.Origin = ethcomm.BytesToAddress(ctx.Sender()) // TODO be cropped from the left
 
-	cache := statedb.NewCacheDB(store) //TODO implement OngBalanceHandle
+	cache := statedb.NewCacheDB(store) // TODO implement OngBalanceHandle
 	cfg.State = statedb.NewStateDB(cache, ethcomm.Hash{}, ethcomm.Hash{}, statedb.NewDummy())
 
 	return &Runner{jsonABI: jsonABI, hexCode: hexCode, config: cfg}
@@ -119,5 +118,25 @@ func (r *Runner) Invoke(ctx common.CallContext) error {
 }
 
 func (r *Runner) Query(ctx common.CallContext) ([]byte, error) {
-	return nil, errors.New("querying evm contract is not supported")
+	vmenv := runtime.NewEnv(r.config)
+	sender := evm.AccountRef(r.config.Origin)
+	address := ethcomm.BytesToAddress(ctx.GetState(keyAddr))
+	contractAbi, _ := abi.JSON(bytes.NewReader(ctx.GetState(keyAbi)))
+
+	method, params := r.parseInput(ctx.Input())
+	query, err := contractAbi.Pack(method, params...)
+	if err != nil {
+		return nil, err
+	}
+
+	ret, leftOverGas, err := vmenv.StaticCall(
+		sender,
+		address,
+		query,
+		r.config.GasLimit,
+	)
+
+	fmt.Printf("query code at: %s, used gas: %d, return result: %s\n", address.String(),
+		r.config.GasLimit-leftOverGas, big.NewInt(0).SetBytes(ret)) // TODO use logger.I()
+	return ret, err
 }

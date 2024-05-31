@@ -5,6 +5,7 @@ package evm
 
 import (
 	"encoding/json"
+	"math/big"
 	"runtime"
 	"testing"
 
@@ -35,7 +36,7 @@ func TestInvoke(t *testing.T) {
 	runner := NewRunner(compiled["Storage"][1], compiled["Storage"][0], storage.NewMemLevelDBStore(), ctx)
 	err := runner.Init(ctx)
 	asrt.NoError(err)
-	runner.jsonABI, runner.hexCode = "", "" //subsequent invokes do not need to pass in jsonABI and hexCode
+	runner.jsonABI, runner.hexCode = "", "" // subsequent invokes do not need to pass in jsonABI and hexCode
 
 	input := &Input{
 		Method: "store",
@@ -50,6 +51,7 @@ func TestInvoke(t *testing.T) {
 		Method: "retrieve",
 	}
 	ctx.MockInput, _ = json.Marshal(input)
-	err = runner.Invoke(ctx)
+	ret, err := runner.Query(ctx)
 	asrt.NoError(err)
+	asrt.EqualValues(big.NewInt(1024), big.NewInt(0).SetBytes(ret))
 }

@@ -88,7 +88,7 @@ func (self *LevelDBStore) Get(key []byte) ([]byte, error) {
 	dat, err := self.db.Get(key, nil)
 	if err != nil {
 		if err == leveldb.ErrNotFound {
-			return nil, ErrNotFound
+			return nil, errors.New("not found")
 		}
 		return nil, err
 	}
