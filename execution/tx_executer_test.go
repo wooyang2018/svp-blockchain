@@ -30,7 +30,7 @@ func TestTxExecutor(t *testing.T) {
 	txDep := core.NewTransaction().SetInput(b).Sign(priv)
 
 	blk := core.NewBlock().SetHeight(10).Sign(priv)
-	trk := newStateTracker(newMapStateStore(), nil)
+	trk := common.NewStateTracker(common.NewMapStateStore(), nil)
 	reg := newCodeRegistry()
 	texe := txExecutor{
 		codeRegistry: reg,
@@ -51,12 +51,12 @@ func TestTxExecutor(t *testing.T) {
 	asrt.Equal(blk.Height(), txc.BlockHeight())
 
 	// codeinfo must be saved by key (transaction hash)
-	cinfo, err := reg.getCodeInfo(txDep.Hash(), trk.spawn(codeRegistryAddr))
+	cinfo, err := reg.getCodeInfo(txDep.Hash(), trk.Spawn(codeRegistryAddr))
 
 	asrt.NoError(err)
 	asrt.Equal(*cinfo, depInput.CodeInfo)
 
-	cc, err := reg.getInstance(txDep.Hash(), trk.spawn(codeRegistryAddr))
+	cc, err := reg.getInstance(txDep.Hash(), trk.Spawn(codeRegistryAddr))
 
 	asrt.NoError(err)
 	asrt.NotNil(cc)
@@ -65,9 +65,9 @@ func TestTxExecutor(t *testing.T) {
 		Method: "minter",
 	}
 	b, _ = json.Marshal(ccInput)
-	minter, err := cc.Query(&callContextTx{
-		input:        b,
-		stateTracker: trk.spawn(txDep.Hash()),
+	minter, err := cc.Query(&common.CallContextTx{
+		RawInput:     b,
+		StateTracker: trk.Spawn(txDep.Hash()),
 	})
 
 	asrt.NoError(err)
@@ -86,9 +86,9 @@ func TestTxExecutor(t *testing.T) {
 	ccInput.Method = "balance"
 	ccInput.Value = 0
 	b, _ = json.Marshal(ccInput)
-	b, err = cc.Query(&callContextTx{
-		input:        b,
-		stateTracker: trk.spawn(txDep.Hash()),
+	b, err = cc.Query(&common.CallContextTx{
+		RawInput:     b,
+		StateTracker: trk.Spawn(txDep.Hash()),
 	})
 
 	asrt.NoError(err)

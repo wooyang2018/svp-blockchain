@@ -38,11 +38,11 @@ var DefaultConfig = Config{
 }
 
 type Storage struct {
-	db          PersistStore
-	chainStore  *chainStore
-	stateStore  *stateStore
-	merkleStore *merkleStore
-	merkleTree  *merkle.Tree
+	PersistStore PersistStore
+	chainStore   *chainStore
+	stateStore   *stateStore
+	merkleStore  *merkleStore
+	merkleTree   *merkle.Tree
 
 	// for writeStateTree and VerifyState
 	mtxWriteState sync.RWMutex
@@ -54,10 +54,10 @@ func New(path string, config Config) *Storage {
 	if err != nil {
 		logger.I().Fatalw("setup storage failed", "error", err)
 	}
-	strg.db = db
-	strg.chainStore = &chainStore{strg.db}
-	strg.stateStore = &stateStore{strg.db, crypto.SHA3_256, config.ConcurrentLimit}
-	strg.merkleStore = &merkleStore{strg.db}
+	strg.PersistStore = db
+	strg.chainStore = &chainStore{strg.PersistStore}
+	strg.stateStore = &stateStore{strg.PersistStore, crypto.SHA3_256, config.ConcurrentLimit}
+	strg.merkleStore = &merkleStore{strg.PersistStore}
 	strg.merkleTree = merkle.NewTree(strg.merkleStore, merkle.Config{
 		Hash:            crypto.SHA3_256,
 		BranchFactor:    config.MerkleBranchFactor,
@@ -71,7 +71,7 @@ func (strg *Storage) Commit(data *CommitData) error {
 }
 
 func (strg *Storage) StoreBlock(blk *core.Block) error {
-	return updateLevelDB(strg.db, strg.chainStore.setBlock(blk))
+	return updateLevelDB(strg.PersistStore, strg.chainStore.setBlock(blk))
 }
 
 func (strg *Storage) GetBlock(hash []byte) (*core.Block, error) {
@@ -83,7 +83,7 @@ func (strg *Storage) GetLastBlock() (*core.Block, error) {
 }
 
 func (strg *Storage) StoreQC(qc *core.QuorumCert) error {
-	return updateLevelDB(strg.db, strg.chainStore.setQC(qc))
+	return updateLevelDB(strg.PersistStore, strg.chainStore.setQC(qc))
 }
 
 func (strg *Storage) GetQC(blkHash []byte) (*core.QuorumCert, error) {
@@ -205,12 +205,12 @@ func (strg *Storage) writeChainData(data *CommitData) error {
 	updFns = append(updFns, strg.chainStore.setBlock(data.Block)...)
 	updFns = append(updFns, strg.chainStore.setTxs(data.Transactions)...)
 	updFns = append(updFns, strg.chainStore.setTxCommits(data.TxCommits)...)
-	return updateLevelDB(strg.db, updFns)
+	return updateLevelDB(strg.PersistStore, updFns)
 }
 
 func (strg *Storage) writeBlockCommit(data *CommitData) error {
 	updFn := strg.chainStore.setBlockCommit(data.BlockCommit)
-	return updateLevelDB(strg.db, []updateFunc{updFn})
+	return updateLevelDB(strg.PersistStore, []updateFunc{updFn})
 }
 
 // commit state values and merkle tree in one transaction
@@ -223,12 +223,12 @@ func (strg *Storage) writeStateMerkleTree(data *CommitData) error {
 
 	updFns := strg.stateStore.commitStateChanges(data.BlockCommit.StateChanges())
 	updFns = append(updFns, strg.merkleStore.commitUpdate(data.merkleUpdate)...)
-	return updateLevelDB(strg.db, updFns)
+	return updateLevelDB(strg.PersistStore, updFns)
 }
 
 func (strg *Storage) setCommittedBlockHeight(height uint64) error {
 	updFn := strg.chainStore.setBlockHeight(height)
-	return updateLevelDB(strg.db, []updateFunc{updFn})
+	return updateLevelDB(strg.PersistStore, []updateFunc{updFn})
 }
 
 func concatBytes(srcs ...[]byte) []byte {

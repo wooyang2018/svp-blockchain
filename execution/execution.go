@@ -40,14 +40,14 @@ func New(stateStore *storage.Storage, config Config) *Execution {
 		stateStore: stateStore,
 		config:     config,
 	}
+
+	nativeDriver := native.NewCodeDriver()
 	exec.codeRegistry = newCodeRegistry()
-	exec.codeRegistry.registerDriver(common.DriverTypeNative, native.NewCodeDriver())
+	exec.codeRegistry.registerDriver(common.DriverTypeNative, nativeDriver)
 	exec.codeRegistry.registerDriver(common.DriverTypeBincc,
 		bincc.NewCodeDriver(exec.config.BinccDir, exec.config.TxExecTimeout))
 	exec.codeRegistry.registerDriver(common.DriverTypeEVM,
-		evm.NewCodeDriver(exec.config.ContractDir))
-	common.Storage = stateStore
-	common.Drivers = exec.codeRegistry
+		evm.NewCodeDriver(exec.config.ContractDir, nativeDriver, stateStore.PersistStore, stateStore))
 	return exec
 }
 
@@ -79,7 +79,7 @@ func (exec *Execution) MockExecute(blk *core.Block) (*core.BlockCommit, []*core.
 	}
 	start := time.Now()
 	txCount := len(bexe.blk.Transactions())
-	bexe.rootTrk = newStateTracker(bexe.state, nil)
+	bexe.rootTrk = common.NewStateTracker(bexe.state, nil)
 	bexe.txCommits = make([]*core.TxCommit, txCount)
 	for i := 0; i < txCount; i++ {
 		bexe.txCommits[i] = core.NewTxCommit().
@@ -90,7 +90,7 @@ func (exec *Execution) MockExecute(blk *core.Block) (*core.BlockCommit, []*core.
 	elapsed := time.Since(start)
 	bcm := core.NewBlockCommit().
 		SetHash(bexe.blk.Hash()).
-		SetStateChanges(bexe.rootTrk.getStateChanges()).
+		SetStateChanges(bexe.rootTrk.GetStateChanges()).
 		SetElapsedExec(elapsed.Seconds())
 	if txCount > 0 {
 		logger.I().Debugw("batch execution",
@@ -110,8 +110,8 @@ func (exec *Execution) Query(query *common.QueryData) (val []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
-	return cc.Query(&callContextQuery{
-		input:       query.Input,
+	return cc.Query(&common.CallContextQuery{
+		RawInput:    query.Input,
 		StateGetter: newStateVerifier(exec.stateStore, query.CodeAddr),
 	})
 }

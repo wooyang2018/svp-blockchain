@@ -37,7 +37,7 @@ func (reg codeRegistry) install(input *common.DeploymentInput) error {
 }
 
 func (reg codeRegistry) deploy(codeAddr []byte, input *common.DeploymentInput,
-	st *stateTracker) (common.Chaincode, error) {
+	st *common.StateTracker) (common.Chaincode, error) {
 	driver, err := reg.getDriver(input.CodeInfo.DriverType)
 	if err != nil {
 		return nil, err
@@ -68,7 +68,7 @@ func (reg codeRegistry) getDriver(driverType common.DriverType) (common.CodeDriv
 }
 
 func (reg codeRegistry) setCodeInfo(codeAddr []byte, codeInfo *common.CodeInfo,
-	st *stateTracker) error {
+	st *common.StateTracker) error {
 	b, err := json.Marshal(codeInfo)
 	if err != nil {
 		return err

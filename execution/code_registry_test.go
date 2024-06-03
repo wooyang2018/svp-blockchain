@@ -16,7 +16,7 @@ import (
 func TestCodeRegistry(t *testing.T) {
 	asrt := assert.New(t)
 
-	trk := newStateTracker(newMapStateStore(), codeRegistryAddr)
+	trk := common.NewStateTracker(common.NewMapStateStore(), codeRegistryAddr)
 	reg := newCodeRegistry()
 
 	codeAddr := bytes.Repeat([]byte{1}, 32)

@@ -22,7 +22,7 @@ type blkExecutor struct {
 	blk          *core.Block
 	txs          []*core.Transaction
 
-	rootTrk   *stateTracker
+	rootTrk   *common.StateTracker
 	txCommits []*core.TxCommit
 
 	mergeIdx     int32
@@ -50,13 +50,13 @@ If so, the tx is executed again before merging.
 func (bexe *blkExecutor) execute() (*core.BlockCommit, []*core.TxCommit) {
 	start := time.Now()
 	bexe.mergeEmitter = emitter.New()
-	bexe.rootTrk = newStateTracker(bexe.state, nil)
+	bexe.rootTrk = common.NewStateTracker(bexe.state, nil)
 	bexe.txCommits = make([]*core.TxCommit, len(bexe.txs))
 	bexe.executeConcurrent()
 	elapsed := time.Since(start)
 	bcm := core.NewBlockCommit().
 		SetHash(bexe.blk.Hash()).
-		SetStateChanges(bexe.rootTrk.getStateChanges()).
+		SetStateChanges(bexe.rootTrk.GetStateChanges()).
 		SetElapsedExec(elapsed.Seconds())
 
 	if len(bexe.txs) > 0 {
@@ -120,21 +120,21 @@ func (bexe *blkExecutor) waitToMerge(i int) {
 
 func (bexe *blkExecutor) mergeTxStateChanges(i int, texe *txExecutor) {
 	defer bexe.increaseMergeIdx()
-	if bexe.rootTrk.hasDependencyChanges(texe.txTrk) {
+	if bexe.rootTrk.HasDependencyChanges(texe.txTrk) {
 		// earlier txs changes the dependencies of this tx, execute tx again
 		texe = bexe.executeTx(i)
 	}
 	if bexe.txCommits[i].Error() != "" {
 		return // don't merge state
 	}
-	bexe.rootTrk.merge(texe.txTrk)
+	bexe.rootTrk.Merge(texe.txTrk)
 }
 
 func (bexe *blkExecutor) executeTx(i int) *txExecutor {
 	texe := &txExecutor{
 		codeRegistry: bexe.codeRegistry,
 		timeout:      bexe.txTimeout,
-		txTrk:        bexe.rootTrk.spawn(nil),
+		txTrk:        bexe.rootTrk.Spawn(nil),
 		blk:          bexe.blk,
 		tx:           bexe.txs[i],
 	}

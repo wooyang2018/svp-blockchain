@@ -154,7 +154,7 @@ func TestStorageCommit(t *testing.T) {
 
 	// tampering state value
 	updFn := strg.stateStore.setState([]byte{5}, []byte{100})
-	updateLevelDB(strg.db, []updateFunc{updFn})
+	updateLevelDB(strg.PersistStore, []updateFunc{updFn})
 
 	// should panic
 	asrt.Panics(func() {

@@ -1,7 +1,7 @@
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
-package execution
+package common
 
 import (
 	"testing"
@@ -9,39 +9,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type mapStateStore struct {
-	stateMap map[string][]byte
-}
-
-func newMapStateStore() *mapStateStore {
-	return &mapStateStore{
-		stateMap: make(map[string][]byte),
-	}
-}
-
-func (store *mapStateStore) VerifyState(key []byte) []byte {
-	return store.stateMap[string(key)]
-}
-
-func (store *mapStateStore) GetState(key []byte) []byte {
-	return store.stateMap[string(key)]
-}
-
-func (store *mapStateStore) SetState(key, value []byte) {
-	store.stateMap[string(key)] = value
-}
-
 func TestStateTrackerGetState(t *testing.T) {
 	asrt := assert.New(t)
 
-	ms := newMapStateStore()
-	trk := newStateTracker(ms, nil)
+	ms := NewMapStateStore()
+	trk := NewStateTracker(ms, nil)
 	ms.SetState([]byte{1}, []byte{200})
 
 	asrt.Equal([]byte{200}, trk.GetState([]byte{1}))
 	asrt.Nil(trk.GetState([]byte{2}))
 
-	trkChild := trk.spawn(nil)
+	trkChild := trk.Spawn(nil)
 	asrt.Equal([]byte{200}, trkChild.GetState([]byte{1}), "child get state from root store")
 	asrt.Nil(trkChild.GetState([]byte{2}))
 
@@ -53,8 +31,8 @@ func TestStateTrackerGetState(t *testing.T) {
 func TestStateTrackerSetState(t *testing.T) {
 	asrt := assert.New(t)
 
-	ms := newMapStateStore()
-	trk := newStateTracker(ms, nil)
+	ms := NewMapStateStore()
+	trk := NewStateTracker(ms, nil)
 	ms.SetState([]byte{1}, []byte{200})
 
 	trk.SetState([]byte{1}, []byte{100})
@@ -62,7 +40,7 @@ func TestStateTrackerSetState(t *testing.T) {
 
 	asrt.Equal([]byte{50}, trk.GetState([]byte{1}))
 
-	scList := trk.getStateChanges()
+	scList := trk.GetStateChanges()
 	asrt.Equal(1, len(scList))
 
 	trk.SetState([]byte{3}, []byte{30})
@@ -74,18 +52,18 @@ func TestStateTrackerSetState(t *testing.T) {
 	asrt.Equal([]byte{30}, trk.GetState([]byte{3}))
 	asrt.Equal([]byte{20}, trk.GetState([]byte{2}))
 
-	scList = trk.getStateChanges()
+	scList = trk.GetStateChanges()
 	asrt.Equal(3, len(scList))
 }
 
 func TestStateTrackerMerge(t *testing.T) {
 	asrt := assert.New(t)
 
-	ms := newMapStateStore()
-	trk := newStateTracker(ms, nil)
+	ms := NewMapStateStore()
+	trk := NewStateTracker(ms, nil)
 
 	trk.SetState([]byte{1}, []byte{200})
-	trkChild := trk.spawn(nil)
+	trkChild := trk.Spawn(nil)
 	trkChild.SetState([]byte{2}, []byte{20})
 	trkChild.SetState([]byte{1}, []byte{10})
 
@@ -94,23 +72,23 @@ func TestStateTrackerMerge(t *testing.T) {
 
 	asrt.Equal([]byte{200}, trk.GetState([]byte{1}), "child does not set parent state")
 
-	trk.merge(trkChild)
+	trk.Merge(trkChild)
 
 	asrt.Equal([]byte{10}, trk.GetState([]byte{1}))
 	asrt.Equal([]byte{20}, trk.GetState([]byte{2}))
 
-	scList := trk.getStateChanges()
+	scList := trk.GetStateChanges()
 	asrt.Equal(2, len(scList))
 }
 
 func TestStateTrackerWithPrefix(t *testing.T) {
 	asrt := assert.New(t)
 
-	ms := newMapStateStore()
-	trk := newStateTracker(ms, nil)
+	ms := NewMapStateStore()
+	trk := NewStateTracker(ms, nil)
 	trk.SetState([]byte{1, 1}, []byte{50})
 
-	trkChild := trk.spawn([]byte{1})
+	trkChild := trk.Spawn([]byte{1})
 	asrt.Equal([]byte{50}, trkChild.GetState([]byte{1}))
 
 	trkChild.SetState([]byte{1}, []byte{10})
@@ -118,10 +96,10 @@ func TestStateTrackerWithPrefix(t *testing.T) {
 	asrt.Equal([]byte{10}, trkChild.GetState([]byte{1}))
 	asrt.Equal([]byte{20}, trkChild.GetState([]byte{2}))
 
-	scList := trkChild.getStateChanges()
+	scList := trkChild.GetStateChanges()
 	asrt.Equal(2, len(scList))
 
-	trk.merge(trkChild)
+	trk.Merge(trkChild)
 	asrt.Equal([]byte{10}, trk.GetState([]byte{1, 1}))
 	asrt.Equal([]byte{20}, trk.GetState([]byte{1, 2}))
 }

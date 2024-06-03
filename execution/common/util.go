@@ -20,6 +20,23 @@ import (
 
 var ErrAddressLength = errors.New("unexpected address length")
 
+// genesisCodes include addresses of XCoin and TAddr
+var genesisCodes map[string][]byte
+
+func RegisterCode(key string, addr []byte) {
+	if genesisCodes == nil {
+		genesisCodes = make(map[string][]byte)
+	}
+	genesisCodes[key] = addr
+}
+
+func GetCodeAddr(key string) []byte {
+	if _, ok := genesisCodes[key]; !ok {
+		panic("calling non exist built-in chaincode")
+	}
+	return genesisCodes[key]
+}
+
 func DownloadCode(url string, retry int) (*http.Response, error) {
 	resp, err := http.Get(url)
 	if err == nil {

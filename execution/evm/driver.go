@@ -12,19 +12,30 @@ import (
 	"sync"
 
 	"github.com/wooyang2018/svp-blockchain/execution/common"
+	"github.com/wooyang2018/svp-blockchain/storage"
 )
 
 type CodeDriver struct {
 	codeDir    string
 	mtxInstall sync.Mutex
+
+	driver  common.CodeDriver
+	storage storage.PersistStore
+	state   common.StateStore
+	rootTrk *common.StateTracker
 }
 
 var _ common.CodeDriver = (*CodeDriver)(nil)
 
-func NewCodeDriver(codeDir string) *CodeDriver {
-	return &CodeDriver{
+func NewCodeDriver(codeDir string, nativeDriver common.CodeDriver, storage storage.PersistStore, state common.StateStore) *CodeDriver {
+	driver := &CodeDriver{
 		codeDir: codeDir,
+		driver:  nativeDriver,
+		storage: storage,
+		state:   state,
 	}
+	driver.rootTrk = common.NewStateTracker(state, nil)
+	return driver
 }
 
 func (drv CodeDriver) Install(codeID, data []byte) error {
@@ -34,7 +45,7 @@ func (drv CodeDriver) Install(codeID, data []byte) error {
 }
 
 func (drv CodeDriver) GetInstance(codeID []byte) (common.Chaincode, error) {
-	return &Runner{}, nil
+	return NewRunner(drv.driver, drv.storage, drv.rootTrk.Spawn(nil)), nil
 }
 
 func (drv *CodeDriver) downloadCodeIfRequired(codeID, data []byte) error {

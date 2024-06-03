@@ -3,11 +3,6 @@
 
 package common
 
-import "github.com/wooyang2018/svp-blockchain/storage"
-
-var Storage *storage.Storage
-var Drivers map[DriverType]CodeDriver
-
 type DriverType uint8
 
 const (

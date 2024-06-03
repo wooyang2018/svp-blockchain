@@ -30,11 +30,11 @@ func (ms *MockState) SetState(key, value []byte) {
 }
 
 type MockCallContext struct {
+	*MockState
 	MockSender      []byte
 	MockBlockHeight uint64
 	MockBlockHash   []byte
 	MockInput       []byte
-	*MockState
 }
 
 var _ CallContext = (*MockCallContext)(nil)
@@ -53,4 +53,26 @@ func (wc *MockCallContext) BlockHeight() uint64 {
 
 func (wc *MockCallContext) Input() []byte {
 	return wc.MockInput
+}
+
+type MapStateStore struct {
+	stateMap map[string][]byte
+}
+
+func NewMapStateStore() *MapStateStore {
+	return &MapStateStore{
+		stateMap: make(map[string][]byte),
+	}
+}
+
+func (store *MapStateStore) VerifyState(key []byte) []byte {
+	return store.stateMap[string(key)]
+}
+
+func (store *MapStateStore) GetState(key []byte) []byte {
+	return store.stateMap[string(key)]
+}
+
+func (store *MapStateStore) SetState(key, value []byte) {
+	store.stateMap[string(key)] = value
 }

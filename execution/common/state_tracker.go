@@ -1,21 +1,20 @@
 // Copyright (C) 2023 Wooyang2018
 // Licensed under the GNU General Public License v3.0
 
-package execution
+package common
 
 import (
 	"sync"
 
 	"github.com/wooyang2018/svp-blockchain/core"
-	"github.com/wooyang2018/svp-blockchain/execution/common"
 )
 
-// stateTracker tracks state changes in key order
+// StateTracker tracks state changes in key order
 // get latest changed state for each key
 // get state from base state getter if no changes occured for a key
-type stateTracker struct {
+type StateTracker struct {
 	keyPrefix []byte
-	baseState common.StateGetter
+	baseState StateGetter
 
 	trackDep     bool
 	dependencies map[string]struct{} // getState calls
@@ -25,8 +24,8 @@ type stateTracker struct {
 	mtxDep sync.RWMutex
 }
 
-func newStateTracker(state common.StateGetter, keyPrefix []byte) *stateTracker {
-	return &stateTracker{
+func NewStateTracker(state StateGetter, keyPrefix []byte) *StateTracker {
+	return &StateTracker{
 		keyPrefix: keyPrefix,
 		baseState: state,
 
@@ -35,26 +34,26 @@ func newStateTracker(state common.StateGetter, keyPrefix []byte) *stateTracker {
 	}
 }
 
-func (trk *stateTracker) GetState(key []byte) []byte {
+func (trk *StateTracker) GetState(key []byte) []byte {
 	trk.mtxChg.RLock()
 	defer trk.mtxChg.RUnlock()
 	return trk.getState(key)
 }
 
-func (trk *stateTracker) SetState(key, value []byte) {
+func (trk *StateTracker) SetState(key, value []byte) {
 	trk.mtxChg.Lock()
 	defer trk.mtxChg.Unlock()
 	trk.setState(key, value)
 }
 
-// spawn creates a new tracker with current tracker as base StateGetter
-func (trk *stateTracker) spawn(keyPrefix []byte) *stateTracker {
-	child := newStateTracker(trk, keyPrefix)
+// Spawn creates a new tracker with current tracker as base StateGetter
+func (trk *StateTracker) Spawn(keyPrefix []byte) *StateTracker {
+	child := NewStateTracker(trk, keyPrefix)
 	child.trackDep = true
 	return child
 }
 
-func (trk *stateTracker) hasDependencyChanges(child *stateTracker) bool {
+func (trk *StateTracker) HasDependencyChanges(child *StateTracker) bool {
 	trk.mtxChg.RLock()
 	defer trk.mtxChg.RUnlock()
 
@@ -72,7 +71,7 @@ func (trk *stateTracker) hasDependencyChanges(child *stateTracker) bool {
 	return false
 }
 
-func (trk *stateTracker) merge(child *stateTracker) {
+func (trk *StateTracker) Merge(child *StateTracker) {
 	trk.mtxChg.Lock()
 	defer trk.mtxChg.Unlock()
 
@@ -84,7 +83,7 @@ func (trk *stateTracker) merge(child *stateTracker) {
 	}
 }
 
-func (trk *stateTracker) getStateChanges() []*core.StateChange {
+func (trk *StateTracker) GetStateChanges() []*core.StateChange {
 	trk.mtxChg.RLock()
 	defer trk.mtxChg.RUnlock()
 
@@ -95,8 +94,8 @@ func (trk *stateTracker) getStateChanges() []*core.StateChange {
 	return scList
 }
 
-func (trk *stateTracker) getState(key []byte) []byte {
-	key = common.ConcatBytes(trk.keyPrefix, key)
+func (trk *StateTracker) getState(key []byte) []byte {
+	key = ConcatBytes(trk.keyPrefix, key)
 	trk.setDependency(key)
 	if value, ok := trk.changes[string(key)]; ok {
 		return value
@@ -104,7 +103,7 @@ func (trk *stateTracker) getState(key []byte) []byte {
 	return trk.baseState.GetState(key)
 }
 
-func (trk *stateTracker) setDependency(key []byte) {
+func (trk *StateTracker) setDependency(key []byte) {
 	if !trk.trackDep {
 		return
 	}
@@ -113,8 +112,8 @@ func (trk *stateTracker) setDependency(key []byte) {
 	trk.dependencies[string(key)] = struct{}{}
 }
 
-func (trk *stateTracker) setState(key, value []byte) {
-	key = common.ConcatBytes(trk.keyPrefix, key)
+func (trk *StateTracker) setState(key, value []byte) {
+	key = ConcatBytes(trk.keyPrefix, key)
 	keyStr := string(key)
 	trk.changes[keyStr] = value
 }

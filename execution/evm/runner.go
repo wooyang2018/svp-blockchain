@@ -18,6 +18,7 @@ import (
 	"github.com/wooyang2018/svp-blockchain/evm/runtime"
 	"github.com/wooyang2018/svp-blockchain/evm/statedb"
 	"github.com/wooyang2018/svp-blockchain/execution/common"
+	"github.com/wooyang2018/svp-blockchain/native"
 	"github.com/wooyang2018/svp-blockchain/storage"
 )
 
@@ -34,19 +35,55 @@ type Runner struct {
 	jsonABI string
 	hexCode string
 	config  *runtime.Config
+
+	driver  common.CodeDriver
+	storage storage.PersistStore
+	txTrk   *common.StateTracker
 }
 
 var _ common.Chaincode = (*Runner)(nil)
 
-func NewRunner(jsonABI, hexCode string, store storage.PersistStore, ctx common.CallContext) *Runner {
-	cfg := new(runtime.Config)
-	runtime.SetDefaults(cfg)                          // TODO convert other call context to config
-	cfg.Origin = ethcomm.BytesToAddress(ctx.Sender()) // TODO be cropped from the left
+func NewRunner(driver common.CodeDriver, storage storage.PersistStore, txTrk *common.StateTracker) *Runner {
+	return &Runner{
+		driver:  driver,
+		storage: storage,
+		txTrk:   txTrk,
+	}
+}
 
-	cache := statedb.NewCacheDB(store) // TODO implement OngBalanceHandle
+func (r *Runner) Build(jsonABI, hexCode string, ctx common.CallContext) {
+	cfg := new(runtime.Config)
+	runtime.SetDefaults(cfg) // TODO convert other call context to config
+
+	cc, err := r.driver.GetInstance(native.CodeTAddr)
+	if err != nil {
+		panic(err)
+	}
+
+	err = cc.Init(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	invokeTrk := r.txTrk.Spawn(common.GetCodeAddr(native.FileCodeTAddr))
+	cc.Invoke(r.makeCallContext(invokeTrk, nil))
+
+	cfg.Origin = ethcomm.BytesToAddress(ctx.Sender()) // TODO be cropped from the left
+	cache := statedb.NewCacheDB(r.storage)            // TODO implement OngBalanceHandle
 	cfg.State = statedb.NewStateDB(cache, ethcomm.Hash{}, ethcomm.Hash{}, statedb.NewDummy())
 
-	return &Runner{jsonABI: jsonABI, hexCode: hexCode, config: cfg}
+	r.jsonABI = jsonABI
+	r.hexCode = hexCode
+	r.config = cfg
+}
+
+func (r *Runner) makeCallContext(st *common.StateTracker, input []byte) common.CallContext {
+	return &common.CallContextTx{
+		// Block:        blk,
+		// Transaction:  tx,
+		RawInput:     input,
+		StateTracker: st,
+	}
 }
 
 func (r *Runner) parseInput(raw []byte) (string, []interface{}) {
