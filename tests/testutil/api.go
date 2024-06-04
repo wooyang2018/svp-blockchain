@@ -7,36 +7,24 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/wooyang2018/svp-blockchain/consensus"
 	"github.com/wooyang2018/svp-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/tests/cluster"
 	"github.com/wooyang2018/svp-blockchain/txpool"
 )
-
-func checkResponse(resp *http.Response, err error) error {
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != 200 {
-		msg, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
-		return fmt.Errorf("status code not 200, %s", string(msg))
-	}
-	return nil
-}
 
 func getRequestWithRetry(url string) (*http.Response, error) {
 	retry := 0
 	for {
 		resp, err := http.Get(url)
-		err = checkResponse(resp, err)
+		err = common.CheckResponse(resp, err)
 		if err == nil {
-			return resp, err
+			return resp, nil
 		}
 		retry++
 		if retry > 5 {

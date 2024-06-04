@@ -5,7 +5,9 @@ package native
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -28,20 +30,20 @@ func NewClient(isDeploy bool) *Client {
 	client := &Client{}
 	if !isDeploy {
 		client.codeAddr, err = os.ReadFile(path.Join(DataPath, CodeFile))
-		check(err)
+		common.Check(err)
 	}
 	b, err := os.ReadFile(path.Join(DataPath, FileNodekey))
-	check(err)
+	common.Check(err)
 	client.signer, _ = core.NewPrivateKey(b)
 	return client
 }
 
 func (client *Client) SubmitTx(tx *core.Transaction) {
 	b, err := json.Marshal(tx)
-	check(err)
+	common.Check(err)
 	resp, err := http.Post(NodeUrl+"/transactions",
 		"application/json", bytes.NewReader(b))
-	check(err)
+	common.Check(err)
 	msg, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	fmt.Printf("status code %d, %s\n", resp.StatusCode, string(msg))
@@ -53,7 +55,7 @@ func (client *Client) QueryState(input []byte) (ret []byte) {
 		Input:    input,
 	}
 	b, err := json.Marshal(query)
-	check(err)
+	common.Check(err)
 	resp, err := http.Post(NodeUrl+"/querystate", "application/json", bytes.NewReader(b))
 	if err != nil || resp.StatusCode != 200 {
 		log.Fatal("query state failed")
@@ -71,16 +73,54 @@ func (client *Client) MakeTx(input []byte) *core.Transaction {
 		Sign(client.signer)
 }
 
-func (client *Client) MakeDeploymentTx(codeID []byte) *core.Transaction {
-	input := &common.DeploymentInput{
-		CodeInfo: common.CodeInfo{
-			DriverType: common.DriverTypeNative,
-			CodeID:     codeID,
-		},
-	}
-	b, _ := json.Marshal(input)
+func (client *Client) makeTxWithInput(input *common.DeploymentInput) *core.Transaction {
+	b, err := json.Marshal(input)
+	common.Check(err)
 	return core.NewTransaction().
 		SetNonce(time.Now().UnixNano()).
 		SetInput(b).
 		Sign(client.signer)
+}
+
+func (client *Client) MakeDeploymentTx(driverType common.DriverType, codeID []byte) *core.Transaction {
+	input := &common.DeploymentInput{
+		CodeInfo: common.CodeInfo{
+			DriverType: driverType,
+			CodeID:     codeID,
+		},
+	}
+	switch driverType {
+	case common.DriverTypeNative:
+	case common.DriverTypeBincc:
+		input.InstallData = []byte(NodeUrl + "/bincc/" + hex.EncodeToString(codeID))
+	case common.DriverTypeEVM:
+		input.InstallData = []byte(NodeUrl + "/contract/" + hex.EncodeToString(codeID))
+	}
+	return client.makeTxWithInput(input)
+}
+
+func (client *Client) UploadChainCode(driverType common.DriverType, filePath string) ([]byte, error) {
+	buf, contentType, err := common.CreateRequestBody(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	var urlPath string
+	switch driverType {
+	case common.DriverTypeBincc:
+		urlPath = NodeUrl + "/bincc"
+	case common.DriverTypeEVM:
+		urlPath = NodeUrl + "/contract"
+	case common.DriverTypeNative:
+		return nil, errors.New("native chaincode no need to upload")
+	}
+
+	resp, err := http.Post(urlPath, contentType, buf)
+	retErr := common.CheckResponse(resp, err)
+	if retErr != nil {
+		return nil, retErr
+	}
+	defer resp.Body.Close()
+	var codeID []byte
+	return codeID, json.NewDecoder(resp.Body).Decode(&codeID)
 }

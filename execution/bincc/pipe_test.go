@@ -35,7 +35,6 @@ func setupRunnerAndClient() (*Runner, *Client) {
 
 func TestCallData(t *testing.T) {
 	r, c := setupRunnerAndClient()
-
 	mctx := new(common.MockCallContext)
 	mctx.MockInput = []byte("input")
 	mctx.MockSender = []byte("sender")
@@ -64,10 +63,8 @@ func TestGetState(t *testing.T) {
 	key := []byte("somekey")
 	value := []byte("somevalue")
 	mctx.SetState(key, value)
-
 	go r.serveStateAndGetResult()
 	res := c.GetState(key)
-
 	assert.Equal(t, value, res)
 }
 
@@ -79,18 +76,14 @@ func TestSetState(t *testing.T) {
 
 	key := []byte("somekey")
 	value := []byte("somevalue")
-
 	go r.serveStateAndGetResult()
 	c.SetState(key, value)
-
 	assert.Equal(t, value, mctx.GetState(key))
 }
 
 func TestResult(t *testing.T) {
 	r, c := setupRunnerAndClient()
-
 	value := []byte("somevalue")
-
 	go c.sendResult(value, nil)
 	res, err := r.serveStateAndGetResult()
 

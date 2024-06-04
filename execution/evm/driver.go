@@ -39,13 +39,13 @@ func NewCodeDriver(codeDir string, nativeDriver common.CodeDriver, storage stora
 	return driver
 }
 
-func (drv CodeDriver) Install(codeID, data []byte) error {
+func (drv *CodeDriver) Install(codeID, data []byte) error {
 	drv.mtxInstall.Lock()
 	defer drv.mtxInstall.Unlock()
 	return drv.downloadCodeIfRequired(codeID, data)
 }
 
-func (drv CodeDriver) GetInstance(codeID []byte) (common.Chaincode, error) {
+func (drv *CodeDriver) GetInstance(codeID []byte) (common.Chaincode, error) {
 	return NewRunner(drv.driver, drv.storage, drv.rootTrk.Spawn(nil)), nil
 }
 

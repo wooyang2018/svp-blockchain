@@ -10,9 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"mime/multipart"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/wooyang2018/svp-blockchain/core"
@@ -73,7 +71,7 @@ func SubmitTx(cls *cluster.Cluster, retryOrder []int, tx *core.Transaction) (int
 		}
 		resp, err := http.Post(cls.GetNode(i).GetEndpoint()+"/transactions",
 			"application/json", bytes.NewReader(b))
-		retErr = checkResponse(resp, err)
+		retErr = common.CheckResponse(resp, err)
 		if retErr == nil {
 			io.Copy(io.Discard, resp.Body)
 			resp.Body.Close()
@@ -98,7 +96,7 @@ func BatchSubmitTx(cls *cluster.Cluster, retryOrder []int, txs *core.TxList) (in
 		}
 		resp, err := http.Post(cls.GetNode(i).GetEndpoint()+"/transactions/batch",
 			"application/json", bytes.NewReader(b))
-		retErr = checkResponse(resp, err)
+		retErr = common.CheckResponse(resp, err)
 		if retErr == nil {
 			io.Copy(io.Discard, resp.Body)
 			resp.Body.Close()
@@ -128,7 +126,7 @@ func QueryState(node cluster.Node, query *common.QueryData) ([]byte, error) {
 	}
 	resp, err := http.Post(node.GetEndpoint()+"/querystate",
 		"application/json", bytes.NewReader(b))
-	if err = checkResponse(resp, err); err != nil {
+	if err = common.CheckResponse(resp, err); err != nil {
 		return nil, fmt.Errorf("cannot query state, %w", err)
 	}
 	defer resp.Body.Close()
@@ -137,7 +135,7 @@ func QueryState(node cluster.Node, query *common.QueryData) ([]byte, error) {
 }
 
 func uploadBinChainCode(cls *cluster.Cluster, binccPath string) (int, []byte, error) {
-	buf, contentType, err := createBinccRequestBody(binccPath)
+	buf, contentType, err := common.CreateRequestBody(binccPath)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -147,9 +145,8 @@ func uploadBinChainCode(cls *cluster.Cluster, binccPath string) (int, []byte, er
 		if !cls.GetNode(i).IsRunning() {
 			continue
 		}
-		resp, err := http.Post(cls.GetNode(i).GetEndpoint()+"/bincc",
-			contentType, buf)
-		retErr = checkResponse(resp, err)
+		resp, err := http.Post(cls.GetNode(i).GetEndpoint()+"/bincc", contentType, buf)
+		retErr = common.CheckResponse(resp, err)
 		if retErr == nil {
 			defer resp.Body.Close()
 			var codeID []byte
@@ -157,25 +154,4 @@ func uploadBinChainCode(cls *cluster.Cluster, binccPath string) (int, []byte, er
 		}
 	}
 	return 0, nil, fmt.Errorf("cannot upload bincc, %w", retErr)
-}
-
-func createBinccRequestBody(binccPath string) (*bytes.Buffer, string, error) {
-	f, err := os.Open(binccPath)
-	if err != nil {
-		return nil, "", err
-	}
-	defer f.Close()
-
-	buf := bytes.NewBuffer(nil)
-	mw := multipart.NewWriter(buf)
-	defer mw.Close()
-
-	fw, err := mw.CreateFormFile("file", "binChaincode")
-	if err != nil {
-		return nil, "", err
-	}
-	if _, err := io.Copy(fw, f); err != nil {
-		return nil, "", err
-	}
-	return buf, mw.FormDataContentType(), nil
 }

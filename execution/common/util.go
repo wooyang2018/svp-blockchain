@@ -9,7 +9,10 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
+	"log"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"path"
@@ -158,4 +161,65 @@ func ConcatBytes(srcs ...[]byte) []byte {
 		buf.Write(src)
 	}
 	return buf.Bytes()
+}
+
+func CheckResponse(resp *http.Response, err error) error {
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 200 {
+		msg, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return fmt.Errorf("status code not 200, %s", string(msg))
+	}
+	return nil
+}
+
+func CreateRequestBody(filePath string) (*bytes.Buffer, string, error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return nil, "", err
+	}
+	defer f.Close()
+
+	buf := bytes.NewBuffer(nil)
+	mw := multipart.NewWriter(buf)
+	defer mw.Close()
+
+	fw, err := mw.CreateFormFile("file", "chaincode")
+	if err != nil {
+		return nil, "", err
+	}
+	if _, err := io.Copy(fw, f); err != nil {
+		return nil, "", err
+	}
+	return buf, mw.FormDataContentType(), nil
+}
+
+func DumpFile(data []byte, directory, file string) {
+	if !Exists(directory) {
+		Check(os.MkdirAll(directory, os.ModePerm))
+	}
+	f, err := os.Create(path.Join(directory, file))
+	Check(err)
+	defer f.Close()
+	_, err = f.Write(data)
+	Check(err)
+}
+
+func Exists(path string) bool {
+	_, err := os.Stat(path)
+	if err != nil {
+		if os.IsExist(err) {
+			return true
+		}
+		return false
+	}
+	return true
+}
+
+func Check(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
 }

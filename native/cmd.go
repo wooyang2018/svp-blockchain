@@ -5,13 +5,11 @@ package native
 
 import (
 	"fmt"
-	"log"
-	"os"
-	"path"
 
 	"github.com/spf13/cobra"
 
 	"github.com/wooyang2018/svp-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/execution/common"
 )
 
 const (
@@ -37,37 +35,9 @@ var accountCmd = &cobra.Command{
 	Short: "Generate a nodekey file for new account",
 	Run: func(cmd *cobra.Command, args []string) {
 		owner := core.GenerateKey(nil)
-		DumpFile(owner.Bytes(), DataPath, FileNodekey)
+		common.DumpFile(owner.Bytes(), DataPath, FileNodekey)
 		fmt.Println(owner.PublicKey().String())
 	},
-}
-
-func DumpFile(data []byte, directory, file string) {
-	if !Exists(directory) {
-		check(os.MkdirAll(directory, os.ModePerm))
-	}
-	f, err := os.Create(path.Join(directory, file))
-	check(err)
-	defer f.Close()
-	_, err = f.Write(data)
-	check(err)
-}
-
-func Exists(path string) bool {
-	_, err := os.Stat(path)
-	if err != nil {
-		if os.IsExist(err) {
-			return true
-		}
-		return false
-	}
-	return true
-}
-
-func check(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
 }
 
 func init() {

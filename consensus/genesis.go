@@ -81,8 +81,8 @@ func (gns *genesis) commit() {
 }
 
 func (gns *genesis) dumpCodeFile(txs []*core.Transaction) {
-	native.DumpFile(txs[0].Hash(), gns.config.DataDir, native.FileCodeXCoin)
-	native.DumpFile(txs[1].Hash(), gns.config.DataDir, native.FileCodeTAddr)
+	common.DumpFile(txs[0].Hash(), gns.config.DataDir, native.FileCodeXCoin)
+	common.DumpFile(txs[1].Hash(), gns.config.DataDir, native.FileCodeTAddr)
 	common.RegisterCode(native.FileCodeXCoin, txs[0].Hash())
 	common.RegisterCode(native.FileCodeTAddr, txs[1].Hash())
 }

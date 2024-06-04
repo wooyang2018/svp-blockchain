@@ -6,7 +6,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/spf13/cobra"
 
@@ -39,9 +38,8 @@ var queryCmd = &cobra.Command{
 }
 
 func main() {
-	if err := native.RootCmd.Execute(); err != nil {
-		log.Fatal(err)
-	}
+	err := native.RootCmd.Execute()
+	common.Check(err)
 }
 
 func init() {

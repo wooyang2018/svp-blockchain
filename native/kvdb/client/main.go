@@ -7,10 +7,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/spf13/cobra"
 
+	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/native"
 	"github.com/wooyang2018/svp-blockchain/native/kvdb"
 )
@@ -30,9 +30,9 @@ var deployCmd = &cobra.Command{
 	Short: "Deploy the kvdb native contract",
 	Run: func(cmd *cobra.Command, args []string) {
 		client := native.NewClient(true)
-		tx := client.MakeDeploymentTx(native.CodeKVDB)
+		tx := client.MakeDeploymentTx(common.DriverTypeNative, native.CodeKVDB)
 		client.SubmitTx(tx)
-		native.DumpFile(tx.Hash(), native.DataPath, native.FileCodeDefault)
+		common.DumpFile(tx.Hash(), native.DataPath, native.FileCodeDefault)
 	},
 }
 
@@ -79,9 +79,8 @@ var setCmd = &cobra.Command{
 }
 
 func main() {
-	if err := native.RootCmd.Execute(); err != nil {
-		log.Fatal(err)
-	}
+	err := native.RootCmd.Execute()
+	common.Check(err)
 }
 
 func init() {
