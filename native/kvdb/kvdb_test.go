@@ -15,7 +15,7 @@ import (
 
 func makeInitCtx() *common.MockCallContext {
 	ctx := new(common.MockCallContext)
-	ctx.MockState = common.NewMockState()
+	ctx.MemStateStore = common.NewMemStateStore()
 	ctx.MockSender = core.GenerateKey(nil).PublicKey().Bytes()
 	return ctx
 }

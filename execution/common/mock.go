@@ -3,34 +3,34 @@
 
 package common
 
-type MockState struct {
-	StateMap    map[string][]byte
-	VerifyError error
+import "github.com/wooyang2018/svp-blockchain/storage"
+
+type MemStateStore struct {
+	Storage storage.PersistStore
 }
 
-func NewMockState() *MockState {
-	return &MockState{
-		StateMap: make(map[string][]byte),
+func NewMemStateStore() *MemStateStore {
+	return &MemStateStore{
+		Storage: storage.NewMemLevelDBStore(),
 	}
 }
 
-func (ms *MockState) VerifyState(key []byte) ([]byte, error) {
-	if ms.VerifyError != nil {
-		return nil, ms.VerifyError
-	}
-	return ms.GetState(key), nil
+func (store *MemStateStore) VerifyState(key []byte) []byte {
+	val, _ := store.Storage.Get(key)
+	return val
 }
 
-func (ms *MockState) GetState(key []byte) []byte {
-	return ms.StateMap[string(key)]
+func (store *MemStateStore) GetState(key []byte) []byte {
+	val, _ := store.Storage.Get(key)
+	return val
 }
 
-func (ms *MockState) SetState(key, value []byte) {
-	ms.StateMap[string(key)] = value
+func (store *MemStateStore) SetState(key, value []byte) {
+	store.Storage.Put(key, value)
 }
 
 type MockCallContext struct {
-	*MockState
+	*MemStateStore
 	MockSender      []byte
 	MockBlockHeight uint64
 	MockBlockHash   []byte
@@ -53,26 +53,4 @@ func (wc *MockCallContext) BlockHeight() uint64 {
 
 func (wc *MockCallContext) Input() []byte {
 	return wc.MockInput
-}
-
-type MapStateStore struct {
-	stateMap map[string][]byte
-}
-
-func NewMapStateStore() *MapStateStore {
-	return &MapStateStore{
-		stateMap: make(map[string][]byte),
-	}
-}
-
-func (store *MapStateStore) VerifyState(key []byte) []byte {
-	return store.stateMap[string(key)]
-}
-
-func (store *MapStateStore) GetState(key []byte) []byte {
-	return store.stateMap[string(key)]
-}
-
-func (store *MapStateStore) SetState(key, value []byte) {
-	store.stateMap[string(key)] = value
 }

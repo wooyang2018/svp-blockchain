@@ -19,18 +19,13 @@ import (
 func TestTxExecutor(t *testing.T) {
 	asrt := assert.New(t)
 
-	priv := core.GenerateKey(nil)
-	depInput := &common.DeploymentInput{
-		CodeInfo: common.CodeInfo{
-			DriverType: common.DriverTypeNative,
-			CodeID:     native.CodePCoin,
-		},
-	}
+	depInput := makeNativeDepInput(native.CodePCoin)
 	b, _ := json.Marshal(depInput)
+	priv := core.GenerateKey(nil)
 	txDep := core.NewTransaction().SetInput(b).Sign(priv)
 
 	blk := core.NewBlock().SetHeight(10).Sign(priv)
-	trk := common.NewStateTracker(common.NewMapStateStore(), nil)
+	trk := common.NewStateTracker(common.NewMemStateStore(), nil)
 	reg := newCodeRegistry()
 	texe := txExecutor{
 		codeRegistry: reg,
@@ -40,24 +35,20 @@ func TestTxExecutor(t *testing.T) {
 		tx:           txDep,
 	}
 	txc := texe.execute()
-
 	asrt.NotEqual("", txc.Error(), "code driver not registered")
 
 	reg.registerDriver(common.DriverTypeNative, native.NewCodeDriver())
 	txc = texe.execute()
-
 	asrt.Equal("", txc.Error())
 	asrt.Equal(blk.Hash(), txc.BlockHash())
 	asrt.Equal(blk.Height(), txc.BlockHeight())
 
 	// codeinfo must be saved by key (transaction hash)
 	cinfo, err := reg.getCodeInfo(txDep.Hash(), trk.Spawn(codeRegistryAddr))
-
 	asrt.NoError(err)
 	asrt.Equal(*cinfo, depInput.CodeInfo)
 
 	cc, err := reg.getInstance(txDep.Hash(), trk.Spawn(codeRegistryAddr))
-
 	asrt.NoError(err)
 	asrt.NotNil(cc)
 
@@ -69,7 +60,6 @@ func TestTxExecutor(t *testing.T) {
 		RawInput:     b,
 		StateTracker: trk.Spawn(txDep.Hash()),
 	})
-
 	asrt.NoError(err)
 	asrt.Equal(priv.PublicKey().Bytes(), minter, "deployer must be set as minter")
 
@@ -80,7 +70,6 @@ func TestTxExecutor(t *testing.T) {
 	txInvoke := core.NewTransaction().SetCodeAddr(txDep.Hash()).SetInput(b).Sign(priv)
 	texe.tx = txInvoke
 	txc = texe.execute()
-
 	asrt.Equal("", txc.Error())
 
 	ccInput.Method = "balance"
@@ -90,7 +79,6 @@ func TestTxExecutor(t *testing.T) {
 		RawInput:     b,
 		StateTracker: trk.Spawn(txDep.Hash()),
 	})
-
 	asrt.NoError(err)
 	asrt.EqualValues(100, common.DecodeBalance(b))
 }

@@ -12,10 +12,9 @@ import (
 func TestStateTrackerGetState(t *testing.T) {
 	asrt := assert.New(t)
 
-	ms := NewMapStateStore()
+	ms := NewMemStateStore()
 	trk := NewStateTracker(ms, nil)
 	ms.SetState([]byte{1}, []byte{200})
-
 	asrt.Equal([]byte{200}, trk.GetState([]byte{1}))
 	asrt.Nil(trk.GetState([]byte{2}))
 
@@ -31,13 +30,10 @@ func TestStateTrackerGetState(t *testing.T) {
 func TestStateTrackerSetState(t *testing.T) {
 	asrt := assert.New(t)
 
-	ms := NewMapStateStore()
+	ms := NewMemStateStore()
 	trk := NewStateTracker(ms, nil)
 	ms.SetState([]byte{1}, []byte{200})
-
-	trk.SetState([]byte{1}, []byte{100})
 	trk.SetState([]byte{1}, []byte{50})
-
 	asrt.Equal([]byte{50}, trk.GetState([]byte{1}))
 
 	scList := trk.GetStateChanges()
@@ -47,7 +43,6 @@ func TestStateTrackerSetState(t *testing.T) {
 	trk.SetState([]byte{2}, []byte{60})
 	trk.setState([]byte{2}, []byte{20})
 	trk.SetState([]byte{1}, []byte{10})
-
 	asrt.Equal([]byte{10}, trk.GetState([]byte{1}))
 	asrt.Equal([]byte{30}, trk.GetState([]byte{3}))
 	asrt.Equal([]byte{20}, trk.GetState([]byte{2}))
@@ -59,21 +54,17 @@ func TestStateTrackerSetState(t *testing.T) {
 func TestStateTrackerMerge(t *testing.T) {
 	asrt := assert.New(t)
 
-	ms := NewMapStateStore()
+	ms := NewMemStateStore()
 	trk := NewStateTracker(ms, nil)
-
 	trk.SetState([]byte{1}, []byte{200})
 	trkChild := trk.Spawn(nil)
 	trkChild.SetState([]byte{2}, []byte{20})
 	trkChild.SetState([]byte{1}, []byte{10})
-
 	asrt.Equal([]byte{20}, trkChild.GetState([]byte{2}))
 	asrt.Equal([]byte{10}, trkChild.GetState([]byte{1}))
-
 	asrt.Equal([]byte{200}, trk.GetState([]byte{1}), "child does not set parent state")
 
-	trk.Merge(trkChild)
-
+	trk.Merge(trkChild) // "parent can get latest state after merge"
 	asrt.Equal([]byte{10}, trk.GetState([]byte{1}))
 	asrt.Equal([]byte{20}, trk.GetState([]byte{2}))
 
@@ -84,10 +75,9 @@ func TestStateTrackerMerge(t *testing.T) {
 func TestStateTrackerWithPrefix(t *testing.T) {
 	asrt := assert.New(t)
 
-	ms := NewMapStateStore()
+	ms := NewMemStateStore()
 	trk := NewStateTracker(ms, nil)
 	trk.SetState([]byte{1, 1}, []byte{50})
-
 	trkChild := trk.Spawn([]byte{1})
 	asrt.Equal([]byte{50}, trkChild.GetState([]byte{1}))
 

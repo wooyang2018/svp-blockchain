@@ -27,7 +27,8 @@ type CodeDriver struct {
 
 var _ common.CodeDriver = (*CodeDriver)(nil)
 
-func NewCodeDriver(codeDir string, nativeDriver common.CodeDriver, storage storage.PersistStore, state common.StateStore) *CodeDriver {
+func NewCodeDriver(codeDir string, nativeDriver common.CodeDriver, storage storage.PersistStore,
+	state common.StateStore) *CodeDriver {
 	driver := &CodeDriver{
 		codeDir: codeDir,
 		driver:  nativeDriver,

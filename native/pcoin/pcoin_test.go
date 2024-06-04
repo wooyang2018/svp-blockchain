@@ -19,7 +19,7 @@ func makeInitCtx() (*common.MockCallContext, []*core.PublicKey) {
 		vlds[i] = core.GenerateKey(nil).PublicKey()
 	}
 	ctx := new(common.MockCallContext)
-	ctx.MockState = common.NewMockState()
+	ctx.MemStateStore = common.NewMemStateStore()
 	ctx.MockSender = vlds[0].Bytes()
 	return ctx, vlds
 }

@@ -27,12 +27,15 @@ func RegisterCode(key string, addr []byte) {
 	if genesisCodes == nil {
 		genesisCodes = make(map[string][]byte)
 	}
+	if len(addr) != 32 {
+		panic("unexpected genesis chaincode")
+	}
 	genesisCodes[key] = addr
 }
 
 func GetCodeAddr(key string) []byte {
 	if _, ok := genesisCodes[key]; !ok {
-		panic("calling non exist built-in chaincode")
+		panic("unexpected genesis chaincode")
 	}
 	return genesisCodes[key]
 }

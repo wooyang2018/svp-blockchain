@@ -106,13 +106,13 @@ func (exec *Execution) Query(query *common.QueryData) (val []byte, err error) {
 		}
 	}()
 	cc, err := exec.codeRegistry.getInstance(
-		query.CodeAddr, newStateVerifier(exec.stateStore, codeRegistryAddr))
+		query.CodeAddr, newStateGetter(exec.stateStore, codeRegistryAddr))
 	if err != nil {
 		return nil, err
 	}
 	return cc.Query(&common.CallContextQuery{
 		RawInput:    query.Input,
-		StateGetter: newStateVerifier(exec.stateStore, query.CodeAddr),
+		StateGetter: newStateGetter(exec.stateStore, query.CodeAddr),
 	})
 }
 
@@ -126,4 +126,24 @@ func (exec *Execution) VerifyTx(tx *core.Transaction) error {
 		return err
 	}
 	return exec.codeRegistry.install(input)
+}
+
+// stateGetter is used for state query calls
+// it calls the VerifyState of state store instead of GetState
+// to verify the state value with the merkle root
+type stateGetter struct {
+	store     common.StateStore
+	keyPrefix []byte
+}
+
+func newStateGetter(store common.StateStore, prefix []byte) *stateGetter {
+	return &stateGetter{
+		store:     store,
+		keyPrefix: prefix,
+	}
+}
+
+func (sv *stateGetter) GetState(key []byte) []byte {
+	key = common.ConcatBytes(sv.keyPrefix, key)
+	return sv.store.VerifyState(key)
 }

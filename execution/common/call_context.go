@@ -11,16 +11,17 @@ type CallContextTx struct {
 	*StateTracker
 	Block       *core.Block
 	Transaction *core.Transaction
+	RawSender   []byte
 	RawInput    []byte
 }
 
 var _ CallContext = (*CallContextTx)(nil)
 
 func (ctx *CallContextTx) Sender() []byte {
-	if ctx.Transaction == nil {
-		return nil
-	}
-	if ctx.Transaction.Sender() == nil {
+	if ctx.Transaction == nil || ctx.Transaction.Sender() == nil {
+		if ctx.RawSender != nil {
+			return ctx.RawSender
+		}
 		return nil
 	}
 	return ctx.Transaction.Sender().Bytes()

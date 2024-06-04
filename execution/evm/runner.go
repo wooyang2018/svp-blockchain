@@ -19,6 +19,7 @@ import (
 	"github.com/wooyang2018/svp-blockchain/evm/statedb"
 	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/native"
+	"github.com/wooyang2018/svp-blockchain/native/taddr"
 	"github.com/wooyang2018/svp-blockchain/storage"
 )
 
@@ -51,38 +52,45 @@ func NewRunner(driver common.CodeDriver, storage storage.PersistStore, txTrk *co
 	}
 }
 
-func (r *Runner) Build(jsonABI, hexCode string, ctx common.CallContext) {
+func (r *Runner) Build(jsonABI, hexCode string, ctx common.CallContext) error {
 	cfg := new(runtime.Config)
 	runtime.SetDefaults(cfg) // TODO convert other call context to config
 
 	cc, err := r.driver.GetInstance(native.CodeTAddr)
-	if err != nil {
-		panic(err)
-	}
-
-	err = cc.Init(ctx)
-	if err != nil {
-		panic(err)
-	}
-
 	invokeTrk := r.txTrk.Spawn(common.GetCodeAddr(native.FileCodeTAddr))
-	cc.Invoke(r.makeCallContext(invokeTrk, nil))
+	input := &taddr.Input{
+		Method: "query",
+		Addr:   ctx.Sender(),
+	}
+	rawInput, _ := json.Marshal(input)
+	addr20, err := cc.Query(r.makeCallContextTx(invokeTrk, ctx, rawInput))
+	if err != nil {
+		return err
+	}
+	fmt.Println(common.AddressToString(addr20))
 
-	cfg.Origin = ethcomm.BytesToAddress(ctx.Sender()) // TODO be cropped from the left
-	cache := statedb.NewCacheDB(r.storage)            // TODO implement OngBalanceHandle
+	cfg.Origin = ethcomm.BytesToAddress(addr20)
+	cache := statedb.NewCacheDB(r.storage) // TODO implement OngBalanceHandle
 	cfg.State = statedb.NewStateDB(cache, ethcomm.Hash{}, ethcomm.Hash{}, statedb.NewDummy())
 
 	r.jsonABI = jsonABI
 	r.hexCode = hexCode
 	r.config = cfg
+	return nil
 }
 
-func (r *Runner) makeCallContext(st *common.StateTracker, input []byte) common.CallContext {
+func (r *Runner) makeCallContextTx(st *common.StateTracker, ctx common.CallContext, input []byte) *common.CallContextTx {
 	return &common.CallContextTx{
-		// Block:        blk,
-		// Transaction:  tx,
-		RawInput:     input,
 		StateTracker: st,
+		RawSender:    ctx.Sender(),
+		RawInput:     input,
+	}
+}
+
+func (r *Runner) makeCallContextQuery(st *common.StateTracker, ctx common.CallContext, input []byte) *common.CallContextQuery {
+	return &common.CallContextQuery{
+		StateGetter: st,
+		RawInput:    input,
 	}
 }
 

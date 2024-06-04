@@ -21,7 +21,7 @@ func makeInitCtx() (*common.MockCallContext, []*core.PublicKey) {
 		values[i] = vlds[i].String()
 	}
 	ctx := new(common.MockCallContext)
-	ctx.MockState = common.NewMockState()
+	ctx.MemStateStore = common.NewMemStateStore()
 	ctx.MockSender = vlds[0].Bytes()
 	input := InitInput{values}
 	ctx.MockInput, _ = json.Marshal(input)

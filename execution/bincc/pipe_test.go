@@ -58,7 +58,7 @@ func TestCallData(t *testing.T) {
 func TestGetState(t *testing.T) {
 	r, c := setupRunnerAndClient()
 	mctx := new(common.MockCallContext)
-	mctx.MockState = common.NewMockState()
+	mctx.MemStateStore = common.NewMemStateStore()
 	r.callContext = mctx
 
 	key := []byte("somekey")
@@ -74,7 +74,7 @@ func TestGetState(t *testing.T) {
 func TestSetState(t *testing.T) {
 	r, c := setupRunnerAndClient()
 	mctx := new(common.MockCallContext)
-	mctx.MockState = common.NewMockState()
+	mctx.MemStateStore = common.NewMemStateStore()
 	r.callContext = mctx
 
 	key := []byte("somekey")
