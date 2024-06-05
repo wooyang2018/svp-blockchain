@@ -41,7 +41,7 @@ var balanceCmd = &cobra.Command{
 
 var transferCmd = &cobra.Command{
 	Use:   "transfer",
-	Short: "Transfer token to the given public key",
+	Short: "Transfer tokens to the given public key",
 	Run: func(cmd *cobra.Command, args []string) {
 		client := native.NewClient(false)
 		destBytes, _ := common.Address32ToBytes(dest)
@@ -70,6 +70,6 @@ func init() {
 
 	transferCmd.PersistentFlags().StringVar(&dest, FlagDest, dest, "destination public key")
 	transferCmd.MarkPersistentFlagRequired(FlagDest)
-	transferCmd.PersistentFlags().Uint64Var(&value, FlagValue, value, "value of transfer command")
+	transferCmd.PersistentFlags().Uint64Var(&value, FlagValue, value, "value of tokens")
 	transferCmd.MarkPersistentFlagRequired(FlagValue)
 }
