@@ -23,3 +23,7 @@ func (c *Empty) Invoke(ctx common.CallContext) error {
 func (c *Empty) Query(ctx common.CallContext) ([]byte, error) {
 	return nil, nil
 }
+
+func (c *Empty) SetTxTrk(txTrk *common.StateTracker) {
+	return
+}

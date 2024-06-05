@@ -58,6 +58,10 @@ func (c *KVDB) Query(ctx common.CallContext) ([]byte, error) {
 	}
 }
 
+func (c *KVDB) SetTxTrk(txTrk *common.StateTracker) {
+	return
+}
+
 func invokeSet(ctx common.CallContext, input *Input) error {
 	owner := ctx.GetState(keyOwner)
 	if !bytes.Equal(owner, ctx.Sender()) {

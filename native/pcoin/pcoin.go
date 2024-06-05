@@ -71,6 +71,10 @@ func (c *PCoin) Query(ctx common.CallContext) ([]byte, error) {
 	}
 }
 
+func (c *PCoin) SetTxTrk(txTrk *common.StateTracker) {
+	return
+}
+
 func invokeMint(ctx common.CallContext, input *Input) error {
 	minter := ctx.GetState(keyMinter)
 	if !bytes.Equal(minter, ctx.Sender()) {

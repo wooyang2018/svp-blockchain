@@ -40,7 +40,7 @@ func TestCallData(t *testing.T) {
 	mctx.MockSender = []byte("sender")
 	mctx.MockBlockHash = []byte("blockHash")
 	mctx.MockBlockHeight = 10
-	r.callContext = mctx
+	r.callCtx = mctx
 
 	go r.serveStateAndGetResult()
 	go r.sendCallData(CallTypeInit)
@@ -58,7 +58,7 @@ func TestGetState(t *testing.T) {
 	r, c := setupRunnerAndClient()
 	mctx := new(common.MockCallContext)
 	mctx.MemStateStore = common.NewMemStateStore()
-	r.callContext = mctx
+	r.callCtx = mctx
 
 	key := []byte("somekey")
 	value := []byte("somevalue")
@@ -72,7 +72,7 @@ func TestSetState(t *testing.T) {
 	r, c := setupRunnerAndClient()
 	mctx := new(common.MockCallContext)
 	mctx.MemStateStore = common.NewMemStateStore()
-	r.callContext = mctx
+	r.callCtx = mctx
 
 	key := []byte("somekey")
 	value := []byte("somevalue")

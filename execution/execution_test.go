@@ -10,10 +10,11 @@ import (
 	"testing"
 	"time"
 
+	ethcomm "github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/wooyang2018/svp-blockchain/core"
-	ethrunt "github.com/wooyang2018/svp-blockchain/evm/runtime"
+	"github.com/wooyang2018/svp-blockchain/evm/statedb"
 	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/execution/evm"
 	"github.com/wooyang2018/svp-blockchain/native"
@@ -35,7 +36,7 @@ func newTestExecution() (*common.MemStateStore, *Execution) {
 	return state, execution
 }
 
-func testGenesisTxs(vlds int) ([]*core.Transaction, []*core.PrivateKey) {
+func newGenesisTxs(vlds int) ([]*core.Transaction, []*core.PrivateKey) {
 	values0 := make(map[string]uint64)
 	values1 := make([]string, vlds)
 	priKeys := make([]*core.PrivateKey, vlds)
@@ -64,6 +65,20 @@ func testGenesisTxs(vlds int) ([]*core.Transaction, []*core.PrivateKey) {
 	common.RegisterCode(native.FileCodeXCoin, tx0.Hash())
 	common.RegisterCode(native.FileCodeTAddr, tx1.Hash())
 	return []*core.Transaction{tx0, tx1}, priKeys
+}
+
+func newEVMRunner(state *common.MemStateStore, execution *Execution) (*evm.Runner, *common.StateTracker) {
+	nativeDriver, _ := execution.codeRegistry.getDriver(common.DriverTypeNative)
+	cache := statedb.NewCacheDB(state.Storage)
+	runner := &evm.Runner{
+		CodePath: "../evm/testdata/contracts/Storage.sol",
+		Driver:   nativeDriver,
+		Storage:  state.Storage,
+		StateDB:  statedb.NewStateDB(cache, ethcomm.Hash{}, ethcomm.Hash{}, statedb.NewDummy()),
+	}
+	txTrk := common.NewStateTracker(state, nil)
+	runner.SetTxTrk(txTrk)
+	return runner, txTrk
 }
 
 func TestExecution(t *testing.T) {
@@ -121,17 +136,20 @@ func TestExecution(t *testing.T) {
 	asrt.Equal(priv.PublicKey().Bytes(), minter)
 }
 
-func TestEVMInvoke(t *testing.T) {
+func TestEVMRunner(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("compiling contracts on windows is not supported")
 	}
 	asrt := assert.New(t)
 
-	txs, priKeys := testGenesisTxs(4)
+	txs, priKeys := newGenesisTxs(4)
 	state, execution := newTestExecution()
-	tracker := common.NewStateTracker(state, nil)
+	runner, txTrk := newEVMRunner(state, execution)
+	sender := priKeys[0]
+	tx := core.NewTransaction().SetNonce(time.Now().Unix()).Sign(sender)
+	invokeTrk := txTrk.Spawn(tx.Hash())
 
-	blk := core.NewBlock().SetHeight(0).Sign(priKeys[0])
+	blk := core.NewBlock().SetHeight(0).Sign(sender)
 	bcm, txcs := execution.Execute(blk, txs)
 	asrt.Equal(blk.Hash(), bcm.Hash())
 	asrt.EqualValues(len(txs), len(txcs))
@@ -143,17 +161,15 @@ func TestEVMInvoke(t *testing.T) {
 		state.SetState(sc.Key(), sc.Value())
 	}
 
-	runner := evm.NewRunner(native.NewCodeDriver(), state.Storage, tracker)
 	ctx := &common.CallContextTx{
-		StateTracker: tracker,
-		RawSender:    priKeys[0].PublicKey().Bytes(),
+		StateTracker: invokeTrk,
+		RawSender:    sender.PublicKey().Bytes(),
 	}
-	ctx.RawInput, _ = json.Marshal(nil)
-	compiled := ethrunt.CompileCode("../evm/testdata/contracts/Storage.sol")
-	err := runner.Build(compiled["Storage"][1], compiled["Storage"][0], ctx)
+	initInput := &evm.InitInput{Class: "Storage"}
+	ctx.RawInput, _ = json.Marshal(initInput)
+	err := runner.Init(ctx)
 	asrt.NoError(err)
-	err = runner.Init(ctx)
-	asrt.NoError(err)
+	txTrk.Merge(invokeTrk)
 
 	input := &evm.Input{
 		Method: "store",
@@ -163,8 +179,12 @@ func TestEVMInvoke(t *testing.T) {
 	ctx.RawInput, _ = json.Marshal(input)
 	err = runner.Invoke(ctx)
 	asrt.NoError(err)
+	txTrk.Merge(invokeTrk)
 
-	query := &common.CallContextQuery{StateGetter: tracker}
+	query := &common.CallContextQuery{
+		StateGetter: invokeTrk,
+		RawSender:   sender.PublicKey().Bytes(),
+	}
 	input = &evm.Input{Method: "retrieve"}
 	query.RawInput, _ = json.Marshal(input)
 	ret, err := runner.Query(query)

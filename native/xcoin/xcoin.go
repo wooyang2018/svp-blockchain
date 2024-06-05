@@ -82,6 +82,10 @@ func (c *XCoin) Query(ctx common.CallContext) ([]byte, error) {
 	}
 }
 
+func (c *XCoin) SetTxTrk(txTrk *common.StateTracker) {
+	return
+}
+
 func invokeSet(ctx common.CallContext, input *Input) error {
 	if !bytes.Equal(nil, ctx.Sender()) {
 		return errors.New("method must be internal")

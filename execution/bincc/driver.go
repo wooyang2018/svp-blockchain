@@ -4,10 +4,7 @@
 package bincc
 
 import (
-	"bytes"
 	"encoding/hex"
-	"errors"
-	"os"
 	"path"
 	"sync"
 	"time"
@@ -33,7 +30,7 @@ func NewCodeDriver(codeDir string, timeout time.Duration) *CodeDriver {
 func (drv *CodeDriver) Install(codeID, data []byte) error {
 	drv.mtxInstall.Lock()
 	defer drv.mtxInstall.Unlock()
-	return drv.downloadCodeIfRequired(codeID, data)
+	return common.DownloadCodeIfRequired(drv.codeDir, codeID, data)
 }
 
 func (drv *CodeDriver) GetInstance(codeID []byte) (common.Chaincode, error) {
@@ -41,24 +38,4 @@ func (drv *CodeDriver) GetInstance(codeID []byte) (common.Chaincode, error) {
 		codePath: path.Join(drv.codeDir, hex.EncodeToString(codeID)),
 		timeout:  drv.execTimeout,
 	}, nil
-}
-
-func (drv *CodeDriver) downloadCodeIfRequired(codeID, data []byte) error {
-	filepath := path.Join(drv.codeDir, hex.EncodeToString(codeID))
-	if _, err := os.Stat(filepath); err == nil {
-		return nil // code file already exist
-	}
-	resp, err := common.DownloadCode(string(data), 5)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	sum, buf, err := common.CopyAndSumCode(resp.Body)
-	if err != nil {
-		return err
-	}
-	if !bytes.Equal(codeID, sum) {
-		return errors.New("invalid code hash")
-	}
-	return common.WriteCodeFile(drv.codeDir, codeID, buf)
 }

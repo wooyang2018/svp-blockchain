@@ -51,6 +51,8 @@ type Chaincode interface {
 	Init(ctx CallContext) error
 	Invoke(ctx CallContext) error
 	Query(ctx CallContext) ([]byte, error)
+	// SetTxTrk is used only for evm runner
+	SetTxTrk(txTrk *StateTracker)
 }
 
 type StateStore interface {

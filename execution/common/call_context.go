@@ -47,7 +47,8 @@ func (ctx *CallContextTx) Input() []byte {
 
 type CallContextQuery struct {
 	StateGetter
-	RawInput []byte
+	RawSender []byte
+	RawInput  []byte
 }
 
 var _ CallContext = (*CallContextQuery)(nil)
@@ -57,7 +58,7 @@ func (ctx *CallContextQuery) Input() []byte {
 }
 
 func (ctx *CallContextQuery) Sender() []byte {
-	return nil
+	return ctx.RawSender
 }
 
 func (ctx *CallContextQuery) BlockHash() []byte {

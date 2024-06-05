@@ -17,31 +17,34 @@ import (
 type Runner struct {
 	codePath string
 	timeout  time.Duration
+	timer    *time.Timer
 
-	callContext common.CallContext
-
-	cmd   *exec.Cmd
-	rw    *readWriter
-	timer *time.Timer
+	cmd     *exec.Cmd
+	rw      *readWriter
+	callCtx common.CallContext
 }
 
 var _ common.Chaincode = (*Runner)(nil)
 
 func (r *Runner) Init(ctx common.CallContext) error {
-	r.callContext = ctx
+	r.callCtx = ctx
 	_, err := r.runCode(CallTypeInit)
 	return err
 }
 
 func (r *Runner) Invoke(ctx common.CallContext) error {
-	r.callContext = ctx
+	r.callCtx = ctx
 	_, err := r.runCode(CallTypeInvoke)
 	return err
 }
 
 func (r *Runner) Query(ctx common.CallContext) ([]byte, error) {
-	r.callContext = ctx
+	r.callCtx = ctx
 	return r.runCode(CallTypeQuery)
+}
+
+func (r *Runner) SetTxTrk(txTrk *common.StateTracker) {
+	return
 }
 
 func (r *Runner) runCode(callType CallType) ([]byte, error) {
@@ -96,10 +99,10 @@ func (r *Runner) setupCmd() error {
 func (r *Runner) sendCallData(callType CallType) error {
 	callData := &CallData{
 		CallType:    callType,
-		Input:       r.callContext.Input(),
-		Sender:      r.callContext.Sender(),
-		BlockHash:   r.callContext.BlockHash(),
-		BlockHeight: r.callContext.BlockHeight(),
+		Input:       r.callCtx.Input(),
+		Sender:      r.callCtx.Sender(),
+		BlockHash:   r.callCtx.BlockHash(),
+		BlockHeight: r.callCtx.BlockHeight(),
 	}
 	b, _ := json.Marshal(callData)
 	return r.rw.write(b)
@@ -136,10 +139,10 @@ func (r *Runner) serveState(up *UpStream) error {
 	down := new(DownStream)
 	switch up.Type {
 	case UpStreamGetState:
-		val := r.callContext.GetState(up.Key)
+		val := r.callCtx.GetState(up.Key)
 		down.Value = val
 	case UpStreamSetState:
-		r.callContext.SetState(up.Key, up.Value)
+		r.callCtx.SetState(up.Key, up.Value)
 	}
 	b, _ := json.Marshal(down)
 	return r.rw.write(b)

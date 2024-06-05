@@ -4,67 +4,48 @@
 package evm
 
 import (
-	"bytes"
 	"encoding/hex"
-	"errors"
-	"os"
 	"path"
 	"sync"
 
+	ethcomm "github.com/ethereum/go-ethereum/common"
+
+	"github.com/wooyang2018/svp-blockchain/evm/statedb"
 	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/storage"
 )
 
 type CodeDriver struct {
 	codeDir    string
+	driver     common.CodeDriver
+	storage    storage.PersistStore
+	stateDB    *statedb.StateDB
 	mtxInstall sync.Mutex
-
-	driver  common.CodeDriver
-	storage storage.PersistStore
-	state   common.StateStore
-	rootTrk *common.StateTracker
 }
 
 var _ common.CodeDriver = (*CodeDriver)(nil)
 
-func NewCodeDriver(codeDir string, nativeDriver common.CodeDriver, storage storage.PersistStore,
-	state common.StateStore) *CodeDriver {
-	driver := &CodeDriver{
+func NewCodeDriver(codeDir string, nativeDriver common.CodeDriver, storage storage.PersistStore) *CodeDriver {
+	cache := statedb.NewCacheDB(storage) // TODO implement OngBalanceHandle
+	return &CodeDriver{
 		codeDir: codeDir,
 		driver:  nativeDriver,
 		storage: storage,
-		state:   state,
+		stateDB: statedb.NewStateDB(cache, ethcomm.Hash{}, ethcomm.Hash{}, statedb.NewDummy()),
 	}
-	driver.rootTrk = common.NewStateTracker(state, nil)
-	return driver
 }
 
 func (drv *CodeDriver) Install(codeID, data []byte) error {
 	drv.mtxInstall.Lock()
 	defer drv.mtxInstall.Unlock()
-	return drv.downloadCodeIfRequired(codeID, data)
+	return common.DownloadCodeIfRequired(drv.codeDir, codeID, data)
 }
 
 func (drv *CodeDriver) GetInstance(codeID []byte) (common.Chaincode, error) {
-	return NewRunner(drv.driver, drv.storage, drv.rootTrk.Spawn(nil)), nil
-}
-
-func (drv *CodeDriver) downloadCodeIfRequired(codeID, data []byte) error {
-	filepath := path.Join(drv.codeDir, hex.EncodeToString(codeID))
-	if _, err := os.Stat(filepath); err == nil {
-		return nil // code file already exist
-	}
-	resp, err := common.DownloadCode(string(data), 5)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	sum, buf, err := common.CopyAndSumCode(resp.Body)
-	if err != nil {
-		return err
-	}
-	if !bytes.Equal(codeID, sum) {
-		return errors.New("invalid code hash")
-	}
-	return common.WriteCodeFile(drv.codeDir, codeID, buf)
+	return &Runner{
+		CodePath: path.Join(drv.codeDir, hex.EncodeToString(codeID)),
+		Driver:   drv.driver,
+		Storage:  drv.storage,
+		StateDB:  drv.stateDB,
+	}, nil
 }

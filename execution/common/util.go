@@ -223,3 +223,23 @@ func Check(err error) {
 		log.Fatal(err)
 	}
 }
+
+func DownloadCodeIfRequired(codeDir string, codeID, data []byte) error {
+	filepath := path.Join(codeDir, hex.EncodeToString(codeID))
+	if _, err := os.Stat(filepath); err == nil {
+		return nil // code file already exist
+	}
+	resp, err := DownloadCode(string(data), 5)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	sum, buf, err := CopyAndSumCode(resp.Body)
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(codeID, sum) {
+		return errors.New("invalid code hash")
+	}
+	return WriteCodeFile(codeDir, codeID, buf)
+}

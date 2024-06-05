@@ -47,7 +47,7 @@ func New(stateStore *storage.Storage, config Config) *Execution {
 	exec.codeRegistry.registerDriver(common.DriverTypeBincc,
 		bincc.NewCodeDriver(exec.config.BinccDir, exec.config.TxExecTimeout))
 	exec.codeRegistry.registerDriver(common.DriverTypeEVM,
-		evm.NewCodeDriver(exec.config.ContractDir, nativeDriver, stateStore.PersistStore, stateStore))
+		evm.NewCodeDriver(exec.config.ContractDir, nativeDriver, stateStore.PersistStore))
 	return exec
 }
 

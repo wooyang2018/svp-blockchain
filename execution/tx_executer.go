@@ -76,6 +76,7 @@ func (txe *txExecutor) executeDeployment() error {
 	}
 
 	initTrk := txe.txTrk.Spawn(txe.tx.Hash())
+	cc.SetTxTrk(txe.txTrk)
 	err = cc.Init(txe.makeCallContext(initTrk, input.InitInput))
 	if err != nil {
 		return err
@@ -92,6 +93,7 @@ func (txe *txExecutor) executeInvoke() error {
 		return err
 	}
 	invokeTrk := txe.txTrk.Spawn(txe.tx.CodeAddr())
+	cc.SetTxTrk(txe.txTrk)
 	err = cc.Invoke(txe.makeCallContext(invokeTrk, txe.tx.Input()))
 	if err != nil {
 		return err

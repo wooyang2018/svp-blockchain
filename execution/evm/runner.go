@@ -23,7 +23,7 @@ import (
 	"github.com/wooyang2018/svp-blockchain/storage"
 )
 
-var keyAddr = []byte("address") // TODO evm contract address
+var keyAddr = []byte("address") // evm contract address
 var keyAbi = []byte("abi")      // evm contract abi
 
 type Input struct {
@@ -32,123 +32,82 @@ type Input struct {
 	Types  []string      `json:"types"`
 }
 
-type Runner struct {
-	jsonABI string
-	hexCode string
-	config  *runtime.Config
+type InitInput struct {
+	Class  string        `json:"class"`
+	Params []interface{} `json:"params"`
+	Types  []string      `json:"types"`
+}
 
-	driver  common.CodeDriver
-	storage storage.PersistStore
-	txTrk   *common.StateTracker
+type Runner struct {
+	config *runtime.Config
+	txTrk  *common.StateTracker
+	tmpTrk map[string]*common.StateTracker
+
+	CodePath string
+	Driver   common.CodeDriver
+	Storage  storage.PersistStore
+	StateDB  *statedb.StateDB
 }
 
 var _ common.Chaincode = (*Runner)(nil)
 
-func NewRunner(driver common.CodeDriver, storage storage.PersistStore, txTrk *common.StateTracker) *Runner {
-	return &Runner{
-		driver:  driver,
-		storage: storage,
-		txTrk:   txTrk,
-	}
-}
-
-func (r *Runner) Build(jsonABI, hexCode string, ctx common.CallContext) error {
-	cfg := new(runtime.Config)
-	runtime.SetDefaults(cfg) // TODO convert other call context to config
-
-	cc, err := r.driver.GetInstance(native.CodeTAddr)
-	invokeTrk := r.txTrk.Spawn(common.GetCodeAddr(native.FileCodeTAddr))
-	input := &taddr.Input{
-		Method: "query",
-		Addr:   ctx.Sender(),
-	}
-	rawInput, _ := json.Marshal(input)
-	addr20, err := cc.Query(r.makeCallContextTx(invokeTrk, ctx, rawInput))
-	if err != nil {
-		return err
-	}
-	fmt.Println(common.AddressToString(addr20))
-
-	cfg.Origin = ethcomm.BytesToAddress(addr20)
-	cache := statedb.NewCacheDB(r.storage) // TODO implement OngBalanceHandle
-	cfg.State = statedb.NewStateDB(cache, ethcomm.Hash{}, ethcomm.Hash{}, statedb.NewDummy())
-
-	r.jsonABI = jsonABI
-	r.hexCode = hexCode
-	r.config = cfg
-	return nil
-}
-
-func (r *Runner) makeCallContextTx(st *common.StateTracker, ctx common.CallContext, input []byte) *common.CallContextTx {
-	return &common.CallContextTx{
-		StateTracker: st,
-		RawSender:    ctx.Sender(),
-		RawInput:     input,
-	}
-}
-
-func (r *Runner) makeCallContextQuery(st *common.StateTracker, ctx common.CallContext, input []byte) *common.CallContextQuery {
-	return &common.CallContextQuery{
-		StateGetter: st,
-		RawInput:    input,
-	}
-}
-
-func (r *Runner) parseInput(raw []byte) (string, []interface{}) {
-	var input Input
-	err := json.Unmarshal(raw, &input)
-	if err != nil {
-		panic(err)
-	}
-	var params []interface{}
-	for i := 0; i < len(input.Params); i++ {
-		switch input.Types[i] {
-		case "uint256":
-			params = append(params, big.NewInt(int64(input.Params[i].(float64))))
-		}
-	}
-	return input.Method, params
-}
-
 // Init deploys the solidity contract and binds the eth address.
 func (r *Runner) Init(ctx common.CallContext) error {
-	vmenv := runtime.NewEnv(r.config)
-	sender := evm.AccountRef(r.config.Origin)
-	contractBin, _ := hexutil.Decode(r.hexCode)
-	contractAbi, _ := abi.JSON(strings.NewReader(r.jsonABI))
+	if err := r.setConfig(ctx); err != nil {
+		return err
+	}
 
-	_, args := r.parseInput(ctx.Input())
+	initInput, args := parseInitInput(ctx.Input())
+	compiled := runtime.CompileCode(r.CodePath)
+	hexCode, jsonABI := compiled[initInput.Class][0], compiled[initInput.Class][1]
+
+	contractBin, _ := hexutil.Decode(hexCode)
+	contractAbi, _ := abi.JSON(strings.NewReader(jsonABI))
 	invoke, err := contractAbi.Pack("", args...)
 	if err != nil {
 		return err
 	}
-	deploy := append(contractBin, invoke...)
 
+	deploy := append(contractBin, invoke...)
+	vmenv := runtime.NewEnv(r.config)
+	sender := evm.AccountRef(r.config.Origin)
 	_, address, leftOverGas, err := vmenv.Create(
 		sender,
 		deploy,
 		r.config.GasLimit,
 		r.config.Value,
 	)
-	ctx.SetState(keyAddr, address.Bytes())
-	ctx.SetState(keyAbi, []byte(r.jsonABI))
-
-	fmt.Printf("deploy code at: %s, used gas: %d\n", address.String(), r.config.GasLimit-leftOverGas)
-	return err
-}
-
-func (r *Runner) Invoke(ctx common.CallContext) error {
-	vmenv := runtime.NewEnv(r.config)
-	sender := evm.AccountRef(r.config.Origin)
-	address := ethcomm.BytesToAddress(ctx.GetState(keyAddr))
-	contractAbi, _ := abi.JSON(bytes.NewReader(ctx.GetState(keyAbi)))
-
-	method, params := r.parseInput(ctx.Input())
-	invoke, err := contractAbi.Pack(method, params...)
 	if err != nil {
 		return err
 	}
 
+	ctx.SetState(keyAddr, address.Bytes())
+	ctx.SetState(keyAbi, []byte(jsonABI))
+	err = r.storeAddr(address.Bytes())
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("deploy code at: %s, used gas: %d\n", address.String(), r.config.GasLimit-leftOverGas)
+	r.mergeTrks()
+	return err
+}
+
+func (r *Runner) Invoke(ctx common.CallContext) error {
+	if err := r.setConfig(ctx); err != nil {
+		return err
+	}
+
+	input, params := parseInput(ctx.Input())
+	contractAbi, _ := abi.JSON(bytes.NewReader(ctx.GetState(keyAbi)))
+	invoke, err := contractAbi.Pack(input.Method, params...)
+	if err != nil {
+		return err
+	}
+
+	vmenv := runtime.NewEnv(r.config)
+	sender := evm.AccountRef(r.config.Origin)
+	address := ethcomm.BytesToAddress(ctx.GetState(keyAddr))
 	ret, leftOverGas, err := vmenv.Call(
 		sender,
 		address,
@@ -156,24 +115,31 @@ func (r *Runner) Invoke(ctx common.CallContext) error {
 		r.config.GasLimit,
 		r.config.Value,
 	)
+	if err != nil {
+		return err
+	}
 
 	fmt.Printf("invoke code at: %s, used gas: %d, return result: %s\n", address.String(),
 		r.config.GasLimit-leftOverGas, big.NewInt(0).SetBytes(ret)) // TODO use logger.I()
+	r.mergeTrks()
 	return err
 }
 
 func (r *Runner) Query(ctx common.CallContext) ([]byte, error) {
-	vmenv := runtime.NewEnv(r.config)
-	sender := evm.AccountRef(r.config.Origin)
-	address := ethcomm.BytesToAddress(ctx.GetState(keyAddr))
-	contractAbi, _ := abi.JSON(bytes.NewReader(ctx.GetState(keyAbi)))
+	if err := r.setConfig(ctx); err != nil {
+		return nil, err
+	}
 
-	method, params := r.parseInput(ctx.Input())
-	query, err := contractAbi.Pack(method, params...)
+	input, params := parseInput(ctx.Input())
+	contractAbi, _ := abi.JSON(bytes.NewReader(ctx.GetState(keyAbi)))
+	query, err := contractAbi.Pack(input.Method, params...)
 	if err != nil {
 		return nil, err
 	}
 
+	vmenv := runtime.NewEnv(r.config)
+	sender := evm.AccountRef(r.config.Origin)
+	address := ethcomm.BytesToAddress(ctx.GetState(keyAddr))
 	ret, leftOverGas, err := vmenv.StaticCall(
 		sender,
 		address,
@@ -183,5 +149,106 @@ func (r *Runner) Query(ctx common.CallContext) ([]byte, error) {
 
 	fmt.Printf("query code at: %s, used gas: %d, return result: %s\n", address.String(),
 		r.config.GasLimit-leftOverGas, big.NewInt(0).SetBytes(ret)) // TODO use logger.I()
+	r.mergeTrks() // TODO remove mergeTrk for query
 	return ret, err
+}
+
+func (r *Runner) SetTxTrk(txTrk *common.StateTracker) {
+	r.txTrk = txTrk
+}
+
+func (r *Runner) setConfig(ctx common.CallContext) error {
+	cfg := new(runtime.Config)
+	runtime.SetDefaults(cfg) // TODO convert other call context to config
+	addr20, err := r.queryAddr(ctx.Sender())
+	if err != nil {
+		return err
+	}
+	cfg.Origin = ethcomm.BytesToAddress(addr20)
+	cfg.State = r.StateDB
+	r.config = cfg
+	return nil
+}
+
+func (r *Runner) queryAddr(addr []byte) ([]byte, error) {
+	cc, err := r.Driver.GetInstance(native.CodeTAddr)
+	if err != nil {
+		return nil, err
+	}
+	queryTrk := r.getTrk(native.FileCodeTAddr)
+	input := &taddr.Input{
+		Method: "query",
+		Addr:   addr,
+	}
+	rawInput, _ := json.Marshal(input)
+	return cc.Query(&common.CallContextQuery{
+		StateGetter: queryTrk,
+		RawInput:    rawInput,
+	})
+}
+
+func (r *Runner) storeAddr(addr []byte) error {
+	cc, err := r.Driver.GetInstance(native.CodeTAddr)
+	if err != nil {
+		return err
+	}
+	invokeTrk := r.getTrk(native.FileCodeTAddr)
+	input := &taddr.Input{
+		Method: "store",
+		Addr:   addr,
+	}
+	rawInput, _ := json.Marshal(input)
+	return cc.Invoke(&common.CallContextTx{
+		StateTracker: invokeTrk,
+		RawInput:     rawInput,
+	})
+}
+
+func (r *Runner) mergeTrks() {
+	for _, trk := range r.tmpTrk {
+		r.txTrk.Merge(trk)
+	}
+}
+
+func (r *Runner) getTrk(key string) *common.StateTracker {
+	if r.tmpTrk == nil {
+		r.tmpTrk = make(map[string]*common.StateTracker)
+	}
+	if res, ok := r.tmpTrk[key]; ok {
+		return res
+	}
+	r.tmpTrk[key] = r.txTrk.Spawn(common.GetCodeAddr(key))
+	return r.tmpTrk[key]
+}
+
+func parseInput(raw []byte) (*Input, []interface{}) {
+	input := new(Input)
+	err := json.Unmarshal(raw, input)
+	common.Check(err)
+	var params []interface{}
+	for i := 0; i < len(input.Params); i++ {
+		params = append(params, parseParam(input.Types[i], input.Params[i]))
+	}
+	return input, params
+}
+
+func parseInitInput(raw []byte) (*InitInput, []interface{}) {
+	input := new(InitInput)
+	err := json.Unmarshal(raw, input)
+	common.Check(err)
+	var params []interface{}
+	for i := 0; i < len(input.Params); i++ {
+		params = append(params, parseParam(input.Types[i], input.Params[i]))
+	}
+	return input, params
+}
+
+// TODO parseParam more types
+func parseParam(paramType string, param interface{}) interface{} {
+	switch paramType {
+	case "uint256":
+		return big.NewInt(int64(param.(float64)))
+	default:
+		return nil
+	}
 }

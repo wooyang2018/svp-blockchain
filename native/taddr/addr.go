@@ -77,6 +77,10 @@ func (c *TAddr) Query(ctx common.CallContext) ([]byte, error) {
 	}
 }
 
+func (c *TAddr) SetTxTrk(txTrk *common.StateTracker) {
+	return
+}
+
 func storeAddr(ctx common.CallContext, input *Input) error {
 	if !bytes.Equal(nil, ctx.Sender()) {
 		return errors.New("method must be internal")
