@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
@@ -144,7 +143,7 @@ func (gns *genesis) genesisTxs() [][]byte {
 		Sign(gns.resources.Signer)
 
 	if err := gns.resources.TxPool.StoreTxs(&core.TxList{tx0, tx1}); err != nil {
-		log.Fatal(err)
+		logger.I().Fatal(err)
 	}
 	return [][]byte{tx0.Hash(), tx1.Hash()}
 }

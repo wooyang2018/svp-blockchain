@@ -47,8 +47,8 @@ func (ctx *CallContextTx) Input() []byte {
 
 type CallContextQuery struct {
 	StateGetter
-	RawSender []byte
 	RawInput  []byte
+	RawSender []byte
 }
 
 var _ CallContext = (*CallContextQuery)(nil)

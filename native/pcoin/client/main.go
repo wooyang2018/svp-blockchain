@@ -29,7 +29,7 @@ var deployCmd = &cobra.Command{
 	Short: "Deploy the pcoin native contract",
 	Run: func(cmd *cobra.Command, args []string) {
 		client := native.NewClient(true)
-		tx := client.MakeDeploymentTx(common.DriverTypeNative, native.CodePCoin)
+		tx := client.MakeDeploymentTx(common.DriverTypeNative, native.CodePCoin, nil)
 		client.SubmitTx(tx)
 		common.DumpFile(tx.Hash(), native.DataPath, native.FileCodeDefault)
 	},

@@ -19,6 +19,8 @@ import (
 	"time"
 
 	"golang.org/x/crypto/sha3"
+
+	"github.com/wooyang2018/svp-blockchain/logger"
 )
 
 var ErrAddressLength = errors.New("unexpected address length")
@@ -170,7 +172,7 @@ func CheckResponse(resp *http.Response, err error) error {
 	if resp.StatusCode != 200 {
 		msg, _ := io.ReadAll(resp.Body)
 		resp.Body.Close()
-		return fmt.Errorf("status code not 200, %s", string(msg))
+		return fmt.Errorf("status code %d, %s", resp.StatusCode, string(msg))
 	}
 	return nil
 }
@@ -219,6 +221,12 @@ func Exists(path string) bool {
 }
 
 func Check(err error) {
+	if err != nil {
+		logger.I().Fatal(err)
+	}
+}
+
+func Check2(err error) {
 	if err != nil {
 		log.Fatal(err)
 	}

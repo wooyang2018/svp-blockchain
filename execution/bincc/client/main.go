@@ -25,7 +25,7 @@ var deployCmd = &cobra.Command{
 		client := native.NewClient(true)
 		codeID, err := client.UploadChainCode(common.DriverTypeBincc, filePath)
 		common.Check(err)
-		tx := client.MakeDeploymentTx(common.DriverTypeBincc, codeID)
+		tx := client.MakeDeploymentTx(common.DriverTypeBincc, codeID, nil)
 		client.SubmitTx(tx)
 		common.DumpFile(tx.Hash(), native.DataPath, native.FileCodeDefault)
 	},

@@ -17,8 +17,9 @@ type CodeInfo struct {
 }
 
 type QueryData struct {
-	CodeAddr []byte
-	Input    []byte
+	CodeAddr []byte `json:"codeAddr"`
+	Input    []byte `json:"input"`
+	Sender   []byte `json:"sender"`
 }
 
 type DeploymentInput struct {

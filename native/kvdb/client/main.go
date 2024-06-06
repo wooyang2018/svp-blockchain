@@ -30,7 +30,7 @@ var deployCmd = &cobra.Command{
 	Short: "Deploy the kvdb native contract",
 	Run: func(cmd *cobra.Command, args []string) {
 		client := native.NewClient(true)
-		tx := client.MakeDeploymentTx(common.DriverTypeNative, native.CodeKVDB)
+		tx := client.MakeDeploymentTx(common.DriverTypeNative, native.CodeKVDB, nil)
 		client.SubmitTx(tx)
 		common.DumpFile(tx.Hash(), native.DataPath, native.FileCodeDefault)
 	},

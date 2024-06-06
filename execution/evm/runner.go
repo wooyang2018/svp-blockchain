@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"strconv"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -27,15 +28,15 @@ var keyAddr = []byte("address") // evm contract address
 var keyAbi = []byte("abi")      // evm contract abi
 
 type Input struct {
-	Method string        `json:"method"`
-	Params []interface{} `json:"params"`
-	Types  []string      `json:"types"`
+	Method string   `json:"method"`
+	Params []string `json:"params"`
+	Types  []string `json:"types"`
 }
 
 type InitInput struct {
-	Class  string        `json:"class"`
-	Params []interface{} `json:"params"`
-	Types  []string      `json:"types"`
+	Class  string   `json:"class"`
+	Params []string `json:"params"`
+	Types  []string `json:"types"`
 }
 
 type Runner struct {
@@ -244,10 +245,12 @@ func parseInitInput(raw []byte) (*InitInput, []interface{}) {
 }
 
 // TODO parseParam more types
-func parseParam(paramType string, param interface{}) interface{} {
+func parseParam(paramType string, param string) interface{} {
 	switch paramType {
 	case "uint256":
-		return big.NewInt(int64(param.(float64)))
+		tmp, err := strconv.ParseInt(param, 10, 64)
+		common.Check(err)
+		return big.NewInt(tmp)
 	default:
 		return nil
 	}

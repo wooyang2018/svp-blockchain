@@ -5,7 +5,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -15,6 +14,7 @@ import (
 	"time"
 
 	"github.com/wooyang2018/svp-blockchain/consensus"
+	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/node"
 	"github.com/wooyang2018/svp-blockchain/tests/cluster"
 	"github.com/wooyang2018/svp-blockchain/tests/experiments"
@@ -55,7 +55,7 @@ var (
 
 	OnlySetupDocker  = false
 	OnlySetupCluster = false
-	OnlyRunCluster   = false
+	OnlyRunCluster   = true
 )
 
 func getNodeConfig() node.Config {
@@ -300,7 +300,7 @@ func buildChain() {
 		fmt.Printf(" $ export %s\n", "GOOS=linux GOARCH=amd64")
 	}
 	fmt.Printf(" $ %s\n\n", strings.Join(cmd.Args, " "))
-	check(cmd.Run())
+	common.Check(cmd.Run())
 }
 
 func makeLoadClient() testutil.LoadClient {
@@ -329,7 +329,7 @@ func buildPCoinBinCC() {
 		fmt.Printf(" $ export %s\n", "GOOS=linux GOARCH=amd64")
 	}
 	fmt.Printf(" $ %s\n\n", strings.Join(cmd.Args, " "))
-	check(cmd.Run())
+	common.Check(cmd.Run())
 }
 
 func makeLocalClusterFactory() *cluster.LocalFactory {
@@ -342,7 +342,7 @@ func makeLocalClusterFactory() *cluster.LocalFactory {
 		SetupDocker: OnlySetupDocker,
 		NodeConfig:  getNodeConfig(),
 	})
-	check(err)
+	common.Check(err)
 	return ftry
 }
 
@@ -359,12 +359,6 @@ func makeRemoteClusterFactory() *cluster.RemoteFactory {
 		SetupRequired:   RemoteSetupRequired,
 		InstallRequired: RemoteInstallRequired,
 	})
-	check(err)
+	common.Check(err)
 	return ftry
-}
-
-func check(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
 }

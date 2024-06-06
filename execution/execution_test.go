@@ -123,15 +123,15 @@ func TestExecution(t *testing.T) {
 	asrt.Equal(native.CodePCoin, codeInfo.CodeID)
 
 	ccInput, _ := json.Marshal(pcoin.Input{Method: "minter"})
-	minter, err := execution.Query(&common.QueryData{tx1.Hash(), ccInput})
+	minter, err := execution.Query(&common.QueryData{tx1.Hash(), ccInput, nil})
 	asrt.NoError(err)
 	asrt.Equal(priv.PublicKey().Bytes(), minter)
 
-	minter, err = execution.Query(&common.QueryData{tx2.Hash(), ccInput})
+	minter, err = execution.Query(&common.QueryData{tx2.Hash(), ccInput, nil})
 	asrt.Error(err)
 	asrt.Nil(minter)
 
-	minter, err = execution.Query(&common.QueryData{tx3.Hash(), ccInput})
+	minter, err = execution.Query(&common.QueryData{tx3.Hash(), ccInput, nil})
 	asrt.NoError(err)
 	asrt.Equal(priv.PublicKey().Bytes(), minter)
 }
@@ -173,7 +173,7 @@ func TestEVMRunner(t *testing.T) {
 
 	input := &evm.Input{
 		Method: "store",
-		Params: []interface{}{1024},
+		Params: []string{"1024"},
 		Types:  []string{"uint256"},
 	}
 	ctx.RawInput, _ = json.Marshal(input)

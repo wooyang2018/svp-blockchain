@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path"
@@ -30,20 +29,20 @@ func NewClient(isDeploy bool) *Client {
 	client := &Client{}
 	if !isDeploy {
 		client.codeAddr, err = os.ReadFile(path.Join(DataPath, CodeFile))
-		common.Check(err)
+		common.Check2(err)
 	}
 	b, err := os.ReadFile(path.Join(DataPath, FileNodekey))
-	common.Check(err)
+	common.Check2(err)
 	client.signer, _ = core.NewPrivateKey(b)
 	return client
 }
 
 func (client *Client) SubmitTx(tx *core.Transaction) {
 	b, err := json.Marshal(tx)
-	common.Check(err)
+	common.Check2(err)
 	resp, err := http.Post(NodeUrl+"/transactions",
 		"application/json", bytes.NewReader(b))
-	common.Check(err)
+	common.Check2(err)
 	msg, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	fmt.Printf("status code %d, %s\n", resp.StatusCode, string(msg))
@@ -53,13 +52,13 @@ func (client *Client) QueryState(input []byte) (ret []byte) {
 	query := &common.QueryData{
 		CodeAddr: client.codeAddr,
 		Input:    input,
+		Sender:   client.signer.PublicKey().Bytes(),
 	}
 	b, err := json.Marshal(query)
-	common.Check(err)
+	common.Check2(err)
 	resp, err := http.Post(NodeUrl+"/querystate", "application/json", bytes.NewReader(b))
-	if err != nil || resp.StatusCode != 200 {
-		log.Fatal("query state failed")
-	}
+	err = common.CheckResponse(resp, err)
+	common.Check2(err)
 	defer resp.Body.Close()
 	json.NewDecoder(resp.Body).Decode(&ret)
 	return
@@ -75,19 +74,20 @@ func (client *Client) MakeTx(input []byte) *core.Transaction {
 
 func (client *Client) makeTxWithInput(input *common.DeploymentInput) *core.Transaction {
 	b, err := json.Marshal(input)
-	common.Check(err)
+	common.Check2(err)
 	return core.NewTransaction().
 		SetNonce(time.Now().UnixNano()).
 		SetInput(b).
 		Sign(client.signer)
 }
 
-func (client *Client) MakeDeploymentTx(driverType common.DriverType, codeID []byte) *core.Transaction {
+func (client *Client) MakeDeploymentTx(driverType common.DriverType, codeID []byte, initInput []byte) *core.Transaction {
 	input := &common.DeploymentInput{
 		CodeInfo: common.CodeInfo{
 			DriverType: driverType,
 			CodeID:     codeID,
 		},
+		InitInput: initInput,
 	}
 	switch driverType {
 	case common.DriverTypeNative:

@@ -110,9 +110,11 @@ func (exec *Execution) Query(query *common.QueryData) (val []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
+	cc.SetTxTrk(common.NewStateTracker(exec.stateStore, nil))
 	return cc.Query(&common.CallContextQuery{
-		RawInput:    query.Input,
 		StateGetter: newStateGetter(exec.stateStore, query.CodeAddr),
+		RawInput:    query.Input,
+		RawSender:   query.Sender,
 	})
 }
 

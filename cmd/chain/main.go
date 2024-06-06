@@ -4,11 +4,10 @@
 package main
 
 import (
-	"log"
-
 	"github.com/spf13/cobra"
 
 	"github.com/wooyang2018/svp-blockchain/consensus"
+	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/node"
 )
 
@@ -23,9 +22,8 @@ var rootCmd = &cobra.Command{
 }
 
 func main() {
-	if err := rootCmd.Execute(); err != nil {
-		log.Fatal(err)
-	}
+	err := rootCmd.Execute()
+	common.Check(err)
 }
 
 func init() {
