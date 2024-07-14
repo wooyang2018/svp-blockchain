@@ -19,8 +19,6 @@ import (
 	"github.com/wooyang2018/svp-blockchain/evm/runtime"
 	"github.com/wooyang2018/svp-blockchain/evm/statedb"
 	"github.com/wooyang2018/svp-blockchain/execution/common"
-	"github.com/wooyang2018/svp-blockchain/native"
-	"github.com/wooyang2018/svp-blockchain/native/taddr"
 	"github.com/wooyang2018/svp-blockchain/storage"
 )
 
@@ -40,12 +38,9 @@ type InitInput struct {
 }
 
 type Runner struct {
-	config *runtime.Config
-	txTrk  *common.StateTracker
-	tmpTrk map[string]*common.StateTracker
-
+	config   *runtime.Config
+	Proxy    *NativeProxy
 	CodePath string
-	Driver   common.CodeDriver
 	Storage  storage.PersistStore
 	StateDB  *statedb.StateDB
 }
@@ -84,13 +79,13 @@ func (r *Runner) Init(ctx common.CallContext) error {
 
 	ctx.SetState(keyAddr, address.Bytes())
 	ctx.SetState(keyAbi, []byte(jsonABI))
-	err = r.storeAddr(address.Bytes())
+	err = r.Proxy.storeAddr(address.Bytes())
 	if err != nil {
 		return err
 	}
 
 	fmt.Printf("deploy code at: %s, used gas: %d\n", address.String(), r.config.GasLimit-leftOverGas)
-	r.mergeTrks()
+	r.Proxy.mergeTrks()
 	return err
 }
 
@@ -122,7 +117,7 @@ func (r *Runner) Invoke(ctx common.CallContext) error {
 
 	fmt.Printf("invoke code at: %s, used gas: %d, return result: %s\n", address.String(),
 		r.config.GasLimit-leftOverGas, big.NewInt(0).SetBytes(ret)) // TODO use logger.I()
-	r.mergeTrks()
+	r.Proxy.mergeTrks()
 	return err
 }
 
@@ -150,18 +145,18 @@ func (r *Runner) Query(ctx common.CallContext) ([]byte, error) {
 
 	fmt.Printf("query code at: %s, used gas: %d, return result: %s\n", address.String(),
 		r.config.GasLimit-leftOverGas, big.NewInt(0).SetBytes(ret)) // TODO use logger.I()
-	r.mergeTrks() // TODO remove mergeTrk for query
+	r.Proxy.mergeTrks() // TODO remove mergeTrk for query
 	return ret, err
 }
 
 func (r *Runner) SetTxTrk(txTrk *common.StateTracker) {
-	r.txTrk = txTrk
+	r.Proxy.setTxTrk(txTrk)
 }
 
 func (r *Runner) setConfig(ctx common.CallContext) error {
 	cfg := new(runtime.Config)
 	runtime.SetDefaults(cfg) // TODO convert other call context to config
-	addr20, err := r.queryAddr(ctx.Sender())
+	addr20, err := r.Proxy.queryAddr(ctx.Sender())
 	if err != nil {
 		return err
 	}
@@ -169,57 +164,6 @@ func (r *Runner) setConfig(ctx common.CallContext) error {
 	cfg.State = r.StateDB
 	r.config = cfg
 	return nil
-}
-
-func (r *Runner) queryAddr(addr []byte) ([]byte, error) {
-	cc, err := r.Driver.GetInstance(native.CodeTAddr)
-	if err != nil {
-		return nil, err
-	}
-	queryTrk := r.getTrk(native.FileCodeTAddr)
-	input := &taddr.Input{
-		Method: "query",
-		Addr:   addr,
-	}
-	rawInput, _ := json.Marshal(input)
-	return cc.Query(&common.CallContextQuery{
-		StateGetter: queryTrk,
-		RawInput:    rawInput,
-	})
-}
-
-func (r *Runner) storeAddr(addr []byte) error {
-	cc, err := r.Driver.GetInstance(native.CodeTAddr)
-	if err != nil {
-		return err
-	}
-	invokeTrk := r.getTrk(native.FileCodeTAddr)
-	input := &taddr.Input{
-		Method: "store",
-		Addr:   addr,
-	}
-	rawInput, _ := json.Marshal(input)
-	return cc.Invoke(&common.CallContextTx{
-		StateTracker: invokeTrk,
-		RawInput:     rawInput,
-	})
-}
-
-func (r *Runner) mergeTrks() {
-	for _, trk := range r.tmpTrk {
-		r.txTrk.Merge(trk)
-	}
-}
-
-func (r *Runner) getTrk(key string) *common.StateTracker {
-	if r.tmpTrk == nil {
-		r.tmpTrk = make(map[string]*common.StateTracker)
-	}
-	if res, ok := r.tmpTrk[key]; ok {
-		return res
-	}
-	r.tmpTrk[key] = r.txTrk.Spawn(common.GetCodeAddr(key))
-	return r.tmpTrk[key]
 }
 
 func parseInput(raw []byte) (*Input, []interface{}) {

@@ -244,6 +244,10 @@ func concatBytes(srcs ...[]byte) []byte {
 	return buf.Bytes()
 }
 
+func convertPrefix(prefix DataEntryPrefix) []byte {
+	return []byte{byte(prefix)}
+}
+
 func updateLevelDB(db PersistStore, fns []updateFunc) error {
 	for _, fn := range fns {
 		if err := fn(db); err != nil {

@@ -127,17 +127,17 @@ func (ss *stateStore) getStateNotFoundNil(key []byte) []byte {
 }
 
 func (ss *stateStore) getState(key []byte) ([]byte, error) {
-	return ss.getter.Get(concatBytes([]byte{byte(STATE_VALUE_BY_KEY)}, key))
+	return ss.getter.Get(concatBytes(convertPrefix(STATE_VALUE_BY_KEY), key))
 }
 
 func (ss *stateStore) getMerkleIndex(key []byte) ([]byte, error) {
-	return ss.getter.Get(concatBytes([]byte{byte(MERKLE_INDEX_BY_STATE_KEY)}, key))
+	return ss.getter.Get(concatBytes(convertPrefix(MERKLE_INDEX_BY_STATE_KEY), key))
 }
 
 func (ss *stateStore) setState(key, value []byte) updateFunc {
 	return func(setter Setter) error {
 		return setter.Put(
-			concatBytes([]byte{byte(STATE_VALUE_BY_KEY)}, key), value,
+			concatBytes(convertPrefix(STATE_VALUE_BY_KEY), key), value,
 		)
 	}
 }
@@ -145,7 +145,7 @@ func (ss *stateStore) setState(key, value []byte) updateFunc {
 func (ss *stateStore) setTreeIndex(key, idx []byte) updateFunc {
 	return func(setter Setter) error {
 		return setter.Put(
-			concatBytes([]byte{byte(MERKLE_INDEX_BY_STATE_KEY)}, key), idx,
+			concatBytes(convertPrefix(MERKLE_INDEX_BY_STATE_KEY), key), idx,
 		)
 	}
 }

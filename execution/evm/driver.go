@@ -17,7 +17,7 @@ import (
 
 type CodeDriver struct {
 	codeDir    string
-	driver     common.CodeDriver
+	proxy      *NativeProxy
 	storage    storage.PersistStore
 	stateDB    *statedb.StateDB
 	mtxInstall sync.Mutex
@@ -26,12 +26,13 @@ type CodeDriver struct {
 var _ common.CodeDriver = (*CodeDriver)(nil)
 
 func NewCodeDriver(codeDir string, nativeDriver common.CodeDriver, storage storage.PersistStore) *CodeDriver {
-	cache := statedb.NewCacheDB(storage) // TODO implement OngBalanceHandle
+	cache := statedb.NewCacheDB(storage)
+	proxy := NewNativeProxy(nativeDriver)
 	return &CodeDriver{
 		codeDir: codeDir,
-		driver:  nativeDriver,
+		proxy:   proxy,
 		storage: storage,
-		stateDB: statedb.NewStateDB(cache, ethcomm.Hash{}, ethcomm.Hash{}, statedb.NewDummy()),
+		stateDB: statedb.NewStateDB(cache, ethcomm.Hash{}, ethcomm.Hash{}, proxy),
 	}
 }
 
@@ -44,7 +45,7 @@ func (drv *CodeDriver) Install(codeID, data []byte) error {
 func (drv *CodeDriver) GetInstance(codeID []byte) (common.Chaincode, error) {
 	return &Runner{
 		CodePath: path.Join(drv.codeDir, hex.EncodeToString(codeID)),
-		Driver:   drv.driver,
+		Proxy:    drv.proxy,
 		Storage:  drv.storage,
 		StateDB:  drv.stateDB,
 	}, nil
