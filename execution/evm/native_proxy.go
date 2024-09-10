@@ -7,7 +7,6 @@ import (
 
 	ethcomm "github.com/ethereum/go-ethereum/common"
 
-	"github.com/wooyang2018/svp-blockchain/evm/statedb"
 	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/native"
 	"github.com/wooyang2018/svp-blockchain/native/taddr"
@@ -15,16 +14,23 @@ import (
 )
 
 type NativeProxy struct {
-	txTrk  *common.StateTracker
-	tmpTrk map[string]*common.StateTracker
-	driver common.CodeDriver
+	addr20Cache map[[20]byte][32]byte
+	addr32Cache map[[32]byte][20]byte
+	txTrk       *common.StateTracker
+	tmpTrk      map[string]*common.StateTracker
+	driver      common.CodeDriver
 }
 
 func NewNativeProxy(driver common.CodeDriver) *NativeProxy {
-	return &NativeProxy{driver: driver}
+	return &NativeProxy{
+		addr20Cache: make(map[[20]byte][32]byte),
+		addr32Cache: make(map[[32]byte][20]byte),
+		tmpTrk:      make(map[string]*common.StateTracker),
+		driver:      driver,
+	}
 }
 
-func (p *NativeProxy) SubBalance(cache *statedb.CacheDB, addr ethcomm.Address, val *big.Int) error {
+func (p *NativeProxy) SubBalance(addr ethcomm.Address, val *big.Int) error {
 	addr32, err := p.queryAddr(addr.Bytes())
 	if err != nil {
 		return err
@@ -40,7 +46,7 @@ func (p *NativeProxy) SubBalance(cache *statedb.CacheDB, addr ethcomm.Address, v
 	return p.SetBalanceByAddr32(addr32, oldVal-val.Uint64())
 }
 
-func (p *NativeProxy) AddBalance(cache *statedb.CacheDB, addr ethcomm.Address, val *big.Int) error {
+func (p *NativeProxy) AddBalance(addr ethcomm.Address, val *big.Int) error {
 	addr32, err := p.queryAddr(addr.Bytes())
 	if err != nil {
 		return err
@@ -53,11 +59,11 @@ func (p *NativeProxy) AddBalance(cache *statedb.CacheDB, addr ethcomm.Address, v
 	return p.SetBalanceByAddr32(addr32, oldVal+val.Uint64())
 }
 
-func (p *NativeProxy) SetBalance(cache *statedb.CacheDB, addr ethcomm.Address, val *big.Int) error {
+func (p *NativeProxy) SetBalance(addr ethcomm.Address, val *big.Int) error {
 	return p.SetBalanceByAddr20(addr.Bytes(), val.Uint64())
 }
 
-func (p *NativeProxy) GetBalance(cache *statedb.CacheDB, addr ethcomm.Address) (*big.Int, error) {
+func (p *NativeProxy) GetBalance(addr ethcomm.Address) (*big.Int, error) {
 	balance, err := p.QueryBalanceByAddr20(addr.Bytes())
 	if err != nil {
 		return nil, err
@@ -133,6 +139,15 @@ func (p *NativeProxy) SetBalanceByAddr32(addr32 []byte, value uint64) error {
 }
 
 func (p *NativeProxy) queryAddr(addr []byte) ([]byte, error) {
+	if len(addr) == 20 {
+		if v, ok := p.addr20Cache[[20]byte(addr)]; ok {
+			return v[:], nil
+		}
+	} else if len(addr) == 32 {
+		if v, ok := p.addr32Cache[[32]byte(addr)]; ok {
+			return v[:], nil
+		}
+	}
 	cc, err := p.driver.GetInstance(native.CodeTAddr)
 	if err != nil {
 		return nil, err
@@ -143,10 +158,19 @@ func (p *NativeProxy) queryAddr(addr []byte) ([]byte, error) {
 		Addr:   addr,
 	}
 	rawInput, _ := json.Marshal(input)
-	return cc.Query(&common.CallContextQuery{
+	resAddr, err := cc.Query(&common.CallContextQuery{
 		StateGetter: queryTrk,
 		RawInput:    rawInput,
 	})
+	if err != nil {
+		return nil, err
+	}
+	if len(addr) == 20 {
+		p.addr20Cache[[20]byte(addr)] = [32]byte(resAddr)
+	} else if len(addr) == 32 {
+		p.addr32Cache[[32]byte(addr)] = [20]byte(resAddr)
+	}
+	return resAddr, nil
 }
 
 func (p *NativeProxy) storeAddr(addr []byte) error {
@@ -177,9 +201,6 @@ func (p *NativeProxy) mergeTrks() {
 }
 
 func (p *NativeProxy) getTrk(key string) *common.StateTracker {
-	if p.tmpTrk == nil {
-		p.tmpTrk = make(map[string]*common.StateTracker)
-	}
 	if res, ok := p.tmpTrk[key]; ok {
 		return res
 	}

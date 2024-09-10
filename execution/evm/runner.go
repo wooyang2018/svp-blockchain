@@ -155,13 +155,14 @@ func (r *Runner) SetTxTrk(txTrk *common.StateTracker) {
 
 func (r *Runner) setConfig(ctx common.CallContext) error {
 	cfg := new(runtime.Config)
-	runtime.SetDefaults(cfg) // TODO convert other call context to config
+	runtime.SetDefaults(cfg)
 	addr20, err := r.Proxy.queryAddr(ctx.Sender())
 	if err != nil {
 		return err
 	}
 	cfg.Origin = ethcomm.BytesToAddress(addr20)
 	cfg.State = r.StateDB
+	cfg.BlockNumber = big.NewInt(0).SetUint64(ctx.BlockHeight())
 	r.config = cfg
 	return nil
 }
@@ -188,7 +189,6 @@ func parseInitInput(raw []byte) (*InitInput, []interface{}) {
 	return input, params
 }
 
-// TODO parseParam more types
 func parseParam(paramType string, param string) interface{} {
 	switch paramType {
 	case "uint256":
