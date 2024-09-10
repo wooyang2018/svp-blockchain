@@ -334,7 +334,7 @@ func (self *StateDB) AddLog(log *common.StorageLog) {
 }
 
 func (self *StateDB) AddPreimage(ethcomm.Hash, []byte) {
-	// todo
+	panic("implement me")
 }
 
 func (self *StateDB) ForEachStorage(ethcomm.Address, func(ethcomm.Hash, ethcomm.Hash) bool) error {

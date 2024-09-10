@@ -114,9 +114,11 @@ func (r *Runner) Invoke(ctx common.CallContext) error {
 	if err != nil {
 		return err
 	}
+	retSlice, _ := contractAbi.Unpack(input.Method, ret)
+	res, _ := json.Marshal(retSlice)
 
 	fmt.Printf("invoke code at: %s, used gas: %d, return result: %s\n", address.String(),
-		r.config.GasLimit-leftOverGas, big.NewInt(0).SetBytes(ret)) // TODO use logger.I()
+		r.config.GasLimit-leftOverGas, res)
 	r.Proxy.mergeTrks()
 	return err
 }
@@ -142,11 +144,12 @@ func (r *Runner) Query(ctx common.CallContext) ([]byte, error) {
 		query,
 		r.config.GasLimit,
 	)
+	retSlice, _ := contractAbi.Unpack(input.Method, ret)
+	res, _ := json.Marshal(retSlice)
 
 	fmt.Printf("query code at: %s, used gas: %d, return result: %s\n", address.String(),
-		r.config.GasLimit-leftOverGas, big.NewInt(0).SetBytes(ret)) // TODO use logger.I()
-	r.Proxy.mergeTrks() // TODO remove mergeTrk for query
-	return ret, err
+		r.config.GasLimit-leftOverGas, res)
+	return res, err
 }
 
 func (r *Runner) SetTxTrk(txTrk *common.StateTracker) {

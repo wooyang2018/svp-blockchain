@@ -6,7 +6,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"math/big"
 
 	"github.com/spf13/cobra"
 
@@ -72,7 +71,9 @@ var queryCmd = &cobra.Command{
 
 		client := native.NewClient(false)
 		ret := client.QueryState([]byte(rawInput))
-		fmt.Println(big.NewInt(0).SetBytes(ret)) // TODO only for Storage.sol
+		var res []interface{}
+		json.Unmarshal(ret, &res)
+		fmt.Println(res)
 	},
 }
 

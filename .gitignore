@@ -1,5 +1,6 @@
 /chain.exe
 /chain
+/client
 /tests/chain
 /tests/pcoin
 /tests/workdir

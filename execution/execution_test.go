@@ -189,7 +189,9 @@ func TestEVMRunner(t *testing.T) {
 	query.RawInput, _ = json.Marshal(input)
 	ret, err := runner.Query(query)
 	asrt.NoError(err)
-	asrt.EqualValues(big.NewInt(1024), big.NewInt(0).SetBytes(ret))
+	var res []interface{}
+	json.Unmarshal(ret, &res)
+	asrt.EqualValues(big.NewInt(1024), big.NewInt(int64(res[0].(float64))))
 }
 
 func TestEVMTransfer(t *testing.T) {
