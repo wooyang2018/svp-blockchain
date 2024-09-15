@@ -77,7 +77,9 @@ func (bm *Benchmark) runWithLoad(tps int) error {
 	bm.loadGen = testutil.NewLoadGenerator(bm.loadClient, tps, LoadJobPerTick)
 	bm.benchmarkName = fmt.Sprintf("bench_n_%d_w_%d_load_%d",
 		bm.cfactory.GetParams().NodeCount, bm.cfactory.GetParams().WindowSize, tps)
-	if !EmptyChainCode && PCoinBinCC {
+	if !EmptyChainCode && EVMChainCode {
+		bm.benchmarkName += "_evm"
+	} else if !EmptyChainCode && !EVMChainCode && PCoinBinCC {
 		bm.benchmarkName += "_bincc"
 	}
 	fmt.Printf("Running benchmark %s\n", bm.benchmarkName)

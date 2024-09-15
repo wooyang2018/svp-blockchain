@@ -155,3 +155,25 @@ func uploadBinChainCode(cls *cluster.Cluster, binccPath string) (int, []byte, er
 	}
 	return 0, nil, fmt.Errorf("cannot upload bincc, %w", retErr)
 }
+
+func uploadEVMChainCode(cls *cluster.Cluster, contractPath string) (int, []byte, error) {
+	buf, contentType, err := common.CreateRequestBody(contractPath)
+	if err != nil {
+		return 0, nil, err
+	}
+	var retErr error
+	retryOrder := PickUniqueRandoms(cls.NodeCount(), cls.NodeCount())
+	for _, i := range retryOrder {
+		if !cls.GetNode(i).IsRunning() {
+			continue
+		}
+		resp, err := http.Post(cls.GetNode(i).GetEndpoint()+"/contract", contentType, buf)
+		retErr = common.CheckResponse(resp, err)
+		if retErr == nil {
+			defer resp.Body.Close()
+			var codeID []byte
+			return i, codeID, json.NewDecoder(resp.Body).Decode(&codeID)
+		}
+	}
+	return 0, nil, fmt.Errorf("cannot upload EVM contract, %w", retErr)
+}

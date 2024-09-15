@@ -23,7 +23,7 @@ import (
 
 var (
 	WorkDir    = "./workdir"
-	NodeCount  = 8
+	NodeCount  = 4
 	StakeQuota = 9999
 	WindowSize = 4
 
@@ -32,8 +32,9 @@ var (
 	LoadSubmitNodes = []int{}
 	LoadBatchSubmit = true // whether to enable batch transaction submission
 
-	// chaincode priority: empty > pcoin bincc > pcoin
+	// chaincode priority: empty > evm > pcoin bincc > pcoin
 	EmptyChainCode = false // deploy empty chaincode instead of pcoin
+	EVMChainCode   = true  // deploy evm chaincode
 	PCoinBinCC     = false // deploy pcoin chaincode as bincc type (not embeded in node)
 	CheckRotation  = true
 	BroadcastTx    = true
@@ -199,6 +200,8 @@ func printAndCheckVars() {
 	fmt.Println("LoadSubmitNodes =", LoadSubmitNodes)
 	fmt.Println("LoadBatchSubmit =", LoadBatchSubmit)
 	fmt.Println("EmptyChainCode =", EmptyChainCode)
+	fmt.Println("EVMChainCode =", EVMChainCode)
+	fmt.Println("PCoinBinCC =", PCoinBinCC)
 	fmt.Println("CheckRotation =", CheckRotation)
 	fmt.Println("BroadcastTx =", BroadcastTx)
 	fmt.Println("RemoteLinuxCluster =", RemoteLinuxCluster)
@@ -307,6 +310,11 @@ func makeLoadClient() testutil.LoadClient {
 	fmt.Println("Preparing load client")
 	if EmptyChainCode {
 		return testutil.NewEmptyClient(LoadSubmitNodes)
+	}
+	if EVMChainCode {
+		contractPath := "../evm/testdata/contracts/Storage.sol"
+		Accounts := 100
+		return testutil.NewEVMClient(LoadSubmitNodes, Accounts, contractPath)
 	}
 	var binccPath string
 	if PCoinBinCC {
