@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Chenrui
+// Copyright (C) 2024 XZLiang
 // Licensed under the GNU General Public License v3.0
 
 package testutil
@@ -7,15 +7,16 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math/rand"
+	"path"
 	"strconv"
-	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/wooyang2018/svp-blockchain/consensus"
 	"github.com/wooyang2018/svp-blockchain/core"
 	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/execution/evm"
+	"github.com/wooyang2018/svp-blockchain/native"
 	"github.com/wooyang2018/svp-blockchain/tests/cluster"
 )
 
@@ -23,57 +24,37 @@ type EVMClient struct {
 	contractPath       string
 	contractCodeID     []byte
 	contractUploadNode int
-	signer             *core.PrivateKey
-	accounts           []*core.PrivateKey
-	cluster            *cluster.Cluster
-	codeAddr           []byte
-	nodes              []int
-	invokeCount        int64
+
+	signer   *core.PrivateKey
+	cluster  *cluster.Cluster
+	codeAddr []byte
+	nodes    []int
 }
 
 var _ LoadClient = (*EVMClient)(nil)
 
-func NewEVMClient(nodes []int, account int, contractPath string) *EVMClient {
-	client := &EVMClient{
+func NewEVMClient(nodes []int, contractPath string) *EVMClient {
+	return &EVMClient{
 		contractPath: contractPath,
-		signer:       core.GenerateKey(nil),
-		accounts:     make([]*core.PrivateKey, account),
 		nodes:        nodes,
 	}
-	client.generateKeyConcurrent(client.accounts)
-	return client
 }
 
-func (E *EVMClient) generateKeyConcurrent(keys []*core.PrivateKey) {
-	jobs := make(chan int, 100)
-	defer close(jobs)
-	var wg sync.WaitGroup
-	for i := 0; i < 30; i++ {
-		go func() {
-			for i := range jobs {
-				keys[i] = core.GenerateKey(nil)
-				wg.Done()
-			}
-		}()
-	}
-	for i := range keys {
-		wg.Add(1)
-		jobs <- i
-	}
-	wg.Wait()
+func (client *EVMClient) SetupOnCluster(cls *cluster.Cluster) error {
+	return client.setupOnCluster(cls)
 }
 
-func (E *EVMClient) SetupOnCluster(cls *cluster.Cluster) error {
-	return E.setupOnCluster(cls)
+func (client *EVMClient) SubmitTxAndWait() (int, error) {
+	return SubmitTxAndWait(client.cluster, client.MakeInvokeTx())
 }
 
-func (E *EVMClient) SubmitTx() (int, *core.Transaction, error) {
-	tx := E.makeRandomInvoke()
-	nodeIdx, err := SubmitTx(E.cluster, E.nodes, tx)
+func (client *EVMClient) SubmitTx() (int, *core.Transaction, error) {
+	tx := client.MakeInvokeTx()
+	nodeIdx, err := SubmitTx(client.cluster, client.nodes, tx)
 	return nodeIdx, tx, err
 }
 
-func (E *EVMClient) BatchSubmitTx(num int) (int, *core.TxList, error) {
+func (client *EVMClient) BatchSubmitTx(num int) (int, *core.TxList, error) {
 	jobCh := make(chan struct{}, num)
 	defer close(jobCh)
 	out := make(chan *core.Transaction, num)
@@ -82,7 +63,7 @@ func (E *EVMClient) BatchSubmitTx(num int) (int, *core.TxList, error) {
 	for i := 0; i < 100; i++ {
 		go func(jobCh <-chan struct{}, out chan<- *core.Transaction) {
 			for range jobCh {
-				out <- E.makeRandomInvoke()
+				out <- client.MakeInvokeTx()
 			}
 		}(jobCh, out)
 	}
@@ -95,91 +76,74 @@ func (E *EVMClient) BatchSubmitTx(num int) (int, *core.TxList, error) {
 	}
 
 	txList := core.TxList(txs)
-	nodeIdx, err := BatchSubmitTx(E.cluster, E.nodes, &txList)
+	nodeIdx, err := BatchSubmitTx(client.cluster, client.nodes, &txList)
 	return nodeIdx, &txList, err
 }
 
-func (E *EVMClient) SubmitTxAndWait() (int, error) {
-	return SubmitTxAndWait(E.cluster, E.makeRandomInvoke())
-}
-
-func (E *EVMClient) setupOnCluster(cls *cluster.Cluster) error {
-	E.cluster = cls
+func (client *EVMClient) setupOnCluster(cls *cluster.Cluster) error {
+	fmt.Println("Reading", path.Join(cluster.Node0DataDir, native.FileNodekey))
+	client.signer = cluster.Node0Key
+	client.cluster = cls
 	if consensus.ExecuteTxFlag {
-		if err := E.deploy(); err != nil {
+		if err := client.deploy(); err != nil {
 			return err
 		}
 	}
-	time.Sleep(1 * time.Second)
-	return nil //?
-}
-
-func (E *EVMClient) deploy() error {
-	if E.contractPath != "" {
-		i, codeID, err := uploadEVMChainCode(E.cluster, E.contractPath)
-		if err != nil {
-			return err
-		}
-		E.contractCodeID = codeID
-		E.contractUploadNode = i
-	}
-	depTx := E.MakeDeploymentTx(E.signer)
-	if _, err := SubmitTxAndWait(E.cluster, depTx); err != nil {
-		return fmt.Errorf("cannot deploy EVM contract, %w", err)
-	}
-	E.codeAddr = depTx.Hash()
 	return nil
 }
 
-func (E *EVMClient) MakeDeploymentTx(signer *core.PrivateKey) *core.Transaction {
-	var input *common.DeploymentInput
-	if E.contractCodeID != nil {
-		input = E.evmDeploymentInput()
+func (client *EVMClient) deploy() error {
+	if client.contractPath != "" {
+		i, codeID, err := uploadEVMChainCode(client.cluster, client.contractPath)
+		if err != nil {
+			return err
+		}
+		client.contractCodeID = codeID
+		client.contractUploadNode = i
 	}
+	depTx := client.MakeDeploymentTx()
+	if _, err := SubmitTxAndWait(client.cluster, depTx); err != nil {
+		return fmt.Errorf("cannot deploy evm contract, %w", err)
+	}
+	client.codeAddr = depTx.Hash()
+	return nil
+}
+
+func (client *EVMClient) MakeDeploymentTx() *core.Transaction {
+	input := client.evmDeploymentInput()
 	b, _ := json.Marshal(input)
 	return core.NewTransaction().
 		SetNonce(time.Now().UnixNano()).
 		SetInput(b).
-		Sign(signer)
+		Sign(client.signer)
 }
 
-func (E *EVMClient) evmDeploymentInput() *common.DeploymentInput {
-	initInput := &evm.InitInput{
-		Class: "Storage",
-	}
+func (client *EVMClient) evmDeploymentInput() *common.DeploymentInput {
+	initInput := &evm.InitInput{Class: "Storage"}
 	b, _ := json.Marshal(initInput)
 	return &common.DeploymentInput{
 		CodeInfo: common.CodeInfo{
 			DriverType: common.DriverTypeEVM,
-			CodeID:     E.contractCodeID,
+			CodeID:     client.contractCodeID,
 		},
 		InitInput: b,
 		InstallData: []byte(fmt.Sprintf("%s/contract/%s",
-			E.cluster.GetNode(E.contractUploadNode).GetEndpoint(),
-			hex.EncodeToString(E.contractCodeID),
+			client.cluster.GetNode(client.contractUploadNode).GetEndpoint(),
+			hex.EncodeToString(client.contractCodeID),
 		)),
 	}
 }
 
-func (E *EVMClient) makeRandomInvoke() *core.Transaction {
-	tCount := int(atomic.AddInt64(&E.invokeCount, 1))
-	accIdx := tCount % len(E.accounts)
-	return E.MakeEVMInvokeTx(E.accounts[accIdx], 1)
-}
-
-func (E *EVMClient) MakeEVMInvokeTx(
-	sender *core.PrivateKey, value uint64,
-) *core.Transaction {
+func (client *EVMClient) MakeInvokeTx() *core.Transaction {
 	input := &evm.Input{
 		Method: "store",
-		Params: []string{strconv.Itoa(int(value))},
+		Params: []string{strconv.Itoa(rand.Int())},
 		Types:  []string{"uint256"},
 	}
-	b, err := json.Marshal(input)
-	common.Check2(err)
+	b, _ := json.Marshal(input)
 	return core.NewTransaction().
-		SetCodeAddr(E.codeAddr).
+		SetCodeAddr(client.codeAddr).
 		SetNonce(time.Now().UnixNano()).
-		SetInput([]byte(b)).
-		Sign(sender)
+		SetInput(b).
+		Sign(client.signer)
 }

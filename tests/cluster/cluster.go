@@ -6,8 +6,12 @@ package cluster
 import (
 	"time"
 
+	"github.com/wooyang2018/svp-blockchain/core"
 	"github.com/wooyang2018/svp-blockchain/node"
 )
+
+var Node0DataDir string
+var Node0Key *core.PrivateKey
 
 type Node interface {
 	Start() error

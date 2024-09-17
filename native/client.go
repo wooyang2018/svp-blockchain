@@ -81,7 +81,8 @@ func (client *Client) makeTxWithInput(input *common.DeploymentInput) *core.Trans
 		Sign(client.signer)
 }
 
-func (client *Client) MakeDeploymentTx(driverType common.DriverType, codeID []byte, initInput []byte) *core.Transaction {
+func (client *Client) MakeDeploymentTx(driverType common.DriverType,
+	codeID []byte, initInput []byte) *core.Transaction {
 	input := &common.DeploymentInput{
 		CodeInfo: common.CodeInfo{
 			DriverType: driverType,

@@ -142,6 +142,9 @@ func (ftry *LocalFactory) SetupCluster(name string) (*Cluster, error) {
 		}
 		node.config.ConsensusConfig.BenchmarkPath = path.Join(node.config.DataDir, "consensus.csv")
 		nodes[i] = node
+		if i == 0 {
+			Node0DataDir = node.config.DataDir
+		}
 	}
 
 	return &Cluster{

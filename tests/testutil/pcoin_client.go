@@ -20,15 +20,17 @@ import (
 
 type PCoinClient struct {
 	binccPath       string
-	minter          *core.PrivateKey
-	accounts        []*core.PrivateKey
-	dests           []*core.PrivateKey
-	cluster         *cluster.Cluster
 	binccCodeID     []byte
 	binccUploadNode int
-	codeAddr        []byte
 	transferCount   int64
-	nodes           []int
+
+	minter       *core.PrivateKey
+	accounts     []*core.PrivateKey
+	destAccounts []*core.PrivateKey
+
+	cluster  *cluster.Cluster
+	codeAddr []byte
+	nodes    []int
 }
 
 var _ LoadClient = (*PCoinClient)(nil)
@@ -36,14 +38,14 @@ var _ LoadClient = (*PCoinClient)(nil)
 // NewPCoinClient creates and setups a load service, submits chaincode deploy tx and waits for commission
 func NewPCoinClient(nodes []int, mintCount, destCount int, binccPath string) *PCoinClient {
 	client := &PCoinClient{
-		binccPath: binccPath,
-		minter:    core.GenerateKey(nil),
-		accounts:  make([]*core.PrivateKey, mintCount),
-		dests:     make([]*core.PrivateKey, destCount),
-		nodes:     nodes,
+		binccPath:    binccPath,
+		minter:       core.GenerateKey(nil),
+		accounts:     make([]*core.PrivateKey, mintCount),
+		destAccounts: make([]*core.PrivateKey, destCount),
+		nodes:        nodes,
 	}
 	client.generateKeyConcurrent(client.accounts)
-	client.generateKeyConcurrent(client.dests)
+	client.generateKeyConcurrent(client.destAccounts)
 	return client
 }
 
@@ -85,6 +87,7 @@ func (client *PCoinClient) BatchSubmitTx(num int) (int, *core.TxList, error) {
 	defer close(jobCh)
 	out := make(chan *core.Transaction, num)
 	defer close(out)
+
 	for i := 0; i < 100; i++ {
 		go func(jobCh <-chan struct{}, out chan<- *core.Transaction) {
 			for range jobCh {
@@ -99,6 +102,7 @@ func (client *PCoinClient) BatchSubmitTx(num int) (int, *core.TxList, error) {
 	for i := 0; i < num; i++ {
 		txs[i] = <-out
 	}
+
 	txList := core.TxList(txs)
 	nodeIdx, err := BatchSubmitTx(client.cluster, client.nodes, &txList)
 	return nodeIdx, &txList, err
@@ -164,9 +168,9 @@ func (client *PCoinClient) Mint(dest *core.PublicKey, value uint64) error {
 func (client *PCoinClient) makeRandomTransfer() *core.Transaction {
 	tCount := int(atomic.AddInt64(&client.transferCount, 1))
 	accIdx := tCount % len(client.accounts)
-	destIdx := tCount % len(client.dests)
+	destIdx := tCount % len(client.destAccounts)
 	return client.MakeTransferTx(client.accounts[accIdx],
-		client.dests[destIdx].PublicKey(), 1)
+		client.destAccounts[destIdx].PublicKey(), 1)
 }
 
 func (client *PCoinClient) QueryBalance(node cluster.Node, dest *core.PublicKey) (uint64, error) {
@@ -225,9 +229,8 @@ func (client *PCoinClient) MakeMintTx(dest *core.PublicKey, value uint64) *core.
 		Sign(client.minter)
 }
 
-func (client *PCoinClient) MakeTransferTx(
-	sender *core.PrivateKey, dest *core.PublicKey, value uint64,
-) *core.Transaction {
+func (client *PCoinClient) MakeTransferTx(sender *core.PrivateKey,
+	dest *core.PublicKey, value uint64) *core.Transaction {
 	input := &pcoin.Input{
 		Method: "transfer",
 		Dest:   dest.Bytes(),

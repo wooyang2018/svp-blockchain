@@ -64,7 +64,7 @@ func (api *nodeAPI) submitTx(c *gin.Context) {
 		return
 	}
 	if err := api.node.txpool.SubmitTx(tx); err != nil {
-		logger.I().Warnf("submit tx failed %+v", err)
+		logger.I().Warnf("submit tx failed, %+v", err)
 		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}

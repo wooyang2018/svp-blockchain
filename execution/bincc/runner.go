@@ -74,7 +74,7 @@ func (r *Runner) startCode(callType CallType) error {
 	if err == nil {
 		return nil
 	}
-	logger.I().Warnf("start code error %f", err)
+	logger.I().Warnf("start code error:%+v", err)
 	select {
 	case <-r.timer.C:
 		return errors.New("chaincode start timeout")

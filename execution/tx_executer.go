@@ -29,7 +29,7 @@ func (txe *txExecutor) execute() *core.TxCommit {
 		SetBlockHash(txe.blk.Hash()).
 		SetBlockHeight(txe.blk.Height())
 	if err := txe.executeWithTimeout(); err != nil {
-		logger.I().Warnf("execute tx error %+v", err)
+		logger.I().Warnf("execute tx error:%+v", err)
 		txc.SetError(err.Error())
 	}
 	txc.SetElapsed(time.Since(start).Seconds())

@@ -79,7 +79,7 @@ func (bm *Benchmark) runWithLoad(tps int) error {
 		bm.cfactory.GetParams().NodeCount, bm.cfactory.GetParams().WindowSize, tps)
 	if !EmptyChainCode && EVMChainCode {
 		bm.benchmarkName += "_evm"
-	} else if !EmptyChainCode && !EVMChainCode && PCoinBinCC {
+	} else if !EmptyChainCode && PCoinBinCC {
 		bm.benchmarkName += "_bincc"
 	}
 	fmt.Printf("Running benchmark %s\n", bm.benchmarkName)

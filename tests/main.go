@@ -313,8 +313,7 @@ func makeLoadClient() testutil.LoadClient {
 	}
 	if EVMChainCode {
 		contractPath := "../evm/testdata/contracts/Storage.sol"
-		Accounts := 100
-		return testutil.NewEVMClient(LoadSubmitNodes, Accounts, contractPath)
+		return testutil.NewEVMClient(LoadSubmitNodes, contractPath)
 	}
 	var binccPath string
 	if PCoinBinCC {

@@ -162,6 +162,9 @@ func SetupTemplateDir(dir string, keys []*core.PrivateKey, genesis *node.Genesis
 		if err := WritePeersFile(d, vlds); err != nil {
 			return err
 		}
+		if i == 0 {
+			Node0Key = key
+		}
 	}
 	return nil
 }

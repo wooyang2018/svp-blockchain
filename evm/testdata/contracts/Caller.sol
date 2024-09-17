@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 contract Callee {
     function store(uint256 num) public {}
 
-    function retrieve() public view returns (uint256){}
+    function retrieve() public view returns (uint256) {}
 
     function storedtor(uint256 num) public {}
 }

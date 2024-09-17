@@ -20,12 +20,12 @@ contract Image {
         return x;
     }
 
-    function get(uint i) public view returns (string memory _image){
+    function get(uint i) public view returns (string memory _image) {
         require(msg.sender == owner);
         return image[i];
     }
 
-    function getThis() view public returns (address _addr){
+    function getThis() view public returns (address _addr) {
         return address(this);
     }
 }

@@ -135,29 +135,15 @@ func QueryState(node cluster.Node, query *common.QueryData) ([]byte, error) {
 }
 
 func uploadBinChainCode(cls *cluster.Cluster, binccPath string) (int, []byte, error) {
-	buf, contentType, err := common.CreateRequestBody(binccPath)
-	if err != nil {
-		return 0, nil, err
-	}
-	var retErr error
-	retryOrder := PickUniqueRandoms(cls.NodeCount(), cls.NodeCount())
-	for _, i := range retryOrder {
-		if !cls.GetNode(i).IsRunning() {
-			continue
-		}
-		resp, err := http.Post(cls.GetNode(i).GetEndpoint()+"/bincc", contentType, buf)
-		retErr = common.CheckResponse(resp, err)
-		if retErr == nil {
-			defer resp.Body.Close()
-			var codeID []byte
-			return i, codeID, json.NewDecoder(resp.Body).Decode(&codeID)
-		}
-	}
-	return 0, nil, fmt.Errorf("cannot upload bincc, %w", retErr)
+	return uploadChainCode(cls, binccPath, "bincc")
 }
 
 func uploadEVMChainCode(cls *cluster.Cluster, contractPath string) (int, []byte, error) {
-	buf, contentType, err := common.CreateRequestBody(contractPath)
+	return uploadChainCode(cls, contractPath, "contract")
+}
+
+func uploadChainCode(cls *cluster.Cluster, path string, flag string) (int, []byte, error) {
+	buf, contentType, err := common.CreateRequestBody(path)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -167,7 +153,7 @@ func uploadEVMChainCode(cls *cluster.Cluster, contractPath string) (int, []byte,
 		if !cls.GetNode(i).IsRunning() {
 			continue
 		}
-		resp, err := http.Post(cls.GetNode(i).GetEndpoint()+"/contract", contentType, buf)
+		resp, err := http.Post(cls.GetNode(i).GetEndpoint()+"/"+flag, contentType, buf)
 		retErr = common.CheckResponse(resp, err)
 		if retErr == nil {
 			defer resp.Body.Close()
@@ -175,5 +161,5 @@ func uploadEVMChainCode(cls *cluster.Cluster, contractPath string) (int, []byte,
 			return i, codeID, json.NewDecoder(resp.Body).Decode(&codeID)
 		}
 	}
-	return 0, nil, fmt.Errorf("cannot upload EVM contract, %w", retErr)
+	return 0, nil, fmt.Errorf("cannot upload %s chaincode, %w", flag, retErr)
 }

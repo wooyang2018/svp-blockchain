@@ -232,6 +232,9 @@ func (ftry *RemoteFactory) SetupCluster(name string) (*Cluster, error) {
 		node.RemoveEffect()
 		node.StopDstat()
 		cls.nodes[i] = node
+		if i == 0 {
+			Node0DataDir = node.config.DataDir
+		}
 	}
 	cls.Stop()
 	time.Sleep(5 * time.Second)

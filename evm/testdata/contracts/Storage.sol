@@ -11,11 +11,11 @@ contract Storage {
         owner = payable(msg.sender);
     }
 
-    function store(uint256 num) public {
+    function store(uint256 num) public returns (uint256) {
         number = num;
-    }
+        return number;}
 
-    function retrieve() public view returns (uint256){
+    function retrieve() public view returns (uint256) {
         return number;
     }
 

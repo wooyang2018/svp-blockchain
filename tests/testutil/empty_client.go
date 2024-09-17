@@ -85,7 +85,7 @@ func (client *EmptyClient) setupOnCluster(cls *cluster.Cluster) error {
 }
 
 func (client *EmptyClient) deploy() error {
-	depTx := client.MakeDeploymentTx(client.signer)
+	depTx := client.MakeDeploymentTx()
 	if _, err := SubmitTxAndWait(client.cluster, depTx); err != nil {
 		return fmt.Errorf("cannot deploy empty chaincode, %w", err)
 	}
@@ -93,13 +93,13 @@ func (client *EmptyClient) deploy() error {
 	return nil
 }
 
-func (client *EmptyClient) MakeDeploymentTx(minter *core.PrivateKey) *core.Transaction {
+func (client *EmptyClient) MakeDeploymentTx() *core.Transaction {
 	input := client.nativeDeploymentInput()
 	b, _ := json.Marshal(input)
 	return core.NewTransaction().
 		SetNonce(time.Now().UnixNano()).
 		SetInput(b).
-		Sign(minter)
+		Sign(client.signer)
 }
 
 func (client *EmptyClient) nativeDeploymentInput() *common.DeploymentInput {
