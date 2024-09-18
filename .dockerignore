@@ -1,0 +1,17 @@
+/chain.exe
+/chain
+/client
+/tests/chain
+/tests/pcoin
+/tests/workdir
+/tests/seedemu/output
+/tests/seedemu/__pycache__
+/docs
+
+ING
+OK
+***/.DS_Store
+.vscode
+.idea
+.git
+go.sum
