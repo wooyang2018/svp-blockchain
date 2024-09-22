@@ -65,7 +65,7 @@ func proxyHandler(c *gin.Context) {
 
 	path := c.Param("path")
 	if path == "/" {
-		c.String(http.StatusBadRequest, "path can not be empty")
+		c.String(http.StatusBadRequest, "path cannot be empty")
 		return
 	}
 
@@ -97,7 +97,7 @@ func proxyHandler(c *gin.Context) {
 func commandHandler(c *gin.Context) {
 	cmd := c.PostForm("cmd")
 	if cmd == "" {
-		c.String(http.StatusBadRequest, "command can not be empty")
+		c.String(http.StatusBadRequest, "command cannot be empty")
 		return
 	}
 	fmt.Println("execute command:", cmd)
@@ -125,12 +125,16 @@ func clusterFactoryHandler(c *gin.Context) {
 		SetupDocker: false,
 		NodeConfig:  node.DefaultConfig,
 	})
+	c.String(http.StatusOK, "successfully created cluster factory")
+}
+
+func resetWorkDirHandler(c *gin.Context) {
 	err := os.RemoveAll(WorkDir)
 	err = os.MkdirAll(factory.TemplateDir(), 0755)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 	} else {
-		c.String(http.StatusOK, "successfully created cluster factory.")
+		c.String(http.StatusOK, "successfully reset working directory")
 	}
 }
 
@@ -170,7 +174,7 @@ func templateDirHandler(c *gin.Context) {
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 	} else {
-		c.String(http.StatusOK, "successfully setup template dir")
+		c.String(http.StatusOK, "successfully setup template directory")
 	}
 }
 
@@ -180,21 +184,16 @@ func buildChainHandler(c *gin.Context) {
 	if err := cmd.Run(); err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 	} else {
-		c.String(http.StatusOK, "successfully build chain")
+		c.String(http.StatusOK, "successfully built chain binary file")
 	}
 }
 
-func createClusterHandler(c *gin.Context) {
+func newClusterHandler(c *gin.Context) {
 	var err error
 	if cls, err = factory.SetupCluster(ClusterName); err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
-	}
-	cls.Stop() // to make sure no existing process keeps running
-	if err = cls.Start(); err != nil {
-		c.String(http.StatusInternalServerError, err.Error())
 	} else {
-		time.Sleep(10 * time.Second)
-		c.String(http.StatusOK, "started cluster")
+		c.String(http.StatusOK, "successfully newed cluster")
 	}
 }
 
@@ -204,13 +203,13 @@ func startClusterHandler(c *gin.Context) {
 		c.String(http.StatusInternalServerError, err.Error())
 	} else {
 		time.Sleep(10 * time.Second)
-		c.String(http.StatusOK, "started cluster")
+		c.String(http.StatusOK, "successfully started cluster")
 	}
 }
 
 func stopClusterHandler(c *gin.Context) {
 	cls.Stop()
-	c.String(http.StatusOK, "stopped cluster")
+	c.String(http.StatusOK, "successfully stopped cluster")
 }
 
 func main() {
@@ -220,12 +219,13 @@ func main() {
 	r.Any("/proxy/:node/*path", proxyHandler)
 	r.POST("/execute", commandHandler)
 
-	r.POST("/setup/factory", clusterFactoryHandler)
-	r.POST("/setup/addrs", localAddrsHandler)
-	r.POST("/setup/random", randomKeysHandler)
-	r.POST("/setup/template", templateDirHandler)
+	r.POST("/setup/new/factory", clusterFactoryHandler)
+	r.POST("/setup/reset/workdir", resetWorkDirHandler)
+	r.POST("/setup/genesis/addrs", localAddrsHandler)
+	r.POST("/setup/genesis/random", randomKeysHandler)
+	r.POST("/setup/genesis/template", templateDirHandler)
 	r.POST("/setup/build/chain", buildChainHandler)
-	r.POST("/setup/cluster/create", createClusterHandler)
+	r.POST("/setup/new/cluster", newClusterHandler)
 	r.POST("/setup/cluster/start", startClusterHandler)
 	r.POST("/setup/cluster/stop", stopClusterHandler)
 

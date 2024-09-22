@@ -13,8 +13,8 @@ GET http://localhost:8080/proxy/-1/txpool
 ### Request a specific blockchain process to retrieve block at specified height.
 GET http://localhost:8080/proxy/-1/blocks/height/50
 
-### Request the proxy process to create a local cluster factory.
-POST http://localhost:8080/setup/factory
+### Request the proxy process to new a local cluster factory.
+POST http://localhost:8080/setup/new/factory
 Content-Type: application/json
 
 {
@@ -23,17 +23,20 @@ Content-Type: application/json
   "windowSize": 4
 }
 
+### Request the proxy process to reset the working directory.
+POST http://localhost:8080/setup/reset/workdir
+
 ### Request the proxy process to make local point and topic addresses.
-POST http://localhost:8080/setup/addrs
+POST http://localhost:8080/setup/genesis/addrs
 
 ### Request the proxy process to make validator keys and stake quotas.
-POST http://localhost:8080/setup/random
+POST http://localhost:8080/setup/genesis/random
 
 ### Request the proxy process to write the genesis files for startup.
-POST http://localhost:8080/setup/template
+POST http://localhost:8080/setup/genesis/template
 
-### Request the proxy process to create a cluster named cluster_template.
-POST http://localhost:8080/setup/cluster/create
+### Request the proxy process to new a cluster named cluster_template.
+POST http://localhost:8080/setup/new/cluster
 
 ### Request the proxy process to build the blockchain binary file.
 POST http://localhost:8080/setup/build/chain

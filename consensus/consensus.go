@@ -5,10 +5,13 @@ package consensus
 
 import (
 	"os"
+	"path"
 	"time"
 
 	"github.com/wooyang2018/svp-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/logger"
+	"github.com/wooyang2018/svp-blockchain/native"
 )
 
 type Consensus struct {
@@ -103,6 +106,7 @@ func (cons *Consensus) getInitialBlockAndQC() (exec *core.Block, leaf *core.Bloc
 		if err != nil {
 			panic("cannot get block with qc")
 		}
+		cons.restoreCodeFile()
 		return exec, leaf, qc
 	}
 	// not started blockchain yet, create genesis block
@@ -112,6 +116,19 @@ func (cons *Consensus) getInitialBlockAndQC() (exec *core.Block, leaf *core.Bloc
 	}
 	exec, qc = gns.run()
 	return exec, exec, qc
+}
+
+func (cons *Consensus) restoreCodeFile() {
+	xcoinAddr, err := os.ReadFile(path.Join(cons.config.DataDir, native.FileCodeXCoin))
+	if err != nil {
+		logger.I().Fatalf("cannot read xcoin code file, %+v", err)
+	}
+	taddrAddr, err := os.ReadFile(path.Join(cons.config.DataDir, native.FileCodeTAddr))
+	if err != nil {
+		logger.I().Fatalf("cannot read taddr code file, %+v", err)
+	}
+	common.RegisterCode(native.FileCodeXCoin, xcoinAddr)
+	common.RegisterCode(native.FileCodeTAddr, taddrAddr)
 }
 
 func (cons *Consensus) setupStatus(exec *core.Block, leaf *core.Block, qc *core.QuorumCert) {

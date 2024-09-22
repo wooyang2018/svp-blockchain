@@ -110,7 +110,7 @@ func (vld *validator) onReceiveProposal(blk *core.Block) error {
 		return errors.New("not same view")
 	}
 	if vld.driver.cmpQCPriority(blk.QuorumCert(), vld.status.getQCHigh()) < 0 {
-		return errors.New("can not vote by lower qc")
+		return errors.New("cannot vote by lower qc")
 	}
 
 	vld.driver.updateQCHigh(blk.QuorumCert())

@@ -64,7 +64,7 @@ func (pm *pacemaker) newProposal() {
 	defer pm.driver.mtxUpdate.Unlock()
 
 	if pm.status.getViewChange() != 0 {
-		logger.I().Warn("can not create proposal when view change")
+		logger.I().Warn("cannot create proposal when view change")
 		return
 	}
 	if !pm.driver.isLeader(pm.resources.Signer.PublicKey()) {

@@ -206,7 +206,7 @@ func (s *status) getVoteQuota() (uint64, error) {
 
 	quota, ok := s.window.vote()
 	if !ok {
-		return 0, errors.New("can not vote because of strategy")
+		return 0, errors.New("cannot vote because of strategy")
 	}
 	return quota, nil
 }

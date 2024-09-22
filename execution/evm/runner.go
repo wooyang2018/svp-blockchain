@@ -73,6 +73,7 @@ func (r *Runner) Init(ctx common.CallContext) error {
 		r.config.GasLimit,
 		r.config.Value,
 	)
+	err = r.StateDB.Commit()
 	if err != nil {
 		return err
 	}
@@ -111,6 +112,7 @@ func (r *Runner) Invoke(ctx common.CallContext) error {
 		r.config.GasLimit,
 		r.config.Value,
 	)
+	err = r.StateDB.Commit()
 	if err != nil {
 		return err
 	}

@@ -373,7 +373,7 @@ func (self *StateDB) Snapshot() int {
 
 func (self *StateDB) RevertToSnapshot(idx int) {
 	if idx+1 > len(self.snapshots) {
-		panic("can not revert snapshot")
+		panic("cannot revert snapshot")
 	}
 
 	sn := self.snapshots[idx]
