@@ -107,9 +107,9 @@ func BatchSubmitTx(cls *cluster.Cluster, retryOrder []int, txs *core.TxList) (in
 }
 
 func GetTxStatus(node cluster.Node, hash []byte) (txpool.TxStatus, error) {
-	hashstr := hex.EncodeToString(hash)
-	resp, err := getRequestWithRetry(node.GetEndpoint() +
-		fmt.Sprintf("/transactions/%s/status", hashstr))
+	hashStr := hex.EncodeToString(hash)
+	resp, err := common.GetRequestWithRetry(node.GetEndpoint() +
+		fmt.Sprintf("/transactions/%s/status", hashStr))
 	if err != nil {
 		return 0, err
 	}

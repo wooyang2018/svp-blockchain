@@ -165,18 +165,6 @@ func ConcatBytes(srcs ...[]byte) []byte {
 	return buf.Bytes()
 }
 
-func CheckResponse(resp *http.Response, err error) error {
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != 200 {
-		msg, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
-		return fmt.Errorf("status code %d, %s", resp.StatusCode, string(msg))
-	}
-	return nil
-}
-
 func CreateRequestBody(filePath string) (*bytes.Buffer, string, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
@@ -196,6 +184,34 @@ func CreateRequestBody(filePath string) (*bytes.Buffer, string, error) {
 		return nil, "", err
 	}
 	return buf, mw.FormDataContentType(), nil
+}
+
+func GetRequestWithRetry(url string) (*http.Response, error) {
+	retry := 0
+	for {
+		resp, err := http.Get(url)
+		err = CheckResponse(resp, err)
+		if err == nil {
+			return resp, nil
+		}
+		retry++
+		if retry > 5 {
+			return nil, err
+		}
+		time.Sleep(200 * time.Second)
+	}
+}
+
+func CheckResponse(resp *http.Response, err error) error {
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 200 {
+		msg, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return fmt.Errorf("status code %d, %s", resp.StatusCode, string(msg))
+	}
+	return nil
 }
 
 func DumpFile(data []byte, directory, file string) {

@@ -138,8 +138,8 @@ func (api *nodeAPI) getBlock(c *gin.Context) {
 }
 
 func (api *nodeAPI) getHash(c *gin.Context) ([]byte, error) {
-	hashstr := c.Param("hash")
-	return hex.DecodeString(hashstr)
+	hash := c.Param("hash")
+	return hex.DecodeString(hash)
 }
 
 func (api *nodeAPI) getBlockByHeight(c *gin.Context) {

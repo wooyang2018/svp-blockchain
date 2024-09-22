@@ -15,6 +15,7 @@ import (
 
 	"github.com/multiformats/go-multiaddr"
 
+	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/node"
 )
 
@@ -44,21 +45,15 @@ type RemoteFactory struct {
 
 var _ ClusterFactory = (*RemoteFactory)(nil)
 
-func NewRemoteFactory(params RemoteFactoryParams) (*RemoteFactory, error) {
+func NewRemoteFactory(params RemoteFactoryParams) *RemoteFactory {
 	os.Mkdir(params.WorkDir, 0755)
 	ftry := &RemoteFactory{
 		params: params,
 	}
 	ftry.templateDir = path.Join(ftry.params.WorkDir, "cluster_template")
-	if err := ftry.ReadHosts(ftry.params.HostsPath, ftry.params.NodeCount); err != nil {
-		return nil, err
-	}
-	if ftry.params.SetupRequired {
-		if err := ftry.setup(); err != nil {
-			return nil, err
-		}
-	}
-	return ftry, nil
+	err := ftry.ReadHosts(ftry.params.HostsPath, ftry.params.NodeCount)
+	common.Check(err)
+	return ftry
 }
 
 func (ftry *RemoteFactory) TemplateDir() string {
@@ -98,7 +93,7 @@ func (ftry *RemoteFactory) GetParams() RemoteFactoryParams {
 	return ftry.params
 }
 
-func (ftry *RemoteFactory) setup() error {
+func (ftry *RemoteFactory) Bootstrap() error {
 	pointAddrs, topicAddrs, err := ftry.makeAddrs()
 	if err != nil {
 		return err

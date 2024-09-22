@@ -1,0 +1,48 @@
+### Request the proxy process to execute shell command.
+POST http://localhost:8080/execute
+Content-Type: application/x-www-form-urlencoded
+
+cmd = echo hello
+
+### Request a specific blockchain process to retrieve consensus status.
+GET http://localhost:8080/proxy/-1/consensus
+
+### Request a specific blockchain process to retrieve txpool status.
+GET http://localhost:8080/proxy/-1/txpool
+
+### Request a specific blockchain process to retrieve block at specified height.
+GET http://localhost:8080/proxy/-1/blocks/height/50
+
+### Request the proxy process to create a local cluster factory.
+POST http://localhost:8080/setup/factory
+Content-Type: application/json
+
+{
+  "nodeCount": 4,
+  "stakeQuota": 9999,
+  "windowSize": 4
+}
+
+### Request the proxy process to make local point and topic addresses.
+POST http://localhost:8080/setup/addrs
+
+### Request the proxy process to make validator keys and stake quotas.
+POST http://localhost:8080/setup/random
+
+### Request the proxy process to write the genesis files for startup.
+POST http://localhost:8080/setup/template
+
+### Request the proxy process to create a cluster named cluster_template.
+POST http://localhost:8080/setup/cluster/create
+
+### Request the proxy process to build the blockchain binary file.
+POST http://localhost:8080/setup/build/chain
+
+### Request the proxy process to view the working directory of each node.
+GET http://localhost:8080/workdir/0/genesis.json
+
+### Request the proxy process to start the cluster.
+POST http://localhost:8080/setup/cluster/start
+
+### Request the proxy process to stop the cluster.
+POST http://localhost:8080/setup/cluster/stop

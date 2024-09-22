@@ -36,29 +36,29 @@ type LocalFactory struct {
 
 var _ ClusterFactory = (*LocalFactory)(nil)
 
-func NewLocalFactory(params LocalFactoryParams) (*LocalFactory, error) {
+func NewLocalFactory(params LocalFactoryParams) *LocalFactory {
 	os.Mkdir(params.WorkDir, 0755)
 	ftry := &LocalFactory{
 		params: params,
 	}
-	if err := ftry.setup(); err != nil {
-		return nil, err
+	if ftry.params.SetupDocker {
+		ftry.templateDir = path.Join(ftry.params.WorkDir, "docker_template")
+	} else {
+		ftry.templateDir = path.Join(ftry.params.WorkDir, "cluster_template")
 	}
-	return ftry, nil
+	return ftry
 }
 
 func (ftry *LocalFactory) TemplateDir() string {
 	return ftry.templateDir
 }
 
-func (ftry *LocalFactory) setup() (err error) {
+func (ftry *LocalFactory) Bootstrap() (err error) {
 	var pointAddrs, topicAddrs []multiaddr.Multiaddr
 	if ftry.params.SetupDocker {
-		ftry.templateDir = path.Join(ftry.params.WorkDir, "docker_template")
-		pointAddrs, topicAddrs, err = ftry.makeDockerAddrs()
+		pointAddrs, topicAddrs, err = ftry.MakeDockerAddrs()
 	} else {
-		ftry.templateDir = path.Join(ftry.params.WorkDir, "cluster_template")
-		pointAddrs, topicAddrs, err = ftry.makeLocalAddrs()
+		pointAddrs, topicAddrs, err = ftry.MakeLocalAddrs()
 	}
 	if err != nil {
 		return err
@@ -79,7 +79,7 @@ func (ftry *LocalFactory) setup() (err error) {
 	return SetupTemplateDir(ftry.templateDir, keys, genesis, peers)
 }
 
-func (ftry *LocalFactory) makeDockerAddrs() ([]multiaddr.Multiaddr, []multiaddr.Multiaddr, error) {
+func (ftry *LocalFactory) MakeDockerAddrs() ([]multiaddr.Multiaddr, []multiaddr.Multiaddr, error) {
 	n := ftry.params.NodeCount
 	pointAddrs, topicAddrs := make([]multiaddr.Multiaddr, n), make([]multiaddr.Multiaddr, n)
 	for i := 0; i < n; i++ {
@@ -96,7 +96,7 @@ func (ftry *LocalFactory) makeDockerAddrs() ([]multiaddr.Multiaddr, []multiaddr.
 	return pointAddrs, topicAddrs, nil
 }
 
-func (ftry *LocalFactory) makeLocalAddrs() ([]multiaddr.Multiaddr, []multiaddr.Multiaddr, error) {
+func (ftry *LocalFactory) MakeLocalAddrs() ([]multiaddr.Multiaddr, []multiaddr.Multiaddr, error) {
 	n := ftry.params.NodeCount
 	pointAddrs, topicAddrs := make([]multiaddr.Multiaddr, n), make([]multiaddr.Multiaddr, n)
 	for i := 0; i < n; i++ {

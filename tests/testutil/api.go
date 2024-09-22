@@ -7,9 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"sync"
-	"time"
 
 	"github.com/wooyang2018/svp-blockchain/consensus"
 	"github.com/wooyang2018/svp-blockchain/core"
@@ -18,27 +16,11 @@ import (
 	"github.com/wooyang2018/svp-blockchain/txpool"
 )
 
-func getRequestWithRetry(url string) (*http.Response, error) {
-	retry := 0
-	for {
-		resp, err := http.Get(url)
-		err = common.CheckResponse(resp, err)
-		if err == nil {
-			return resp, nil
-		}
-		retry++
-		if retry > 5 {
-			return nil, err
-		}
-		time.Sleep(200 * time.Second)
-	}
-}
-
 func GetStatus(node cluster.Node) (*consensus.Status, error) {
 	if !node.IsRunning() {
 		return nil, errors.New("node is not running")
 	}
-	resp, err := getRequestWithRetry(node.GetEndpoint() + "/consensus")
+	resp, err := common.GetRequestWithRetry(node.GetEndpoint() + "/consensus")
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +36,7 @@ func GetTxPoolStatus(node cluster.Node) (*txpool.Status, error) {
 	if !node.IsRunning() {
 		return nil, errors.New("node is not running")
 	}
-	resp, err := getRequestWithRetry(node.GetEndpoint() + "/txpool")
+	resp, err := common.GetRequestWithRetry(node.GetEndpoint() + "/txpool")
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +92,7 @@ func GetBlockByHeight(node cluster.Node, height uint64) (*core.Block, error) {
 	if !node.IsRunning() {
 		return nil, errors.New("node is not running")
 	}
-	resp, err := getRequestWithRetry(fmt.Sprintf("%s/blocks/height/%d", node.GetEndpoint(), height))
+	resp, err := common.GetRequestWithRetry(fmt.Sprintf("%s/blocks/height/%d", node.GetEndpoint(), height))
 	if err != nil {
 		return nil, err
 	}

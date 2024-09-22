@@ -340,7 +340,7 @@ func buildPCoinBinCC() {
 }
 
 func makeLocalClusterFactory() *cluster.LocalFactory {
-	ftry, err := cluster.NewLocalFactory(cluster.LocalFactoryParams{
+	ftry := cluster.NewLocalFactory(cluster.LocalFactoryParams{
 		BinPath:     "./chain",
 		WorkDir:     path.Join(WorkDir, "local-clusters"),
 		NodeCount:   NodeCount,
@@ -349,12 +349,13 @@ func makeLocalClusterFactory() *cluster.LocalFactory {
 		SetupDocker: OnlySetupDocker,
 		NodeConfig:  getNodeConfig(),
 	})
+	err := ftry.Bootstrap()
 	common.Check(err)
 	return ftry
 }
 
 func makeRemoteClusterFactory() *cluster.RemoteFactory {
-	ftry, err := cluster.NewRemoteFactory(cluster.RemoteFactoryParams{
+	ftry := cluster.NewRemoteFactory(cluster.RemoteFactoryParams{
 		BinPath:         "./chain",
 		WorkDir:         path.Join(WorkDir, "remote-clusters"),
 		NodeCount:       NodeCount,
@@ -366,6 +367,9 @@ func makeRemoteClusterFactory() *cluster.RemoteFactory {
 		SetupRequired:   RemoteSetupRequired,
 		InstallRequired: RemoteInstallRequired,
 	})
-	common.Check(err)
+	if RemoteSetupRequired {
+		err := ftry.Bootstrap()
+		common.Check(err)
+	}
 	return ftry
 }

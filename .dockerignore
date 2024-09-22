@@ -1,17 +1,19 @@
 /chain.exe
 /chain
 /client
+/proxy
+/workdir
 /tests/chain
 /tests/pcoin
 /tests/workdir
 /tests/seedemu/output
-/tests/seedemu/__pycache__
 /docs
 
-ING
-OK
-***/.DS_Store
 .vscode
 .idea
 .git
-go.sum
+**/.DS_Store
+**/__pycache__
+**/go.sum
+**/ING
+**/OK
