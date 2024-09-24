@@ -28,11 +28,13 @@ var _ common.CodeDriver = (*CodeDriver)(nil)
 func NewCodeDriver(codeDir string, nativeDriver common.CodeDriver, storage storage.PersistStore) *CodeDriver {
 	cache := statedb.NewCacheDB(storage)
 	proxy := NewNativeProxy(nativeDriver)
+	stateDB := statedb.NewStateDB(cache, ethcomm.Hash{}, ethcomm.Hash{}, proxy)
+	statedb.RegisterStateDB(stateDB)
 	return &CodeDriver{
 		codeDir: codeDir,
 		proxy:   proxy,
 		storage: storage,
-		stateDB: statedb.NewStateDB(cache, ethcomm.Hash{}, ethcomm.Hash{}, proxy),
+		stateDB: stateDB,
 	}
 }
 

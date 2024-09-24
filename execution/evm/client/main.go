@@ -35,11 +35,11 @@ var deployCmd = &cobra.Command{
 		common.Check2(err)
 
 		client := native.NewClient(true)
-		codeID, err := client.UploadChainCode(common.DriverTypeEVM, filePath)
+		codeID, err := native.UploadChainCode(common.DriverTypeEVM, filePath)
 		common.Check2(err)
 		tx := client.MakeDeploymentTx(common.DriverTypeEVM, codeID, []byte(rawInput))
 		client.SubmitTx(tx)
-		common.DumpFile(tx.Hash(), native.DataPath, native.FileCodeDefault)
+		common.DumpFile(tx.Hash(), native.GetDataPath(), native.FileCodeDefault)
 	},
 }
 

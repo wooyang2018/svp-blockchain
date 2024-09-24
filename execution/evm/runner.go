@@ -73,10 +73,6 @@ func (r *Runner) Init(ctx common.CallContext) error {
 		r.config.GasLimit,
 		r.config.Value,
 	)
-	err = r.StateDB.Commit()
-	if err != nil {
-		return err
-	}
 
 	ctx.SetState(keyAddr, address.Bytes())
 	ctx.SetState(keyAbi, []byte(jsonABI))
@@ -87,7 +83,7 @@ func (r *Runner) Init(ctx common.CallContext) error {
 
 	fmt.Printf("deploy code at: %s, used gas: %d\n", address.String(), r.config.GasLimit-leftOverGas)
 	r.Proxy.mergeTrks()
-	return err
+	return nil
 }
 
 func (r *Runner) Invoke(ctx common.CallContext) error {
@@ -112,17 +108,13 @@ func (r *Runner) Invoke(ctx common.CallContext) error {
 		r.config.GasLimit,
 		r.config.Value,
 	)
-	err = r.StateDB.Commit()
-	if err != nil {
-		return err
-	}
+
 	retSlice, _ := contractAbi.Unpack(input.Method, ret)
 	res, _ := json.Marshal(retSlice)
-
 	fmt.Printf("invoke code at: %s, used gas: %d, return result: %s\n", address.String(),
 		r.config.GasLimit-leftOverGas, res)
 	r.Proxy.mergeTrks()
-	return err
+	return nil
 }
 
 func (r *Runner) Query(ctx common.CallContext) ([]byte, error) {
@@ -146,12 +138,12 @@ func (r *Runner) Query(ctx common.CallContext) ([]byte, error) {
 		query,
 		r.config.GasLimit,
 	)
+
 	retSlice, _ := contractAbi.Unpack(input.Method, ret)
 	res, _ := json.Marshal(retSlice)
-
 	fmt.Printf("query code at: %s, used gas: %d, return result: %s\n", address.String(),
 		r.config.GasLimit-leftOverGas, res)
-	return res, err
+	return res, nil
 }
 
 func (r *Runner) SetTxTrk(txTrk *common.StateTracker) {

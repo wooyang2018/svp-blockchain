@@ -20,9 +20,9 @@ const (
 )
 
 var (
-	NodeUrl  = "http://127.0.0.1:9090"
-	DataPath = "./"
-	CodeFile = FileCodeDefault
+	nodeUrl  = "http://127.0.0.1:9090"
+	dataPath = "./"
+	codeFile = FileCodeDefault
 )
 
 var RootCmd = &cobra.Command{
@@ -35,14 +35,22 @@ var accountCmd = &cobra.Command{
 	Short: "Generate a nodekey file for new account",
 	Run: func(cmd *cobra.Command, args []string) {
 		owner := core.GenerateKey(nil)
-		common.DumpFile(owner.Bytes(), DataPath, FileNodekey)
+		common.DumpFile(owner.Bytes(), dataPath, FileNodekey)
 		fmt.Println(owner.PublicKey().String())
 	},
 }
 
+func SetNodeUrl(url string) {
+	nodeUrl = url
+}
+
+func GetDataPath() string {
+	return dataPath
+}
+
 func init() {
 	RootCmd.AddCommand(accountCmd)
-	RootCmd.PersistentFlags().StringVar(&NodeUrl, "node", NodeUrl, "blockchain node url")
-	RootCmd.PersistentFlags().StringVar(&DataPath, "path", DataPath, "workspace data path")
-	RootCmd.PersistentFlags().StringVar(&CodeFile, "code", CodeFile, "native chaincode address")
+	RootCmd.PersistentFlags().StringVar(&nodeUrl, "node", nodeUrl, "blockchain node url")
+	RootCmd.PersistentFlags().StringVar(&dataPath, "path", dataPath, "workspace data path")
+	RootCmd.PersistentFlags().StringVar(&codeFile, "code", codeFile, "native chaincode address")
 }

@@ -23,11 +23,11 @@ var deployCmd = &cobra.Command{
 	Short: "Deploy a specific bincc chaincode",
 	Run: func(cmd *cobra.Command, args []string) {
 		client := native.NewClient(true)
-		codeID, err := client.UploadChainCode(common.DriverTypeBincc, filePath)
+		codeID, err := native.UploadChainCode(common.DriverTypeBincc, filePath)
 		common.Check(err)
 		tx := client.MakeDeploymentTx(common.DriverTypeBincc, codeID, nil)
 		client.SubmitTx(tx)
-		common.DumpFile(tx.Hash(), native.DataPath, native.FileCodeDefault)
+		common.DumpFile(tx.Hash(), native.GetDataPath(), native.FileCodeDefault)
 	},
 }
 

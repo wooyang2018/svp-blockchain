@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"runtime/debug"
 	"time"
 
 	"github.com/wooyang2018/svp-blockchain/core"
@@ -53,7 +54,8 @@ func (txe *txExecutor) executeWithTimeout() error {
 func (txe *txExecutor) executeChaincode() (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("%+v", r)
+			err = fmt.Errorf("recovered from panic: %+v", r)
+			fmt.Printf("%s\n", debug.Stack())
 		}
 	}()
 	if len(txe.tx.CodeAddr()) == 0 {
