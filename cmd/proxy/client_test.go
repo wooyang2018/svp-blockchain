@@ -1,3 +1,6 @@
+// Copyright (C) 2024 Wooyang2018
+// Licensed under the GNU General Public License v3.0
+
 package main
 
 import (
@@ -69,7 +72,7 @@ func TestEVMClient(t *testing.T) {
 
 	asrt := assert.New(t)
 	native.SetNodeUrl(ProxyUrl + "/proxy/0")
-	client := native.Client{}
+	client := &native.Client{}
 	signer, err := getNode0Key()
 	asrt.NoError(err)
 	client.SetSigner(signer)

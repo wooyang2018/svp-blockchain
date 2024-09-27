@@ -46,6 +46,10 @@ func (client *Client) SetAddr(addr []byte) {
 	client.codeAddr = addr
 }
 
+func (client *Client) GetAddr() []byte {
+	return client.codeAddr
+}
+
 func (client *Client) SubmitTxAndWait(tx *core.Transaction) {
 	client.SubmitTx(tx)
 	if err := WaitTxCommitted(tx); err != nil {
@@ -118,7 +122,16 @@ func (client *Client) MakeDeploymentTx(driverType common.DriverType,
 }
 
 func UploadChainCode(driverType common.DriverType, filePath string) ([]byte, error) {
-	buf, contentType, err := common.CreateRequestBody(filePath)
+	f, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return UploadChainCode2(driverType, f)
+}
+
+func UploadChainCode2(driverType common.DriverType, f io.Reader) ([]byte, error) {
+	buf, contentType, err := common.CreateRequestBody(f)
 	if err != nil {
 		return nil, err
 	}

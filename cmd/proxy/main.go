@@ -14,7 +14,6 @@ import (
 	"path"
 	"runtime/debug"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -22,9 +21,7 @@ import (
 
 	"github.com/wooyang2018/svp-blockchain/core"
 	"github.com/wooyang2018/svp-blockchain/execution/common"
-	"github.com/wooyang2018/svp-blockchain/node"
 	"github.com/wooyang2018/svp-blockchain/tests/cluster"
-	"github.com/wooyang2018/svp-blockchain/tests/testutil"
 )
 
 const (
@@ -116,7 +113,7 @@ func streamLogHandler(c *gin.Context) {
 	}
 
 	workDir := path.Join(WorkDir, ClusterName)
-	filePath := path.Join(workDir, strconv.Itoa(nodeID)+"/log.txt")
+	filePath := path.Join(workDir, strconv.Itoa(nodeID), "log.txt")
 	file, err := os.Open(filePath)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
@@ -203,146 +200,6 @@ func getStartPosition(file *os.File, n int) (int64, error) {
 	return lines[len(lines)-1], nil
 }
 
-func oneClickHandler(c *gin.Context) {
-	handlers := []gin.HandlerFunc{
-		clusterFactoryHandler, resetWorkDirHandler,
-		localAddrsHandler, randomKeysHandler,
-		templateDirHandler, buildChainHandler,
-		newClusterHandler, startClusterHandler,
-	}
-	for _, handler := range handlers {
-		handler(c)
-		if c.Writer.Status() == http.StatusOK {
-			c.String(http.StatusOK, "\n")
-		} else {
-			break
-		}
-	}
-}
-
-func clusterFactoryHandler(c *gin.Context) {
-	params = new(FactoryParams)
-	if err := c.ShouldBind(params); err != nil {
-		c.String(http.StatusBadRequest, err.Error())
-		return
-	}
-	factory = cluster.NewLocalFactory(cluster.LocalFactoryParams{
-		BinPath:     "./chain",
-		WorkDir:     WorkDir,
-		NodeCount:   params.NodeCount,
-		StakeQuota:  params.StakeQuota,
-		WindowSize:  params.WindowSize,
-		SetupDocker: false,
-		NodeConfig:  node.DefaultConfig,
-	})
-	c.String(http.StatusOK, "successfully newed cluster factory")
-}
-
-func resetWorkDirHandler(c *gin.Context) {
-	err := os.RemoveAll(WorkDir)
-	err = os.MkdirAll(factory.TemplateDir(), 0755)
-	if err != nil {
-		c.String(http.StatusInternalServerError, err.Error())
-	} else {
-		c.String(http.StatusOK, "successfully reset working directory")
-	}
-}
-
-func localAddrsHandler(c *gin.Context) {
-	pointAddrs, topicAddrs, err := factory.MakeLocalAddrs()
-	if err != nil {
-		c.String(http.StatusInternalServerError, err.Error())
-		return
-	}
-	config.pointAddrs = pointAddrs
-	config.topicAddrs = topicAddrs
-	c.JSON(http.StatusOK, gin.H{"point addrs": pointAddrs, "topic addrs": topicAddrs})
-}
-
-func randomKeysHandler(c *gin.Context) {
-	config.keys = cluster.MakeRandomKeys(params.NodeCount)
-	config.quotas = cluster.MakeRandomQuotas(params.NodeCount, params.StakeQuota)
-	keyStrs := make([]string, params.NodeCount)
-	for i, key := range config.keys {
-		keyStrs[i] = key.PublicKey().String()
-	}
-	c.JSON(http.StatusOK, gin.H{"validator keys": keyStrs, "stake quotas": config.quotas})
-}
-
-func templateDirHandler(c *gin.Context) {
-	genesis := &node.Genesis{
-		Validators:  make([]string, params.NodeCount),
-		StakeQuotas: make([]uint64, params.NodeCount),
-		WindowSize:  params.WindowSize,
-	}
-	for i, v := range config.keys {
-		genesis.Validators[i] = v.PublicKey().String()
-		genesis.StakeQuotas[i] = config.quotas[i]
-	}
-	peers := cluster.MakePeers(config.keys, config.pointAddrs, config.topicAddrs)
-	err := cluster.SetupTemplateDir(factory.TemplateDir(), config.keys, genesis, peers)
-	if err != nil {
-		c.String(http.StatusInternalServerError, err.Error())
-	} else {
-		c.String(http.StatusOK, "successfully setup template directory")
-	}
-}
-
-func buildChainHandler(c *gin.Context) {
-	cmd := exec.Command("go", "build", "./cmd/chain")
-	fmt.Printf(" $ %s\n", strings.Join(cmd.Args, " "))
-	if err := cmd.Run(); err != nil {
-		c.String(http.StatusInternalServerError, err.Error())
-	} else {
-		c.String(http.StatusOK, "successfully built chain binary file")
-	}
-}
-
-func newClusterHandler(c *gin.Context) {
-	var err error
-	if cls, err = factory.SetupCluster(ClusterName); err != nil {
-		c.String(http.StatusInternalServerError, err.Error())
-	} else {
-		c.String(http.StatusOK, "successfully newed cluster")
-	}
-}
-
-func startClusterHandler(c *gin.Context) {
-	cls.Stop() // to make sure no existing process keeps running
-	if err := cls.Start(); err != nil {
-		c.String(http.StatusInternalServerError, err.Error())
-		return
-	}
-	time.Sleep(5 * time.Second)
-	ret := testutil.GetStatusAll(cls)
-	if len(ret) < params.NodeCount {
-		c.String(http.StatusInternalServerError, "failed to get status from %d node", params.NodeCount-len(ret))
-	} else {
-		c.String(http.StatusOK, "successfully started cluster")
-	}
-}
-
-func stopClusterHandler(c *gin.Context) {
-	cls.Stop()
-	c.String(http.StatusOK, "successfully stopped cluster")
-}
-
-func checkLivenessHandler(c *gin.Context) {
-	ret := testutil.GetStatusAll(cls)
-	if len(ret) < params.NodeCount {
-		failed := make([]int, 0)
-		for i := 0; i < params.NodeCount; i++ {
-			if _, ok := ret[i]; !ok {
-				failed = append(failed, i)
-			}
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf(
-			"failed to get status from node %+v", failed), "result": ret})
-	} else {
-		c.JSON(http.StatusOK, ret)
-	}
-}
-
 func main() {
 	gin.SetMode(gin.DebugMode)
 	r := gin.Default()
@@ -351,8 +208,9 @@ func main() {
 	r.Any("/proxy/:node/*path", proxyHandler)
 	r.GET("/stream/:node", streamLogHandler)
 	r.POST("/execute", commandHandler)
-	r.POST("/setup/oneclick", oneClickHandler)
+	r.Static("/workdir", path.Join(WorkDir, ClusterName))
 
+	r.POST("/setup/oneclick", oneClickHandler)
 	r.POST("/setup/new/factory", clusterFactoryHandler)
 	r.POST("/setup/reset/workdir", resetWorkDirHandler)
 	r.POST("/setup/genesis/addrs", localAddrsHandler)
@@ -364,7 +222,13 @@ func main() {
 	r.POST("/setup/cluster/stop", stopClusterHandler)
 	r.GET("/setup/cluster/liveness", checkLivenessHandler)
 
-	r.Static("/workdir", path.Join(WorkDir, ClusterName))
+	r.POST("/transaction/new/client", newClientHandler)
+	r.POST("/transaction/upload/contract", uploadContractHandler)
+	r.POST("/transaction/upload/bincc", uploadBinCodeHandler)
+	r.POST("/transaction/deploy/contract", deployCodeHandler)
+	r.POST("/transaction/invoke/contract", invokeCodeHandler)
+	r.POST("/transaction/query/contract", queryCodeHandler)
+
 	common.Check2(r.Run(GinAddr))
 }
 

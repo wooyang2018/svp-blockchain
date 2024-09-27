@@ -165,17 +165,10 @@ func ConcatBytes(srcs ...[]byte) []byte {
 	return buf.Bytes()
 }
 
-func CreateRequestBody(filePath string) (*bytes.Buffer, string, error) {
-	f, err := os.Open(filePath)
-	if err != nil {
-		return nil, "", err
-	}
-	defer f.Close()
-
+func CreateRequestBody(f io.Reader) (*bytes.Buffer, string, error) {
 	buf := bytes.NewBuffer(nil)
 	mw := multipart.NewWriter(buf)
 	defer mw.Close()
-
 	fw, err := mw.CreateFormFile("file", "chaincode")
 	if err != nil {
 		return nil, "", err

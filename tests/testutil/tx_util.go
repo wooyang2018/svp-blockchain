@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/wooyang2018/svp-blockchain/core"
@@ -143,10 +144,16 @@ func uploadEVMChainCode(cls *cluster.Cluster, contractPath string) (int, []byte,
 }
 
 func uploadChainCode(cls *cluster.Cluster, path string, flag string) (int, []byte, error) {
-	buf, contentType, err := common.CreateRequestBody(path)
+	f, err := os.Open(path)
 	if err != nil {
 		return 0, nil, err
 	}
+	defer f.Close()
+	buf, contentType, err := common.CreateRequestBody(f)
+	if err != nil {
+		return 0, nil, err
+	}
+
 	var retErr error
 	retryOrder := PickUniqueRandoms(cls.NodeCount(), cls.NodeCount())
 	for _, i := range retryOrder {

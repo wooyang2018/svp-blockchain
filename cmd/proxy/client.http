@@ -11,7 +11,7 @@ GET http://localhost:8080/proxy/-1/consensus
 GET http://localhost:8080/proxy/-1/txpool
 
 ### Request a specific blockchain process to retrieve block at specified height.
-GET http://localhost:8080/proxy/-1/blocks/height/50
+GET http://localhost:8080/proxy/-1/blocks/height/10
 
 ### Request a specific blockchain process to stream the log file.
 # curl http://localhost:8080/stream/-1
@@ -65,3 +65,54 @@ POST http://localhost:8080/setup/cluster/stop
 
 ### Request the proxy process to check liveness of the cluster.
 GET http://localhost:8080/setup/cluster/liveness
+
+### 2.1 Request the proxy process to new a transaction client.
+POST http://localhost:8080/transaction/new/client
+
+### 2.2 Request the proxy process to upload an evm contract.
+POST http://localhost:8080/transaction/upload/contract
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="Storage.sol"
+Content-Type: text/plain
+
+< ../../evm/testdata/contracts/Storage.sol
+--WebAppBoundary--
+
+### Request the proxy process to upload a bincc chaincode.
+POST http://localhost:8080/transaction/upload/bincc
+
+### 2.3 Request the proxy process to deploy the uploaded contract.
+POST http://localhost:8080/transaction/deploy/contract
+Content-Type: application/json
+
+{
+  "class": "Storage",
+  "params": [],
+  "types": []
+}
+
+### 2.4 Request the proxy process to invoke the deployed contract.
+POST http://localhost:8080/transaction/invoke/contract
+Content-Type: application/json
+
+{
+  "method": "store",
+  "params": [
+    "1024"
+  ],
+  "types": [
+    "uint256"
+  ]
+}
+
+### 2.5 Request the proxy process to query the deployed contract.
+POST http://localhost:8080/transaction/query/contract
+Content-Type: application/json
+
+{
+  "method": "retrieve",
+  "params": [],
+  "types": []
+}
