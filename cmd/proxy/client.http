@@ -13,6 +13,9 @@ GET http://localhost:8080/proxy/-1/txpool
 ### Request a specific blockchain process to retrieve block at specified height.
 GET http://localhost:8080/proxy/-1/blocks/height/10
 
+### Request the proxy process to view the working directory of each node.
+GET http://localhost:8080/workdir/0/genesis.json
+
 ### Request a specific blockchain process to stream the log file.
 # curl http://localhost:8080/stream/-1
 
@@ -54,9 +57,6 @@ POST http://localhost:8080/setup/new/cluster
 ### 1.7 Request the proxy process to build the blockchain binary file.
 POST http://localhost:8080/setup/build/chain
 
-### Request the proxy process to view the working directory of each node.
-GET http://localhost:8080/workdir/0/genesis.json
-
 ### 1.8 Request the proxy process to start the cluster.
 POST http://localhost:8080/setup/cluster/start
 
@@ -67,7 +67,7 @@ POST http://localhost:8080/setup/cluster/stop
 GET http://localhost:8080/setup/cluster/liveness
 
 ### 2.1 Request the proxy process to new a transaction client.
-POST http://localhost:8080/transaction/new/client
+POST http://localhost:8080/setup/new/client/1
 
 ### 2.2 Request the proxy process to upload an evm contract.
 POST http://localhost:8080/transaction/upload/contract
@@ -115,4 +115,80 @@ Content-Type: application/json
   "method": "retrieve",
   "params": [],
   "types": []
+}
+
+### Request the proxy process to invoke the native chaincode xcoin.
+POST http://localhost:8080/native/invoke/xcoin
+Content-Type: application/json
+
+{
+  "method": "transfer",
+  "dest": "DXmBmIZA3zk7C+mGgs8ySZLacAvZkfkW+VWlrNCl0vU=",
+  "value": 10
+}
+
+### Request the proxy process to query the native chaincode xcoin.
+POST http://localhost:8080/native/query/xcoin
+Content-Type: application/json
+
+{
+  "method": "balance",
+  "dest": "DXmBmIZA3zk7C+mGgs8ySZLacAvZkfkW+VWlrNCl0vU="
+}
+
+### Request the proxy process to query the native chaincode taddr.
+POST http://localhost:8080/native/query/taddr
+Content-Type: application/json
+
+{
+  "method": "query",
+  "addr": "DXmBmIZA3zk7C+mGgs8ySZLacAvZkfkW+VWlrNCl0vU="
+}
+
+### Request the proxy process to deploy the native chaincode pcoin.
+POST http://localhost:8080/native/deploy/pcoin
+
+### Request the proxy process to invoke the native chaincode pcoin.
+POST http://localhost:8080/native/invoke/pcoin
+Content-Type: application/json
+
+{
+  "method": "transfer",
+  "dest": "DXmBmIZA3zk7C+mGgs8ySZLacAvZkfkW+VWlrNCl0vU=",
+  "value": 10
+}
+
+### Request the proxy process to invoke the native chaincode pcoin.
+POST http://localhost:8080/native/invoke/pcoin
+Content-Type: application/json
+
+{
+  "method": "mint",
+  "dest": "DXmBmIZA3zk7C+mGgs8ySZLacAvZkfkW+VWlrNCl0vU=",
+  "value": 100
+}
+
+### Request the proxy process to query the native chaincode pcoin.
+POST http://localhost:8080/native/query/pcoin
+Content-Type: application/json
+
+{
+  "method": "balance",
+  "dest": "DXmBmIZA3zk7C+mGgs8ySZLacAvZkfkW+VWlrNCl0vU="
+}
+
+### Request the proxy process to query the native chaincode pcoin.
+POST http://localhost:8080/native/query/pcoin
+Content-Type: application/json
+
+{
+  "method": "total"
+}
+
+### Request the proxy process to query the native chaincode pcoin.
+POST http://localhost:8080/native/query/pcoin
+Content-Type: application/json
+
+{
+  "method": "minter"
 }

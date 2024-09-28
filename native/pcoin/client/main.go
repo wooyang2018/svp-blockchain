@@ -11,7 +11,7 @@ import (
 
 	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/native"
-	"github.com/wooyang2018/svp-blockchain/native/xcoin"
+	"github.com/wooyang2018/svp-blockchain/native/pcoin"
 )
 
 const (
@@ -41,7 +41,7 @@ var mintCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		client := native.NewClient(false)
 		destBytes, _ := common.Address32ToBytes(dest)
-		input := &xcoin.Input{
+		input := &pcoin.Input{
 			Method: "mint",
 			Dest:   destBytes,
 			Value:  value,
@@ -58,7 +58,7 @@ var transferCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		client := native.NewClient(false)
 		destBytes, _ := common.Address32ToBytes(dest)
-		input := &xcoin.Input{
+		input := &pcoin.Input{
 			Method: "transfer",
 			Dest:   destBytes,
 			Value:  value,
@@ -74,7 +74,7 @@ var minterCmd = &cobra.Command{
 	Short: "Query the public key of minter",
 	Run: func(cmd *cobra.Command, args []string) {
 		client := native.NewClient(false)
-		input := &xcoin.Input{
+		input := &pcoin.Input{
 			Method: "minter",
 		}
 		rawBytes, _ := json.Marshal(input)
@@ -87,7 +87,7 @@ var totalCmd = &cobra.Command{
 	Short: "Query the total number of tokens",
 	Run: func(cmd *cobra.Command, args []string) {
 		client := native.NewClient(false)
-		input := &xcoin.Input{
+		input := &pcoin.Input{
 			Method: "total",
 		}
 		rawBytes, _ := json.Marshal(input)
@@ -101,7 +101,7 @@ var balanceCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		client := native.NewClient(false)
 		destBytes, _ := common.Address32ToBytes(dest)
-		input := &xcoin.Input{
+		input := &pcoin.Input{
 			Method: "balance",
 			Dest:   destBytes,
 		}

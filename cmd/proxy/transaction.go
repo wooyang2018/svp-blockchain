@@ -6,9 +6,11 @@ package main
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"path"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 
@@ -21,9 +23,9 @@ import (
 var client *native.Client
 var codeID []byte
 
-func getLocalNode0Key() (*core.PrivateKey, error) {
+func getLocalNode0Key(nodeID int) (*core.PrivateKey, error) {
 	workDir := path.Join(WorkDir, ClusterName)
-	nodeKeyPath := path.Join(workDir, "0", native.FileNodekey)
+	nodeKeyPath := path.Join(workDir, strconv.Itoa(nodeID), native.FileNodekey)
 	b, err := os.ReadFile(nodeKeyPath)
 	if err != nil {
 		return nil, err
@@ -32,8 +34,15 @@ func getLocalNode0Key() (*core.PrivateKey, error) {
 }
 
 func newClientHandler(c *gin.Context) {
+	nodeID, err := paramNodeID(c)
+	if err != nil {
+		c.String(http.StatusBadRequest, err.Error())
+		return
+	}
+
+	native.SetNodeUrl(fmt.Sprintf("http://127.0.0.1:%d", 9090+nodeID))
 	client = &native.Client{}
-	if signer, err := getLocalNode0Key(); err != nil {
+	if signer, err := getLocalNode0Key(nodeID); err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 	} else {
 		client.SetSigner(signer)
@@ -69,7 +78,7 @@ func uploadChainCode(c *gin.Context, driverType common.DriverType) {
 	}
 }
 
-func isCodeDeployed(c *gin.Context, isDeploy bool) bool {
+func isContractReady(c *gin.Context, isDeploy bool) bool {
 	if client == nil {
 		c.String(http.StatusBadRequest, "please new a transaction client first")
 		return false
@@ -85,8 +94,8 @@ func isCodeDeployed(c *gin.Context, isDeploy bool) bool {
 	return true
 }
 
-func deployCodeHandler(c *gin.Context) {
-	if !isCodeDeployed(c, true) {
+func deployContractHandler(c *gin.Context) {
+	if !isContractReady(c, true) {
 		return
 	}
 	initInput := new(evm.InitInput)
@@ -101,8 +110,8 @@ func deployCodeHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "successfully deployed contract", "transaction": tx})
 }
 
-func invokeCodeHandler(c *gin.Context) {
-	if !isCodeDeployed(c, false) {
+func invokeContractHandler(c *gin.Context) {
+	if !isContractReady(c, false) {
 		return
 	}
 	input := new(evm.Input)
@@ -116,8 +125,8 @@ func invokeCodeHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "successfully invoked contract", "transaction": tx})
 }
 
-func queryCodeHandler(c *gin.Context) {
-	if !isCodeDeployed(c, false) {
+func queryContractHandler(c *gin.Context) {
+	if !isContractReady(c, false) {
 		return
 	}
 	input := new(evm.Input)
@@ -127,5 +136,5 @@ func queryCodeHandler(c *gin.Context) {
 	}
 	b, _ := json.Marshal(input)
 	ret := client.QueryState(b)
-	c.JSON(http.StatusOK, gin.H{"message": "successfully invoked contract", "result": string(ret)})
+	c.JSON(http.StatusOK, gin.H{"message": "successfully queried contract", "result": string(ret)})
 }

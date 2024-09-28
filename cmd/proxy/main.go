@@ -221,13 +221,20 @@ func main() {
 	r.POST("/setup/cluster/start", startClusterHandler)
 	r.POST("/setup/cluster/stop", stopClusterHandler)
 	r.GET("/setup/cluster/liveness", checkLivenessHandler)
+	r.POST("/setup/new/client/:node", newClientHandler)
 
-	r.POST("/transaction/new/client", newClientHandler)
 	r.POST("/transaction/upload/contract", uploadContractHandler)
 	r.POST("/transaction/upload/bincc", uploadBinCodeHandler)
-	r.POST("/transaction/deploy/contract", deployCodeHandler)
-	r.POST("/transaction/invoke/contract", invokeCodeHandler)
-	r.POST("/transaction/query/contract", queryCodeHandler)
+	r.POST("/transaction/deploy/contract", deployContractHandler)
+	r.POST("/transaction/invoke/contract", invokeContractHandler)
+	r.POST("/transaction/query/contract", queryContractHandler)
+
+	r.POST("/native/deploy/pcoin", deployPCoinHandler)
+	r.POST("/native/invoke/pcoin", invokePCoinHandler)
+	r.POST("/native/query/pcoin", queryPCoinHandler)
+	r.POST("/native/invoke/xcoin", invokeXCoinHandler)
+	r.POST("/native/query/xcoin", queryXCoinHandler)
+	r.POST("/native/query/taddr", queryTAddrHandler)
 
 	common.Check2(r.Run(GinAddr))
 }
