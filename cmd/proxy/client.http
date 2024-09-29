@@ -60,6 +60,9 @@ POST http://localhost:8080/setup/build/chain
 ### 1.8 Request the proxy process to start the cluster.
 POST http://localhost:8080/setup/cluster/start
 
+### Request the proxy process to get the score of setup.
+GET http://localhost:8080/score/setup
+
 ### Request the proxy process to stop the cluster.
 POST http://localhost:8080/setup/cluster/stop
 
