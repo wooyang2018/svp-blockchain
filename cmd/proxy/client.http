@@ -2,7 +2,7 @@
 POST http://localhost:8080/execute
 Content-Type: application/x-www-form-urlencoded
 
-cmd = echo hello
+cmd=echo hello
 
 ### Request a specific blockchain process to retrieve consensus status.
 GET http://localhost:8080/proxy/-1/consensus
@@ -116,3 +116,6 @@ Content-Type: application/json
   "params": [],
   "types": []
 }
+
+### Request the score of setup.
+GET http://localhost:8080/score/setup

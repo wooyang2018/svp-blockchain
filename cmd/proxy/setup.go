@@ -51,6 +51,7 @@ func clusterFactoryHandler(c *gin.Context) {
 		NodeConfig:  node.DefaultConfig,
 	})
 	c.String(http.StatusOK, "successfully newed cluster factory")
+	scoreSetupAdd(c.Request.URL.String())
 }
 
 func resetWorkDirHandler(c *gin.Context) {
@@ -60,6 +61,7 @@ func resetWorkDirHandler(c *gin.Context) {
 		c.String(http.StatusInternalServerError, err.Error())
 	} else {
 		c.String(http.StatusOK, "successfully reset working directory")
+		scoreSetupAdd(c.Request.URL.String())
 	}
 }
 
@@ -72,6 +74,7 @@ func localAddrsHandler(c *gin.Context) {
 	config.pointAddrs = pointAddrs
 	config.topicAddrs = topicAddrs
 	c.JSON(http.StatusOK, gin.H{"point addrs": pointAddrs, "topic addrs": topicAddrs})
+	scoreSetupAdd(c.Request.URL.String())
 }
 
 func randomKeysHandler(c *gin.Context) {
@@ -82,6 +85,7 @@ func randomKeysHandler(c *gin.Context) {
 		keyStrs[i] = key.PublicKey().String()
 	}
 	c.JSON(http.StatusOK, gin.H{"validator keys": keyStrs, "stake quotas": config.quotas})
+	scoreSetupAdd(c.Request.URL.String())
 }
 
 func templateDirHandler(c *gin.Context) {
@@ -100,6 +104,7 @@ func templateDirHandler(c *gin.Context) {
 		c.String(http.StatusInternalServerError, err.Error())
 	} else {
 		c.String(http.StatusOK, "successfully setup template directory")
+		scoreSetupAdd(c.Request.URL.String())
 	}
 }
 
@@ -110,6 +115,7 @@ func buildChainHandler(c *gin.Context) {
 		c.String(http.StatusInternalServerError, err.Error())
 	} else {
 		c.String(http.StatusOK, "successfully built chain binary file")
+		scoreSetupAdd(c.Request.URL.String())
 	}
 }
 
@@ -119,6 +125,7 @@ func newClusterHandler(c *gin.Context) {
 		c.String(http.StatusInternalServerError, err.Error())
 	} else {
 		c.String(http.StatusOK, "successfully newed cluster")
+		scoreSetupAdd(c.Request.URL.String())
 	}
 }
 
@@ -135,6 +142,7 @@ func startClusterHandler(c *gin.Context) {
 			"failed to get status from %d node", params.NodeCount-len(ret))
 	} else {
 		c.String(http.StatusOK, "successfully started cluster")
+		scoreSetupAdd(c.Request.URL.String())
 	}
 }
 

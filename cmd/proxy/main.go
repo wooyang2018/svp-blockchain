@@ -5,6 +5,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"math/rand"
@@ -32,10 +33,12 @@ const (
 )
 
 var (
-	params  *FactoryParams
-	factory *cluster.LocalFactory
-	config  ConfigFiles
-	cls     *cluster.Cluster
+	params        *FactoryParams
+	factory       *cluster.LocalFactory
+	config        ConfigFiles
+	cls           *cluster.Cluster
+	scoreSetupMap = make(map[string]bool)
+	scoreSetup    = 0
 )
 
 type FactoryParams struct {
@@ -168,6 +171,28 @@ func paramNodeID(c *gin.Context) (nodeID int, err error) {
 	return nodeID, nil
 }
 
+func scoreSetupHandler(c *gin.Context) {
+	combinedMap := make(map[string]interface{})
+	combinedMap["scoreSetup"] = scoreSetup
+	for k, v := range scoreSetupMap {
+		combinedMap[k] = v
+	}
+
+	jsonData, err := json.Marshal(combinedMap)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to convert scoreSetupMap data to JSON"})
+		return
+	}
+	c.Data(http.StatusOK, "application/json", jsonData)
+}
+
+func scoreSetupAdd(request string) {
+	if !scoreSetupMap[request] {
+		scoreSetupMap[request] = true
+		scoreSetup++
+	}
+}
+
 // getStartPosition gets the position of the Nth line from the bottom.
 func getStartPosition(file *os.File, n int) (int64, error) {
 	var lines []int64
@@ -209,6 +234,8 @@ func main() {
 	r.GET("/stream/:node", streamLogHandler)
 	r.POST("/execute", commandHandler)
 	r.Static("/workdir", path.Join(WorkDir, ClusterName))
+
+	r.GET("/score/setup", scoreSetupHandler)
 
 	r.POST("/setup/oneclick", oneClickHandler)
 	r.POST("/setup/new/factory", clusterFactoryHandler)
