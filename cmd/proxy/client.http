@@ -63,6 +63,12 @@ POST http://localhost:8080/setup/cluster/start
 ### Request the proxy process to get the score of setup.
 GET http://localhost:8080/score/setup
 
+### Request the proxy process to get the score of transaction.
+GET http://localhost:8080/score/transaction
+
+### Request the proxy process to get the score of native.
+GET http://localhost:8080/score/native
+
 ### Request the proxy process to stop the cluster.
 POST http://localhost:8080/setup/cluster/stop
 
@@ -84,7 +90,16 @@ Content-Type: text/plain
 --WebAppBoundary--
 
 ### Request the proxy process to upload a bincc chaincode.
+# cd execution/bincc/pcoin/ && go build
 POST http://localhost:8080/transaction/upload/bincc
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="pcoin"
+Content-Type: application/octet-stream
+
+< ../../execution/bincc/pcoin/pcoin
+--WebAppBoundary--
 
 ### 2.3 Request the proxy process to deploy the uploaded contract.
 POST http://localhost:8080/transaction/deploy/contract

@@ -5,7 +5,6 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"io"
 	"math/rand"
@@ -15,6 +14,7 @@ import (
 	"path"
 	"runtime/debug"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -33,12 +33,16 @@ const (
 )
 
 var (
-	params        *FactoryParams
-	factory       *cluster.LocalFactory
-	config        ConfigFiles
-	cls           *cluster.Cluster
-	scoreSetupMap = make(map[string]bool)
-	scoreSetup    = 0
+	params  *FactoryParams
+	factory *cluster.LocalFactory
+	config  ConfigFiles
+	cls     *cluster.Cluster
+)
+
+var (
+	setupScores       = make(map[string]bool)
+	transactionScores = make(map[string]bool)
+	nativeScores      = make(map[string]bool)
 )
 
 type FactoryParams struct {
@@ -157,6 +161,18 @@ func streamLogHandler(c *gin.Context) {
 	})
 }
 
+func scoreSetupHandler(c *gin.Context) {
+	c.JSON(http.StatusOK, setupScores)
+}
+
+func scoreTransactionHandler(c *gin.Context) {
+	c.JSON(http.StatusOK, transactionScores)
+}
+
+func scoreNativeHandler(c *gin.Context) {
+	c.JSON(http.StatusOK, nativeScores)
+}
+
 func paramNodeID(c *gin.Context) (nodeID int, err error) {
 	nodeID, err = strconv.Atoi(c.Param("node"))
 	if err != nil {
@@ -169,28 +185,6 @@ func paramNodeID(c *gin.Context) (nodeID int, err error) {
 		return params.NodeCount, fmt.Errorf("only support nodes from 0 to %d to proxy", params.NodeCount-1)
 	}
 	return nodeID, nil
-}
-
-func scoreSetupHandler(c *gin.Context) {
-	combinedMap := make(map[string]interface{})
-	combinedMap["scoreSetup"] = scoreSetup
-	for k, v := range scoreSetupMap {
-		combinedMap[k] = v
-	}
-
-	jsonData, err := json.Marshal(combinedMap)
-	if err != nil {
-		c.JSON(500, gin.H{"error": "Failed to convert scoreSetupMap data to JSON"})
-		return
-	}
-	c.Data(http.StatusOK, "application/json", jsonData)
-}
-
-func scoreSetupAdd(request string) {
-	if !scoreSetupMap[request] {
-		scoreSetupMap[request] = true
-		scoreSetup++
-	}
 }
 
 // getStartPosition gets the position of the Nth line from the bottom.
@@ -225,6 +219,24 @@ func getStartPosition(file *os.File, n int) (int64, error) {
 	return lines[len(lines)-1], nil
 }
 
+func addSetupScore(url string, pass bool) {
+	if v, ok := setupScores[url]; !ok || !v {
+		setupScores[url] = pass
+	}
+}
+
+func addTransactionScore(url string, pass bool) {
+	if v, ok := transactionScores[url]; !ok || !v {
+		transactionScores[url] = pass
+	}
+}
+
+func addNativeScore(url string, pass bool) {
+	if v, ok := nativeScores[url]; !ok || !v {
+		nativeScores[url] = pass
+	}
+}
+
 func main() {
 	gin.SetMode(gin.DebugMode)
 	r := gin.Default()
@@ -236,6 +248,8 @@ func main() {
 	r.Static("/workdir", path.Join(WorkDir, ClusterName))
 
 	r.GET("/score/setup", scoreSetupHandler)
+	r.GET("/score/transaction", scoreTransactionHandler)
+	r.GET("/score/native", scoreNativeHandler)
 
 	r.POST("/setup/oneclick", oneClickHandler)
 	r.POST("/setup/new/factory", clusterFactoryHandler)
@@ -276,5 +290,13 @@ func CustomRecovery() gin.HandlerFunc {
 			}
 		}()
 		c.Next()
+		route := c.FullPath()
+		if strings.HasPrefix(route, "/setup") {
+			addSetupScore(route, c.Writer.Status() == http.StatusOK)
+		} else if strings.HasPrefix(route, "/transaction") {
+			addTransactionScore(route, c.Writer.Status() == http.StatusOK)
+		} else if strings.HasPrefix(route, "/native") {
+			addNativeScore(route, c.Writer.Status() == http.StatusOK)
+		}
 	}
 }
