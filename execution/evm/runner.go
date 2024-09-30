@@ -5,9 +5,12 @@ package evm
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -187,11 +190,80 @@ func parseInitInput(raw []byte) (*InitInput, []interface{}) {
 }
 
 func parseParam(paramType string, param string) interface{} {
+	arrayRegex := regexp.MustCompile(`^(\w+)\[(\d*)\]$`)
+	if arrayRegex.MatchString(paramType) {
+		matches := arrayRegex.FindStringSubmatch(paramType)
+		baseType := matches[1]
+		baseSize := matches[2]
+		elemType := getElemType(baseType)
+		params := strings.Split(param, ",")
+		if baseSize != "" {
+			length, _ := strconv.Atoi(baseSize)
+			arrayType := reflect.ArrayOf(length, elemType)
+			arrayValue := reflect.New(arrayType).Elem()
+			for i := 0; i < len(params); i++ {
+				value := parseParam(baseType, strings.TrimSpace(params[i]))
+				arrayValue.Index(i).Set(reflect.ValueOf(value))
+			}
+			return arrayValue.Interface()
+		} else {
+			arrayType := reflect.SliceOf(elemType)
+			arrayValue := reflect.MakeSlice(arrayType, len(params), len(params))
+			for i := 0; i < len(params); i++ {
+				value := parseParam(baseType, strings.TrimSpace(params[i]))
+				arrayValue.Index(i).Set(reflect.ValueOf(value))
+			}
+			return arrayValue.Interface()
+		}
+	}
+	return getElemValue(paramType, param)
+}
+
+func getElemType(baseType string) reflect.Type {
+	var elemType reflect.Type
+	switch baseType {
+	case "uint256":
+		elemType = reflect.TypeOf(big.NewInt(0))
+	case "string":
+		elemType = reflect.TypeOf("")
+	case "uint32":
+		elemType = reflect.TypeOf(uint32(0))
+	case "uint16":
+		elemType = reflect.TypeOf(uint16(0))
+	case "address":
+		elemType = reflect.TypeOf(ethcomm.Address{})
+	case "bytes":
+		elemType = reflect.TypeOf([]byte{})
+	case "bool":
+		elemType = reflect.TypeOf(false)
+	}
+	return elemType
+}
+
+func getElemValue(paramType string, param string) interface{} {
 	switch paramType {
 	case "uint256":
 		tmp, err := strconv.ParseInt(param, 10, 64)
 		common.Check(err)
 		return big.NewInt(tmp)
+	case "string":
+		return param
+	case "uint32":
+		tmp, err := strconv.ParseUint(param, 10, 32)
+		common.Check(err)
+		return uint32(tmp)
+	case "uint16":
+		tmp, err := strconv.ParseUint(param, 10, 16)
+		common.Check(err)
+		return uint16(tmp)
+	case "address":
+		return ethcomm.HexToAddress(param)
+	case "bytes":
+		tmp, err := base64.StdEncoding.DecodeString(param)
+		common.Check(err)
+		return tmp
+	case "bool":
+		return param == "true"
 	default:
 		return nil
 	}

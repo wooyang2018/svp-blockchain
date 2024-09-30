@@ -5,6 +5,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"math/big"
@@ -63,7 +64,7 @@ func getNode0Key() (*core.PrivateKey, error) {
 	return core.NewPrivateKey(b)
 }
 
-func TestEVMClient(t *testing.T) {
+func prepareClient(t *testing.T, filePath string) (*native.Client, []byte) {
 	if !checkLiveness() {
 		if oneClickStart() != nil || !checkLiveness() {
 			t.Skip("enable this test by running chain-proxy container")
@@ -77,10 +78,13 @@ func TestEVMClient(t *testing.T) {
 	asrt.NoError(err)
 	client.SetSigner(signer)
 
-	filePath := "../../evm/testdata/contracts/Storage.sol"
 	codeID, err := native.UploadChainCode(common.DriverTypeEVM, filePath)
 	asrt.NoError(err)
+	return client, codeID
+}
 
+func TestEVMClient(t *testing.T) {
+	client, codeID := prepareClient(t, "../../evm/testdata/contracts/Storage.sol")
 	initInput := &evm.InitInput{Class: "Storage"}
 	b, _ := json.Marshal(initInput)
 	tx := client.MakeDeploymentTx(common.DriverTypeEVM, codeID, b)
@@ -101,5 +105,49 @@ func TestEVMClient(t *testing.T) {
 	ret := client.QueryState(b)
 	var res []interface{}
 	json.Unmarshal(ret, &res)
-	asrt.EqualValues(big.NewInt(1024), big.NewInt(int64(res[0].(float64))))
+	assert.EqualValues(t, big.NewInt(1024), big.NewInt(int64(res[0].(float64))))
+}
+
+func TestEVMDataTypes(t *testing.T) {
+	client, codeID := prepareClient(t, "../../evm/testdata/contracts/Types.sol")
+	encoded := base64.StdEncoding.EncodeToString([]byte("hello world"))
+	initInput := &evm.InitInput{
+		Class: "DataTypes",
+		Params: []string{"256", "hello world", "32", "16",
+			"d04bee43b17d50bd4d9888bfece21ce808b14707",
+			encoded, "true", "256,128", "64,32,16"},
+		Types: []string{"uint256", "string", "uint32", "uint16",
+			"address", "bytes", "bool", "uint256[2]", "uint32[]"},
+	}
+	b, _ := json.Marshal(initInput)
+	tx := client.MakeDeploymentTx(common.DriverTypeEVM, codeID, b)
+	client.SubmitTxAndWait(tx)
+	client.SetAddr(tx.Hash())
+
+	input := &evm.Input{Method: "getAllValues"}
+	b, _ = json.Marshal(input)
+	ret := client.QueryState(b)
+	var res []interface{}
+	json.Unmarshal(ret, &res)
+	t.Logf("%+v\n", res)
+	decoded, _ := base64.StdEncoding.DecodeString(res[5].(string))
+	assert.EqualValues(t, []byte("hello world"), decoded)
+
+	input = &evm.Input{
+		Method: "updateValues",
+		Params: []string{"512", "hello world", "32", "16",
+			"d04bee43b17d50bd4d9888bfece21ce808b14707",
+			encoded, "false", "128,128", "32,16,8"},
+		Types: []string{"uint256", "string", "uint32", "uint16",
+			"address", "bytes", "bool", "uint256[2]", "uint32[]"},
+	}
+	b, _ = json.Marshal(input)
+	tx = client.MakeTx(b)
+	client.SubmitTxAndWait(tx)
+
+	input = &evm.Input{Method: "getAllValues"}
+	b, _ = json.Marshal(input)
+	ret = client.QueryState(b)
+	json.Unmarshal(ret, &res)
+	t.Logf("%+v\n", res)
 }

@@ -138,9 +138,6 @@ func streamLogHandler(c *gin.Context) {
 		return
 	}
 
-	c.Header("Access-Control-Allow-Origin", "*")
-	c.Header("Access-Control-Allow-Methods", "GET, OPTIONS")
-	c.Header("Access-Control-Allow-Headers", "Content-Type")
 	c.Header("Content-Type", "text/plain")
 	c.Header("Transfer-Encoding", "chunked")
 	c.Stream(func(w io.Writer) bool {
@@ -290,6 +287,11 @@ func CustomRecovery() gin.HandlerFunc {
 			}
 		}()
 		c.Next()
+
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Methods", "GET, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Content-Type")
+
 		route := c.FullPath()
 		if strings.HasPrefix(route, "/setup") {
 			addSetupScore(route, c.Writer.Status() == http.StatusOK)
