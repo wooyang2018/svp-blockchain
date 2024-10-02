@@ -24,7 +24,7 @@ var deployCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		client := native.NewClient(true)
 		codeID, err := native.UploadChainCode(common.DriverTypeBincc, filePath)
-		common.Check(err)
+		common.Check2(err)
 		tx := client.MakeDeploymentTx(common.DriverTypeBincc, codeID, nil)
 		client.SubmitTx(tx)
 		common.DumpFile(tx.Hash(), native.GetDataPath(), native.FileCodeDefault)
@@ -33,7 +33,7 @@ var deployCmd = &cobra.Command{
 
 func main() {
 	err := native.RootCmd.Execute()
-	common.Check(err)
+	common.Check2(err)
 }
 
 func init() {

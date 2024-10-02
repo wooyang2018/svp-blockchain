@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcomm "github.com/ethereum/go-ethereum/common"
@@ -46,6 +47,7 @@ type Runner struct {
 	CodePath string
 	Storage  storage.PersistStore
 	StateDB  *statedb.StateDB
+	mtx      sync.Mutex
 }
 
 var _ common.Chaincode = (*Runner)(nil)
@@ -70,12 +72,15 @@ func (r *Runner) Init(ctx common.CallContext) error {
 	deploy := append(contractBin, invoke...)
 	vmenv := runtime.NewEnv(r.config)
 	sender := evm.AccountRef(r.config.Origin)
+
+	r.mtx.Lock()
 	_, address, leftOverGas, err := vmenv.Create(
 		sender,
 		deploy,
 		r.config.GasLimit,
 		r.config.Value,
 	)
+	r.mtx.Unlock()
 
 	ctx.SetState(keyAddr, address.Bytes())
 	ctx.SetState(keyAbi, []byte(jsonABI))
@@ -104,6 +109,8 @@ func (r *Runner) Invoke(ctx common.CallContext) error {
 	vmenv := runtime.NewEnv(r.config)
 	sender := evm.AccountRef(r.config.Origin)
 	address := ethcomm.BytesToAddress(ctx.GetState(keyAddr))
+
+	r.mtx.Lock()
 	ret, leftOverGas, err := vmenv.Call(
 		sender,
 		address,
@@ -111,6 +118,7 @@ func (r *Runner) Invoke(ctx common.CallContext) error {
 		r.config.GasLimit,
 		r.config.Value,
 	)
+	r.mtx.Unlock()
 
 	retSlice, _ := contractAbi.Unpack(input.Method, ret)
 	res, _ := json.Marshal(retSlice)
@@ -135,12 +143,15 @@ func (r *Runner) Query(ctx common.CallContext) ([]byte, error) {
 	vmenv := runtime.NewEnv(r.config)
 	sender := evm.AccountRef(r.config.Origin)
 	address := ethcomm.BytesToAddress(ctx.GetState(keyAddr))
+
+	r.mtx.Lock()
 	ret, leftOverGas, err := vmenv.StaticCall(
 		sender,
 		address,
 		query,
 		r.config.GasLimit,
 	)
+	r.mtx.Unlock()
 
 	retSlice, _ := contractAbi.Unpack(input.Method, ret)
 	res, _ := json.Marshal(retSlice)

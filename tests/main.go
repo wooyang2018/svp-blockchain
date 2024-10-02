@@ -303,7 +303,7 @@ func buildChain() {
 		fmt.Printf(" $ export %s\n", "GOOS=linux GOARCH=amd64")
 	}
 	fmt.Printf(" $ %s\n\n", strings.Join(cmd.Args, " "))
-	common.Check(cmd.Run())
+	common.Check2(cmd.Run())
 }
 
 func makeLoadClient() testutil.LoadClient {
@@ -336,7 +336,7 @@ func buildPCoinBinCC() {
 		fmt.Printf(" $ export %s\n", "GOOS=linux GOARCH=amd64")
 	}
 	fmt.Printf(" $ %s\n\n", strings.Join(cmd.Args, " "))
-	common.Check(cmd.Run())
+	common.Check2(cmd.Run())
 }
 
 func makeLocalClusterFactory() *cluster.LocalFactory {
@@ -350,7 +350,7 @@ func makeLocalClusterFactory() *cluster.LocalFactory {
 		NodeConfig:  getNodeConfig(),
 	})
 	err := ftry.Bootstrap()
-	common.Check(err)
+	common.Check2(err)
 	return ftry
 }
 
@@ -369,7 +369,7 @@ func makeRemoteClusterFactory() *cluster.RemoteFactory {
 	})
 	if RemoteSetupRequired {
 		err := ftry.Bootstrap()
-		common.Check(err)
+		common.Check2(err)
 	}
 	return ftry
 }

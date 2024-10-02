@@ -39,7 +39,7 @@ var queryCmd = &cobra.Command{
 
 func main() {
 	err := native.RootCmd.Execute()
-	common.Check(err)
+	common.Check2(err)
 }
 
 func init() {

@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -237,7 +236,7 @@ func Check(err error) {
 
 func Check2(err error) {
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 }
 

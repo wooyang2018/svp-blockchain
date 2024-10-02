@@ -52,7 +52,7 @@ func NewRemoteFactory(params RemoteFactoryParams) *RemoteFactory {
 	}
 	ftry.templateDir = path.Join(ftry.params.WorkDir, "cluster_template")
 	err := ftry.ReadHosts(ftry.params.HostsPath, ftry.params.NodeCount)
-	common.Check(err)
+	common.Check2(err)
 	return ftry
 }
 

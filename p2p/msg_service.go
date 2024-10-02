@@ -32,6 +32,25 @@ const (
 	MsgTypeResponse
 )
 
+func (t MsgType) String() string {
+	switch t {
+	case MsgTypeProposal:
+		return "Proposal"
+	case MsgTypeVote:
+		return "Vote"
+	case MsgTypeQC:
+		return "QC"
+	case MsgTypeTxList:
+		return "TxList"
+	case MsgTypeRequest:
+		return "Request"
+	case MsgTypeResponse:
+		return "Response"
+	default:
+		return "Unknown"
+	}
+}
+
 type msgReceiver func(peer *Peer, data []byte)
 type topicReceiver func(data []byte)
 
@@ -195,6 +214,7 @@ func (svc *MsgService) setMsgReceivers() {
 	svc.pointReceivers[MsgTypeQC] = svc.onReceiveQC
 	svc.pointReceivers[MsgTypeTxList] = svc.onReceiveTxList
 	svc.pointReceivers[MsgTypeRequest] = svc.onReceiveRequest
+	svc.pointReceivers[MsgTypeResponse] = func(peer *Peer, data []byte) {}
 }
 
 func (svc *MsgService) setTopicReceivers() {
@@ -214,7 +234,7 @@ func (svc *MsgService) listenPeer(peer *Peer) {
 		if receiver, found := svc.pointReceivers[MsgType(msg[0])]; found {
 			receiver(peer, msg[1:])
 		} else {
-			logger.I().Error("msg service received invalid point message")
+			logger.I().Errorw("msg service received invalid point message", "type", MsgType(msg[0]))
 		}
 	}
 }
@@ -226,7 +246,7 @@ func (svc *MsgService) listenTopic(host *Host) {
 		if receiver, found := svc.topicReceivers[MsgType(msg.Data[0])]; found {
 			receiver(msg.Data[1:])
 		} else {
-			logger.I().Error("msg service received invalid topic message")
+			logger.I().Errorw("msg service received invalid topic message", "type", MsgType(msg.Data[0]))
 		}
 	}
 }

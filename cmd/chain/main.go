@@ -23,7 +23,7 @@ var rootCmd = &cobra.Command{
 
 func main() {
 	err := rootCmd.Execute()
-	common.Check(err)
+	common.Check2(err)
 }
 
 func init() {
