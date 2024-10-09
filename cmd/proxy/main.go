@@ -39,11 +39,7 @@ var (
 	cls     *cluster.Cluster
 )
 
-var (
-	setupScores       = make(map[string]bool)
-	transactionScores = make(map[string]bool)
-	nativeScores      = make(map[string]bool)
-)
+var scores = make(map[string]map[string]bool)
 
 type FactoryParams struct {
 	NodeCount  int `json:"nodeCount"`
@@ -158,16 +154,65 @@ func streamLogHandler(c *gin.Context) {
 	})
 }
 
-func scoreSetupHandler(c *gin.Context) {
-	c.JSON(http.StatusOK, setupScores)
+func scoresHandler(c *gin.Context) {
+	c.JSON(http.StatusOK, scores)
 }
 
-func scoreTransactionHandler(c *gin.Context) {
-	c.JSON(http.StatusOK, transactionScores)
+func fileListHandler(c *gin.Context) {
+	nodeID, err := paramNodeID(c)
+	if err != nil {
+		c.String(http.StatusBadRequest, err.Error())
+		return
+	}
+
+	workDir := path.Join(WorkDir, ClusterName)
+	nodePath := path.Join(workDir, strconv.Itoa(nodeID))
+	fileList, err := getFileListRecur(nodePath)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "read working directory error:%+v", err)
+	} else {
+		c.JSON(http.StatusOK, fileList)
+	}
 }
 
-func scoreNativeHandler(c *gin.Context) {
-	c.JSON(http.StatusOK, nativeScores)
+func getFileListRecur(dirPath string) ([]gin.H, error) {
+	dir, err := os.Open(dirPath)
+	if err != nil {
+		return nil, err
+	}
+	defer dir.Close()
+	files, err := dir.Readdir(-1)
+	if err != nil {
+		return nil, err
+	}
+
+	var fileList []gin.H
+	for _, file := range files {
+		if file.Name() == "db" {
+			continue
+		}
+		// if it s a directory read recursively
+		if file.IsDir() {
+			filePath := path.Join(dirPath, file.Name())
+			subFiles, err := getFileListRecur(filePath)
+			if err != nil {
+				return nil, err
+			}
+			fileList = append(fileList, gin.H{
+				"name":  file.Name(),
+				"size":  file.Size(),
+				"time":  file.ModTime(),
+				"files": subFiles,
+			})
+		} else { // if it s a file add it to the list
+			fileList = append(fileList, gin.H{
+				"name": file.Name(),
+				"size": file.Size(),
+				"time": file.ModTime(),
+			})
+		}
+	}
+	return fileList, nil
 }
 
 func paramNodeID(c *gin.Context) (nodeID int, err error) {
@@ -216,24 +261,6 @@ func getStartPosition(file *os.File, n int) (int64, error) {
 	return lines[len(lines)-1], nil
 }
 
-func addSetupScore(url string, pass bool) {
-	if v, ok := setupScores[url]; !ok || !v {
-		setupScores[url] = pass
-	}
-}
-
-func addTransactionScore(url string, pass bool) {
-	if v, ok := transactionScores[url]; !ok || !v {
-		transactionScores[url] = pass
-	}
-}
-
-func addNativeScore(url string, pass bool) {
-	if v, ok := nativeScores[url]; !ok || !v {
-		nativeScores[url] = pass
-	}
-}
-
 func main() {
 	gin.SetMode(gin.DebugMode)
 	r := gin.Default()
@@ -242,15 +269,14 @@ func main() {
 	r.Any("/proxy/:node/*path", proxyHandler)
 	r.GET("/stream/:node", streamLogHandler)
 	r.POST("/execute", commandHandler)
-	r.Static("/workdir", path.Join(WorkDir, ClusterName))
-
-	r.GET("/score/setup", scoreSetupHandler)
-	r.GET("/score/transaction", scoreTransactionHandler)
-	r.GET("/score/native", scoreNativeHandler)
+	r.GET("/scores", scoresHandler)
+	r.GET("/workdir/list/:node", fileListHandler)
+	r.Static("/workdir/file", path.Join(WorkDir, ClusterName))
 
 	r.POST("/setup/oneclick", oneClickHandler)
 	r.POST("/setup/new/factory", clusterFactoryHandler)
 	r.POST("/setup/reset/workdir", resetWorkDirHandler)
+	r.POST("/setup/reset/status", resetStatusHandler)
 	r.POST("/setup/genesis/addrs", localAddrsHandler)
 	r.POST("/setup/genesis/random", randomKeysHandler)
 	r.POST("/setup/genesis/template", templateDirHandler)
@@ -293,12 +319,20 @@ func CustomRecovery() gin.HandlerFunc {
 		c.Header("Access-Control-Allow-Headers", "Content-Type")
 
 		route := c.FullPath()
-		if strings.HasPrefix(route, "/setup") {
-			addSetupScore(route, c.Writer.Status() == http.StatusOK)
-		} else if strings.HasPrefix(route, "/transaction") {
-			addTransactionScore(route, c.Writer.Status() == http.StatusOK)
-		} else if strings.HasPrefix(route, "/native") {
-			addNativeScore(route, c.Writer.Status() == http.StatusOK)
+		for _, prefix := range []string{"/setup", "/transaction", "/native"} {
+			if strings.HasPrefix(route, prefix) {
+				route = strings.TrimPrefix(route, prefix)
+				addScore(prefix, route, c.Writer.Status() == http.StatusOK)
+			}
 		}
+	}
+}
+
+func addScore(prefix string, route string, pass bool) {
+	if scores[prefix] == nil {
+		scores[prefix] = make(map[string]bool)
+	}
+	if v, ok := scores[prefix][route]; !ok || !v {
+		scores[prefix][route] = pass
 	}
 }

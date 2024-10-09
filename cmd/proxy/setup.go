@@ -63,6 +63,20 @@ func resetWorkDirHandler(c *gin.Context) {
 	}
 }
 
+func resetStatusHandler(c *gin.Context) {
+	cmd := exec.Command("pkill", "-9 -f", "^./chain")
+	fmt.Printf(" $ %s\n", strings.Join(cmd.Args, " "))
+	cmd.Run()
+	c.String(http.StatusOK, "successfully reset global variables and blockchain processes")
+
+	params = nil
+	factory = nil
+	config = ConfigFiles{}
+	cls = nil
+	client = nil
+	codeID = nil
+}
+
 func localAddrsHandler(c *gin.Context) {
 	pointAddrs, topicAddrs, err := factory.MakeLocalAddrs()
 	if err != nil {
