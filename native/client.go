@@ -29,7 +29,7 @@ func NewClient(isDeploy bool) *Client {
 	var err error
 	client := &Client{}
 	if !isDeploy {
-		client.codeAddr, err = os.ReadFile(path.Join(dataPath, codeFile))
+		client.codeAddr, err = os.ReadFile(path.Join(GetCodePath(), codeFile))
 		common.Check2(err)
 	}
 	b, err := os.ReadFile(path.Join(dataPath, FileNodekey))

@@ -79,10 +79,12 @@ func TestRWCLoopBack(t *testing.T) {
 	asrt := assert.New(t)
 
 	rwc := newRWCLoopBack()
-	recv := make([]byte, 5)
+	var recv SafeBytes
 	go func() {
 		for {
-			rwc.Read(recv)
+			data := make([]byte, 5)
+			rwc.Read(data)
+			recv.Set(data)
 		}
 	}()
 
@@ -90,7 +92,7 @@ func TestRWCLoopBack(t *testing.T) {
 	rwc.Write(sent)
 
 	time.Sleep(time.Millisecond)
-	asrt.EqualValues(sent, recv)
+	asrt.EqualValues(sent, recv.Get())
 
 	rwc.Close()
 	_, err := rwc.Write(sent)

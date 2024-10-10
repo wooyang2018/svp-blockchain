@@ -123,8 +123,8 @@ func (node *Node) setupComponents() {
 }
 
 func (node *Node) setupRoleStore() {
-	node.roleStore = core.NewRoleStore(node.genesis.Validators,
-		node.genesis.StakeQuotas, node.genesis.WindowSize)
+	node.roleStore = NewRoleStore(node.genesis)
+	core.SetSRole(node.roleStore)
 	logger.I().Infow("setup role store", "window size", node.roleStore.GetWindowSize())
 }
 

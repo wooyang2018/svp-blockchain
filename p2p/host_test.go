@@ -4,6 +4,7 @@
 package p2p
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -13,6 +14,24 @@ import (
 
 	"github.com/wooyang2018/svp-blockchain/core"
 )
+
+// SafeBytes is a thread-safe []byte encapsule
+type SafeBytes struct {
+	data []byte
+	mu   sync.RWMutex
+}
+
+func (s *SafeBytes) Set(b []byte) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.data = b
+}
+
+func (s *SafeBytes) Get() []byte {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.data
+}
 
 func setupTwoHost(t *testing.T) (*Host, *Host, *Peer, *Peer) {
 	asrt := assert.New(t)
@@ -55,10 +74,10 @@ func TestPointHost(t *testing.T) {
 
 	// wait message from host2
 	s1 := peer1.SubscribeMsg()
-	var recv1 []byte
+	var recv1 SafeBytes
 	go func() {
 		for e := range s1.Events() {
-			recv1 = e.([]byte)
+			recv1.Set(e.([]byte))
 		}
 	}()
 
@@ -67,14 +86,14 @@ func TestPointHost(t *testing.T) {
 	peer2.WriteMsg(msg)
 
 	time.Sleep(10 * time.Millisecond)
-	asrt.Equal(msg, recv1)
+	asrt.Equal(msg, recv1.Get())
 
 	// wait message from host1
 	s2 := peer2.SubscribeMsg()
-	var recv2 []byte
+	var recv2 SafeBytes
 	go func() {
 		for e := range s2.Events() {
-			recv2 = e.([]byte)
+			recv2.Set(e.([]byte))
 		}
 	}()
 
@@ -83,7 +102,7 @@ func TestPointHost(t *testing.T) {
 	peer1.WriteMsg(msg)
 
 	time.Sleep(10 * time.Millisecond)
-	asrt.Equal(msg, recv2)
+	asrt.Equal(msg, recv2.Get())
 
 	host1.Close()
 	host2.Close()
@@ -95,11 +114,11 @@ func TestTopicHost(t *testing.T) {
 
 	// wait message from host2
 	s1 := host1.SubscribeMsg()
-	var recv1 []byte
+	var recv1 SafeBytes
 	go func() {
 		for e := range s1.Events() {
 			data := e.(*pubsub.Message)
-			recv1 = data.Data
+			recv1.Set(data.Data)
 		}
 	}()
 
@@ -108,15 +127,15 @@ func TestTopicHost(t *testing.T) {
 	asrt.NoError(host2.chatRoom.Publish(msg))
 
 	time.Sleep(10 * time.Millisecond)
-	asrt.Equal(msg, recv1)
+	asrt.Equal(msg, recv1.Get())
 
 	// wait message from host1
 	s2 := host2.SubscribeMsg()
-	var recv2 []byte
+	var recv2 SafeBytes
 	go func() {
 		for e := range s2.Events() {
 			data := e.(*pubsub.Message)
-			recv2 = data.Data
+			recv2.Set(data.Data)
 		}
 	}()
 
@@ -125,7 +144,7 @@ func TestTopicHost(t *testing.T) {
 	asrt.NoError(host1.chatRoom.Publish(msg))
 
 	time.Sleep(10 * time.Millisecond)
-	asrt.Equal(msg, recv2)
+	asrt.Equal(msg, recv2.Get())
 
 	host1.Close()
 	host2.Close()

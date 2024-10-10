@@ -15,6 +15,12 @@ import (
 	"github.com/wooyang2018/svp-blockchain/p2p"
 )
 
+const (
+	NodekeyFile = "nodekey"
+	GenesisFile = "genesis.json"
+	PeersFile   = "peers.json"
+)
+
 type Peer struct {
 	PubKey    []byte
 	PointAddr string
@@ -26,12 +32,6 @@ type Genesis struct {
 	StakeQuotas []uint64
 	WindowSize  int
 }
-
-const (
-	NodekeyFile = "nodekey"
-	GenesisFile = "genesis.json"
-	PeersFile   = "peers.json"
-)
 
 func ReadNodeKey(datadir string) (*core.PrivateKey, error) {
 	b, err := os.ReadFile(path.Join(datadir, NodekeyFile))
@@ -83,4 +83,36 @@ func ReadPeers(datadir string) ([]*p2p.Peer, error) {
 		peers[i] = p2p.NewPeer(pubKey, pointAddr, topicAddr)
 	}
 	return peers, nil
+}
+
+func WriteNodeKey(datadir string, key *core.PrivateKey) error {
+	f, err := os.Create(path.Join(datadir, NodekeyFile))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = f.Write(key.Bytes())
+	return err
+}
+
+func WriteGenesisFile(datadir string, genesis *Genesis) error {
+	f, err := os.Create(path.Join(datadir, GenesisFile))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	e := json.NewEncoder(f)
+	e.SetIndent("", "  ")
+	return e.Encode(genesis)
+}
+
+func WritePeersFile(datadir string, peers []Peer) error {
+	f, err := os.Create(path.Join(datadir, PeersFile))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	e := json.NewEncoder(f)
+	e.SetIndent("", "  ")
+	return e.Encode(peers)
 }

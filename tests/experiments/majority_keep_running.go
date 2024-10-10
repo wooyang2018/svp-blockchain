@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/wooyang2018/svp-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/node"
 	"github.com/wooyang2018/svp-blockchain/tests/cluster"
 	"github.com/wooyang2018/svp-blockchain/tests/health"
 	"github.com/wooyang2018/svp-blockchain/tests/testutil"
@@ -23,7 +23,7 @@ func (expm *MajorityKeepRunning) Name() string {
 // The blockchain should keep remain healthy
 // When the stopped nodes up again, they should sync the history
 func (expm *MajorityKeepRunning) Run(cls *cluster.Cluster) error {
-	faulty := make([]int, cls.NodeCount()-core.MajorityCount(cls.NodeCount()))
+	faulty := make([]int, cls.NodeCount()-node.MajorityCount(cls.NodeCount()))
 	for i := 0; i < len(faulty); i++ {
 		faulty[i] = i
 		cls.GetNode(i).Stop()

@@ -2,7 +2,7 @@
 POST http://localhost:8080/execute
 Content-Type: application/x-www-form-urlencoded
 
-cmd = echo hello
+cmd = pkill -9 -f ^./chain
 
 ### Request a specific blockchain process to retrieve consensus status.
 GET http://localhost:8080/proxy/-1/consensus
@@ -76,7 +76,7 @@ GET http://localhost:8080/scores
 GET http://localhost:8080/setup/cluster/liveness
 
 ### 2.1 Request the proxy process to new a transaction client.
-POST http://localhost:8080/setup/new/client/1
+POST http://localhost:8080/transaction/new/client/1
 
 ### 2.2 Request the proxy process to upload an evm contract.
 POST http://localhost:8080/transaction/upload/contract

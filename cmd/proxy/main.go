@@ -39,7 +39,41 @@ var (
 	cls     *cluster.Cluster
 )
 
-var scores = make(map[string]map[string]bool)
+type TaskStatus int8
+
+const (
+	Pending TaskStatus = iota // task is pending
+	Failed                    // task has failed
+	Success                   // task was successful
+)
+
+var scores = map[string]map[string]TaskStatus{
+	"setup": {
+		"/new/factory":      Pending,
+		"/reset/workdir":    Pending,
+		"/genesis/addrs":    Pending,
+		"/genesis/random":   Pending,
+		"/genesis/template": Pending,
+		"/build/chain":      Pending,
+		"/new/cluster":      Pending,
+		"/cluster/start":    Pending,
+	},
+	"transaction": {
+		"/new/client/:node": Pending,
+		"/upload/contract":  Pending,
+		"/deploy/contract":  Pending,
+		"/invoke/contract":  Pending,
+		"/query/contract":   Pending,
+	},
+	"native": {
+		"/deploy/pcoin": Pending,
+		"/invoke/pcoin": Pending,
+		"/query/pcoin":  Pending,
+		"/invoke/xcoin": Pending,
+		"/query/xcoin":  Pending,
+		"/query/taddr":  Pending,
+	},
+}
 
 type FactoryParams struct {
 	NodeCount  int `json:"nodeCount"`
@@ -285,8 +319,8 @@ func main() {
 	r.POST("/setup/cluster/start", startClusterHandler)
 	r.POST("/setup/cluster/stop", stopClusterHandler)
 	r.GET("/setup/cluster/liveness", checkLivenessHandler)
-	r.POST("/setup/new/client/:node", newClientHandler)
 
+	r.POST("/transaction/new/client/:node", newClientHandler)
 	r.POST("/transaction/upload/contract", uploadContractHandler)
 	r.POST("/transaction/upload/bincc", uploadBinCodeHandler)
 	r.POST("/transaction/deploy/contract", deployContractHandler)
@@ -322,17 +356,23 @@ func CustomRecovery() gin.HandlerFunc {
 		for _, prefix := range []string{"/setup", "/transaction", "/native"} {
 			if strings.HasPrefix(route, prefix) {
 				route = strings.TrimPrefix(route, prefix)
-				addScore(prefix, route, c.Writer.Status() == http.StatusOK)
+				addScore(prefix[1:], route, c.Writer.Status() == http.StatusOK)
+				break
 			}
 		}
 	}
 }
 
 func addScore(prefix string, route string, pass bool) {
-	if scores[prefix] == nil {
-		scores[prefix] = make(map[string]bool)
+	if _, ok := scores[prefix]; !ok {
+		return
 	}
-	if v, ok := scores[prefix][route]; !ok || !v {
-		scores[prefix][route] = pass
+	if _, ok := scores[prefix][route]; !ok {
+		return
+	}
+	if pass {
+		scores[prefix][route] = Success
+	} else {
+		scores[prefix][route] = Failed
 	}
 }

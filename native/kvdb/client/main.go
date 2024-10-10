@@ -32,7 +32,7 @@ var deployCmd = &cobra.Command{
 		client := native.NewClient(true)
 		tx := client.MakeDeploymentTx(common.DriverTypeNative, native.CodeKVDB, nil)
 		client.SubmitTx(tx)
-		common.DumpFile(tx.Hash(), native.GetDataPath(), native.FileCodeDefault)
+		common.DumpFile(tx.Hash(), native.GetCodePath(), native.FileCodeDefault)
 	},
 }
 

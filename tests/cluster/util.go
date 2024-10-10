@@ -4,7 +4,6 @@
 package cluster
 
 import (
-	"encoding/json"
 	"fmt"
 	"math/rand"
 	"os"
@@ -69,38 +68,6 @@ func WriteYamlFile(clusterDir string, data DockerCompose) error {
 	return encoder.Encode(data)
 }
 
-func WriteNodeKey(datadir string, key *core.PrivateKey) error {
-	f, err := os.Create(path.Join(datadir, node.NodekeyFile))
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	_, err = f.Write(key.Bytes())
-	return err
-}
-
-func WriteGenesisFile(datadir string, genesis *node.Genesis) error {
-	f, err := os.Create(path.Join(datadir, node.GenesisFile))
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	e := json.NewEncoder(f)
-	e.SetIndent("", "  ")
-	return e.Encode(genesis)
-}
-
-func WritePeersFile(datadir string, peers []node.Peer) error {
-	f, err := os.Create(path.Join(datadir, node.PeersFile))
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	e := json.NewEncoder(f)
-	e.SetIndent("", "  ")
-	return e.Encode(peers)
-}
-
 func MakeRandomKeys(count int) []*core.PrivateKey {
 	keys := make([]*core.PrivateKey, count)
 	for i := 0; i < count; i++ {
@@ -153,13 +120,13 @@ func SetupTemplateDir(dir string, keys []*core.PrivateKey, genesis *node.Genesis
 	for i, key := range keys {
 		d := path.Join(dir, strconv.Itoa(i))
 		os.Mkdir(d, 0755)
-		if err := WriteNodeKey(d, key); err != nil {
+		if err := node.WriteNodeKey(d, key); err != nil {
 			return err
 		}
-		if err := WriteGenesisFile(d, genesis); err != nil {
+		if err := node.WriteGenesisFile(d, genesis); err != nil {
 			return err
 		}
-		if err := WritePeersFile(d, vlds); err != nil {
+		if err := node.WritePeersFile(d, vlds); err != nil {
 			return err
 		}
 		if i == 0 {

@@ -4,11 +4,29 @@
 package core
 
 import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
+
+type RoleStore interface {
+	ValidatorCount() int
+	MajorityValidatorCount() int
+	MajorityQuotaCount() uint64
+	IsValidator(pubKey *PublicKey) bool
+	GetWindowSize() int
+	GetValidator(idx int) *PublicKey
+	GetValidatorIndex(pubKey *PublicKey) int
+	GetValidatorQuota(pubKey *PublicKey) uint64
+
+	GetGenesisFile() string
+	DeleteValidator(pubKey string) error
+	AddValidator(pubKey string, quota uint64) error
+}
+
+var SRole RoleStore
+
+func SetSRole(role RoleStore) {
+	SRole = role
+}
 
 type MockValidatorStore struct {
 	mock.Mock
@@ -60,25 +78,17 @@ func (m *MockValidatorStore) GetValidatorQuota(pubKey *PublicKey) uint64 {
 	return args.Get(0).(uint64)
 }
 
-func TestMajorityCount(t *testing.T) {
-	type args struct {
-		validatorCount int
-	}
-	tests := []struct {
-		name string
-		args args
-		want int
-	}{
-		{"single node", args{1}, 1},
-		{"exact factor", args{4}, 3},  // n = 3f+1, f=1
-		{"exact factor", args{10}, 7}, // f=3, m=10-3
-		{"middle", args{12}, 9},       // f=3, m=12-3
-		{"middle", args{14}, 10},      // f=4, m=14-4
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := MajorityCount(tt.args.validatorCount)
-			assert.Equal(t, tt.want, got)
-		})
-	}
+func (m *MockValidatorStore) GetGenesisFile() string {
+	args := m.Called()
+	return args.Get(0).(string)
+}
+
+func (m *MockValidatorStore) DeleteValidator(pubKey string) error {
+	args := m.Called(pubKey)
+	return args.Get(0).(error)
+}
+
+func (m *MockValidatorStore) AddValidator(pubKey string, quota uint64) error {
+	args := m.Called(pubKey, quota)
+	return args.Get(0).(error)
 }

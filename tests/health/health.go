@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/wooyang2018/svp-blockchain/consensus"
-	"github.com/wooyang2018/svp-blockchain/core"
+	"github.com/wooyang2018/svp-blockchain/node"
 	"github.com/wooyang2018/svp-blockchain/tests/cluster"
 	"github.com/wooyang2018/svp-blockchain/tests/testutil"
 )
@@ -81,7 +81,7 @@ func (hc *checker) shouldGetStatus() (map[int]*consensus.Status, error) {
 func (hc *checker) minimumHealthyNode() int {
 	min := hc.cluster.NodeCount()
 	if hc.majority {
-		min = core.MajorityCount(hc.cluster.NodeCount())
+		min = node.MajorityCount(hc.cluster.NodeCount())
 	}
 	return min
 }
@@ -97,5 +97,5 @@ func (hc *checker) ViewWidth() time.Duration {
 }
 
 func (hc *checker) getFaultyCount() int {
-	return hc.cluster.NodeCount() - core.MajorityCount(hc.cluster.NodeCount())
+	return hc.cluster.NodeCount() - node.MajorityCount(hc.cluster.NodeCount())
 }

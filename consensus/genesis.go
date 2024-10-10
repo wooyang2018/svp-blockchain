@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path"
 	"sync"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/logger"
 	"github.com/wooyang2018/svp-blockchain/native"
+	"github.com/wooyang2018/svp-blockchain/native/srole"
 	"github.com/wooyang2018/svp-blockchain/native/taddr"
 	"github.com/wooyang2018/svp-blockchain/native/xcoin"
 	"github.com/wooyang2018/svp-blockchain/storage"
@@ -80,10 +82,13 @@ func (gns *genesis) commit() {
 }
 
 func (gns *genesis) dumpCodeFile(txs []*core.Transaction) {
-	common.DumpFile(txs[0].Hash(), gns.config.DataDir, native.FileCodeXCoin)
-	common.DumpFile(txs[1].Hash(), gns.config.DataDir, native.FileCodeTAddr)
+	codePath := path.Join(gns.config.DataDir, native.CodePathDefault)
+	common.DumpFile(txs[0].Hash(), codePath, native.FileCodeXCoin)
+	common.DumpFile(txs[1].Hash(), codePath, native.FileCodeTAddr)
+	common.DumpFile(txs[2].Hash(), codePath, native.FileCodeSRole)
 	common.RegisterCode(native.FileCodeXCoin, txs[0].Hash())
 	common.RegisterCode(native.FileCodeTAddr, txs[1].Hash())
+	common.RegisterCode(native.FileCodeSRole, txs[1].Hash())
 }
 
 func (gns *genesis) propose() {
@@ -142,10 +147,23 @@ func (gns *genesis) genesisTxs() [][]byte {
 		SetInput(b1).
 		Sign(gns.resources.Signer)
 
-	if err := gns.resources.TxPool.StoreTxs(&core.TxList{tx0, tx1}); err != nil {
+	input2 := &common.DeploymentInput{
+		CodeInfo: common.CodeInfo{
+			DriverType: common.DriverTypeNative,
+			CodeID:     native.CodeSRole,
+		},
+	}
+	input2.InitInput, _ = json.Marshal(srole.InitInput{})
+	b2, _ := json.Marshal(input2)
+	tx2 := core.NewTransaction().
+		SetNonce(time.Now().UnixNano()).
+		SetInput(b2).
+		Sign(gns.resources.Signer)
+
+	if err := gns.resources.TxPool.StoreTxs(&core.TxList{tx0, tx1, tx2}); err != nil {
 		logger.I().Fatal(err)
 	}
-	return [][]byte{tx0.Hash(), tx1.Hash()}
+	return [][]byte{tx0.Hash(), tx1.Hash(), tx2.Hash()}
 }
 
 func (gns *genesis) broadcastProposalLoop() {

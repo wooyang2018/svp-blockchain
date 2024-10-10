@@ -5,6 +5,7 @@ package native
 
 import (
 	"fmt"
+	"path"
 
 	"github.com/spf13/cobra"
 
@@ -15,8 +16,10 @@ import (
 const (
 	FileCodeXCoin   = "xcoin"
 	FileCodeTAddr   = "taddr"
+	FileCodeSRole   = "srole"
 	FileCodeDefault = "default"
 	FileNodekey     = "nodekey"
+	CodePathDefault = "./builtin"
 )
 
 var (
@@ -44,8 +47,8 @@ func SetNodeUrl(url string) {
 	nodeUrl = url
 }
 
-func GetDataPath() string {
-	return dataPath
+func GetCodePath() string {
+	return path.Join(dataPath, CodePathDefault)
 }
 
 func init() {

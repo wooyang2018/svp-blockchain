@@ -130,7 +130,7 @@ func TestEVMDataTypes(t *testing.T) {
 	var res []interface{}
 	json.Unmarshal(ret, &res)
 	t.Logf("%+v\n", res)
-	decoded, _ := base64.StdEncoding.DecodeString(res[5].(string))
+	decoded, _ := common.Address32ToBytes(res[5].(string))
 	assert.EqualValues(t, []byte("hello world"), decoded)
 
 	input = &evm.Input{

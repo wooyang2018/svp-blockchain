@@ -64,10 +64,13 @@ func resetWorkDirHandler(c *gin.Context) {
 }
 
 func resetStatusHandler(c *gin.Context) {
-	cmd := exec.Command("pkill", "-9 -f", "^./chain")
+	cmd := exec.Command("sh", "-c", "pkill -9 -f ^./chain")
 	fmt.Printf(" $ %s\n", strings.Join(cmd.Args, " "))
-	cmd.Run()
-	c.String(http.StatusOK, "successfully reset global variables and blockchain processes")
+	if err := cmd.Run(); err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+	} else {
+		c.String(http.StatusOK, "successfully reset global variables and blockchain processes")
+	}
 
 	params = nil
 	factory = nil
@@ -158,6 +161,10 @@ func stopClusterHandler(c *gin.Context) {
 }
 
 func checkLivenessHandler(c *gin.Context) {
+	if cls == nil || params == nil {
+		c.Status(http.StatusOK) // please start the cluster first
+		return
+	}
 	ret := testutil.GetStatusAll(cls)
 	if len(ret) < params.NodeCount {
 		failed := make([]int, 0)

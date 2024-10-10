@@ -5,7 +5,6 @@ package evm
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -270,7 +269,7 @@ func getElemValue(paramType string, param string) interface{} {
 	case "address":
 		return ethcomm.HexToAddress(param)
 	case "bytes":
-		tmp, err := base64.StdEncoding.DecodeString(param)
+		tmp, err := common.Address32ToBytes(param)
 		common.Check(err)
 		return tmp
 	case "bool":
