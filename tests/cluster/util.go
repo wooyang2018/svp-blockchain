@@ -96,12 +96,12 @@ func MakeRandomQuotas(count int, quota int) []uint64 {
 	return quotas
 }
 
-func MakePeers(keys []*core.PrivateKey, pointAddrs, topicAddrs []multiaddr.Multiaddr) []node.Peer {
+func MakePeers(keys []*core.PrivateKey, pointAddrs, topicAddrs []multiaddr.Multiaddr) []*node.Peer {
 	n := len(pointAddrs)
-	vlds := make([]node.Peer, n)
+	vlds := make([]*node.Peer, n)
 	// create validator infos (pubkey + pointAddr + topicAddr)
 	for i := 0; i < n; i++ {
-		vlds[i] = node.Peer{
+		vlds[i] = &node.Peer{
 			PubKey:    keys[i].PublicKey().Bytes(),
 			PointAddr: pointAddrs[i].String(),
 			TopicAddr: topicAddrs[i].String(),
@@ -110,7 +110,7 @@ func MakePeers(keys []*core.PrivateKey, pointAddrs, topicAddrs []multiaddr.Multi
 	return vlds
 }
 
-func SetupTemplateDir(dir string, keys []*core.PrivateKey, genesis *node.Genesis, vlds []node.Peer) error {
+func SetupTemplateDir(dir string, keys []*core.PrivateKey, genesis *node.Genesis, vlds []*node.Peer) error {
 	if err := os.RemoveAll(dir); err != nil {
 		return err
 	}

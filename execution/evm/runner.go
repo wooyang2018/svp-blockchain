@@ -27,6 +27,7 @@ import (
 
 var keyAddr = []byte("address") // evm contract address
 var keyAbi = []byte("abi")      // evm contract abi
+var mtxExec sync.RWMutex
 
 type Input struct {
 	Method string   `json:"method"`
@@ -46,7 +47,6 @@ type Runner struct {
 	CodePath string
 	Storage  storage.PersistStore
 	StateDB  *statedb.StateDB
-	mtx      sync.Mutex
 }
 
 var _ common.Chaincode = (*Runner)(nil)
@@ -72,14 +72,14 @@ func (r *Runner) Init(ctx common.CallContext) error {
 	vmenv := runtime.NewEnv(r.config)
 	sender := evm.AccountRef(r.config.Origin)
 
-	r.mtx.Lock()
+	mtxExec.Lock()
 	_, address, leftOverGas, err := vmenv.Create(
 		sender,
 		deploy,
 		r.config.GasLimit,
 		r.config.Value,
 	)
-	r.mtx.Unlock()
+	mtxExec.Unlock()
 
 	ctx.SetState(keyAddr, address.Bytes())
 	ctx.SetState(keyAbi, []byte(jsonABI))
@@ -109,7 +109,7 @@ func (r *Runner) Invoke(ctx common.CallContext) error {
 	sender := evm.AccountRef(r.config.Origin)
 	address := ethcomm.BytesToAddress(ctx.GetState(keyAddr))
 
-	r.mtx.Lock()
+	mtxExec.Lock()
 	ret, leftOverGas, err := vmenv.Call(
 		sender,
 		address,
@@ -117,7 +117,7 @@ func (r *Runner) Invoke(ctx common.CallContext) error {
 		r.config.GasLimit,
 		r.config.Value,
 	)
-	r.mtx.Unlock()
+	mtxExec.Unlock()
 
 	retSlice, _ := contractAbi.Unpack(input.Method, ret)
 	res, _ := json.Marshal(retSlice)
@@ -143,14 +143,14 @@ func (r *Runner) Query(ctx common.CallContext) ([]byte, error) {
 	sender := evm.AccountRef(r.config.Origin)
 	address := ethcomm.BytesToAddress(ctx.GetState(keyAddr))
 
-	r.mtx.Lock()
+	mtxExec.RLock()
 	ret, leftOverGas, err := vmenv.StaticCall(
 		sender,
 		address,
 		query,
 		r.config.GasLimit,
 	)
-	r.mtx.Unlock()
+	mtxExec.RUnlock()
 
 	retSlice, _ := contractAbi.Unpack(input.Method, ret)
 	res, _ := json.Marshal(retSlice)

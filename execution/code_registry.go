@@ -20,7 +20,8 @@ func newCodeRegistry() codeRegistry {
 	return reg
 }
 
-func (reg codeRegistry) registerDriver(driverType common.DriverType, driver common.CodeDriver) error {
+func (reg codeRegistry) registerDriver(driverType common.DriverType,
+	driver common.CodeDriver) error {
 	if _, found := reg[driverType]; found {
 		return errors.New("driver already registered")
 	}
@@ -46,8 +47,8 @@ func (reg codeRegistry) deploy(codeAddr []byte, input *common.DeploymentInput,
 	return driver.GetInstance(input.CodeInfo.CodeID)
 }
 
-func (reg codeRegistry) getInstance(codeAddr []byte, state common.StateGetter,
-) (common.Chaincode, error) {
+func (reg codeRegistry) getInstance(codeAddr []byte,
+	state common.StateGetter) (common.Chaincode, error) {
 	info, err := reg.getCodeInfo(codeAddr, state)
 	if err != nil {
 		return nil, err
@@ -77,8 +78,8 @@ func (reg codeRegistry) setCodeInfo(codeAddr []byte, codeInfo *common.CodeInfo,
 	return nil
 }
 
-func (reg codeRegistry) getCodeInfo(codeAddr []byte, state common.StateGetter,
-) (*common.CodeInfo, error) {
+func (reg codeRegistry) getCodeInfo(codeAddr []byte,
+	state common.StateGetter) (*common.CodeInfo, error) {
 	b := state.GetState(codeAddr)
 	info := new(common.CodeInfo)
 	err := json.Unmarshal(b, info)

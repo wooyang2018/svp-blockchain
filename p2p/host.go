@@ -26,10 +26,14 @@ import (
 const protocolID = "/point2point"
 const low, high = 2, 4 // low and high watermark
 
+type Peers interface {
+	GetPeers() []*Peer
+}
+
 type Host struct {
 	privKey   *core.PrivateKey
 	peerStore *PeerStore
-	peers     []*Peer
+	peers     Peers
 
 	pointAddr  multiaddr.Multiaddr
 	pointHost  host.Host
@@ -40,11 +44,12 @@ type Host struct {
 	chatRoom  *ChatRoom
 }
 
-func NewHost(privKey *core.PrivateKey, pointAddr, topicAddr multiaddr.Multiaddr) (*Host, error) {
+func NewHost(privKey *core.PrivateKey, pointAddr, topicAddr multiaddr.Multiaddr, peers Peers) (*Host, error) {
 	host := new(Host)
 	host.privKey = privKey
 	host.pointAddr = pointAddr
 	host.topicAddr = topicAddr
+	host.peers = peers
 	host.peerStore = NewPeerStore()
 
 	pointHost, topicHost, err := host.newLibHost()
@@ -120,12 +125,8 @@ func (host *Host) Close() {
 	}
 }
 
-func (host *Host) SetPeers(peers []*Peer) {
-	host.peers = peers
-}
-
 func (host *Host) SetLeader(idx int) {
-	host.consLeader = host.peers[idx]
+	host.consLeader = host.peers.GetPeers()[idx]
 	if !host.consLeader.pubKey.Equal(host.privKey.PublicKey()) {
 		host.ConnectLeader()
 	}

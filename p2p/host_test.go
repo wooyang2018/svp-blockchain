@@ -33,6 +33,20 @@ func (s *SafeBytes) Get() []byte {
 	return s.data
 }
 
+type mockPeers []*Peer
+
+func (p mockPeers) GetPeers() []*Peer {
+	return p
+}
+
+func newMockPeers(peers ...*Peer) Peers {
+	var res mockPeers
+	for _, peer := range peers {
+		res = append(res, peer)
+	}
+	return res
+}
+
 func setupTwoHost(t *testing.T) (*Host, *Host, *Peer, *Peer) {
 	asrt := assert.New(t)
 
@@ -43,18 +57,15 @@ func setupTwoHost(t *testing.T) (*Host, *Host, *Peer, *Peer) {
 
 	priv1 := core.GenerateKey(nil)
 	peer1 := NewPeer(priv1.PublicKey(), pointAddr1, topicAddr1)
-	host1, err := NewHost(priv1, pointAddr1, topicAddr1)
-	asrt.NoError(err)
-
 	priv2 := core.GenerateKey(nil)
 	peer2 := NewPeer(priv2.PublicKey(), pointAddr2, topicAddr2)
-	host2, err := NewHost(priv2, pointAddr2, topicAddr2)
-	asrt.NoError(err)
 
+	host1, err := NewHost(priv1, pointAddr1, topicAddr1, newMockPeers(peer1, peer2))
+	asrt.NoError(err)
+	host2, err := NewHost(priv2, pointAddr2, topicAddr2, newMockPeers(peer1, peer2))
+	asrt.NoError(err)
 	host1.AddPeer(peer2)
-	host1.SetPeers([]*Peer{peer1, peer2})
 	host2.AddPeer(peer1)
-	host2.SetPeers([]*Peer{peer1, peer2})
 
 	host1.SetLeader(0)
 	host2.SetLeader(0)

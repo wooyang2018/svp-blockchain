@@ -2,6 +2,7 @@ package node
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -36,17 +37,22 @@ func TestMajorityCount(t *testing.T) {
 
 func makeInitCtx() *common.MockCallContext {
 	vlds := make([]*core.PublicKey, 4)
+	peers := make([]*Peer, 4)
 	genesis := &Genesis{
 		Validators:  make([]string, 4),
 		StakeQuotas: make([]uint64, 4),
 		WindowSize:  4,
 	}
+
 	for i := range vlds {
 		vlds[i] = core.GenerateKey(nil).PublicKey()
 		genesis.Validators[i] = vlds[i].String()
 		genesis.StakeQuotas[i] = 100
+		pointAddr := fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", DefaultConfig.PointPort+i)
+		topicAddr := fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", DefaultConfig.TopicPort+i)
+		peers[i] = &Peer{vlds[i].Bytes(), pointAddr, topicAddr}
 	}
-	vs := NewRoleStore(genesis)
+	vs := NewRoleStore(genesis, peers)
 	core.SetSRole(vs)
 
 	ctx := new(common.MockCallContext)

@@ -29,10 +29,10 @@ type Node struct {
 	config Config
 
 	privKey *core.PrivateKey
-	peers   []*p2p.Peer
+	peers   []*Peer
 	genesis *Genesis
 
-	roleStore core.RoleStore
+	roleStore *roleStore
 	storage   *storage.Storage
 	host      *p2p.Host
 	msgSvc    *p2p.MsgService
@@ -123,7 +123,7 @@ func (node *Node) setupComponents() {
 }
 
 func (node *Node) setupRoleStore() {
-	node.roleStore = NewRoleStore(node.genesis)
+	node.roleStore = NewRoleStore(node.genesis, node.peers)
 	core.SetSRole(node.roleStore)
 	logger.I().Infow("setup role store", "window size", node.roleStore.GetWindowSize())
 }
@@ -133,12 +133,11 @@ func (node *Node) setupHost() {
 	checkPort(node.config.TopicPort)
 	pointAddr, _ := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", node.config.PointPort))
 	topicAddr, _ := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", node.config.TopicPort))
-	host, err := p2p.NewHost(node.privKey, pointAddr, topicAddr)
-	host.SetPeers(node.peers)
+	host, err := p2p.NewHost(node.privKey, pointAddr, topicAddr, node.roleStore)
 	if err != nil {
 		logger.I().Fatalw("cannot create p2p host", "error", err)
 	}
-	for _, p := range node.peers {
+	for _, p := range node.roleStore.GetPeers() {
 		if !p.PublicKey().Equal(node.privKey.PublicKey()) {
 			host.AddPeer(p)
 		}

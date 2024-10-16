@@ -16,6 +16,8 @@ type Input struct {
 	Method string `json:"method"`
 	Addr   []byte `json:"addr"`
 	Quota  uint64 `json:"quota"`
+	Point  string `json:"point"`
+	Topic  string `json:"topic"`
 }
 
 type InitInput struct{}

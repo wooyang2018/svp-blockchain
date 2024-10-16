@@ -9,9 +9,12 @@ import (
 	"errors"
 	"math"
 
+	"github.com/multiformats/go-multiaddr"
+
 	"github.com/wooyang2018/svp-blockchain/core"
 	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/logger"
+	"github.com/wooyang2018/svp-blockchain/p2p"
 )
 
 type roleStore struct {
@@ -20,23 +23,35 @@ type roleStore struct {
 	stakeQuotas  []uint64
 	quotaCount   uint64
 	windowSize   int
+	peers        []*p2p.Peer
 }
 
 var _ core.RoleStore = (*roleStore)(nil)
 
-func NewRoleStore(genesis *Genesis) core.RoleStore {
+func NewRoleStore(genesis *Genesis, peers []*Peer) *roleStore {
 	count := len(genesis.Validators)
 	store := &roleStore{
 		validatorMap: make(map[string]int, count),
 		validators:   make([]*core.PublicKey, count),
 		stakeQuotas:  genesis.StakeQuotas,
 		windowSize:   genesis.WindowSize,
+		peers:        make([]*p2p.Peer, count),
 	}
 	// assert len(validators) == len(quotas)
 	for i, v := range genesis.Validators {
 		store.validators[i] = StringToPubKey(v)
 		store.validatorMap[v] = i
 		store.quotaCount += genesis.StakeQuotas[i]
+	}
+
+	for i, r := range peers {
+		pubKey, err := core.NewPublicKey(r.PubKey)
+		common.Check(err)
+		pointAddr, err := multiaddr.NewMultiaddr(r.PointAddr)
+		common.Check(err)
+		topicAddr, err := multiaddr.NewMultiaddr(r.TopicAddr)
+		common.Check(err)
+		store.peers[i] = p2p.NewPeer(pubKey, pointAddr, topicAddr)
 	}
 	return store
 }
@@ -127,6 +142,10 @@ func (store *roleStore) AddValidator(key string, quota uint64) error {
 	store.stakeQuotas = append(store.stakeQuotas, quota)
 	store.quotaCount += quota
 	return nil
+}
+
+func (store *roleStore) GetPeers() []*p2p.Peer {
+	return store.peers
 }
 
 func StringToPubKey(v string) *core.PublicKey {
