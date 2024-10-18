@@ -92,15 +92,15 @@ const DiscoveryServiceTag = "chatroom"
 
 // discoveryNotifee gets notified when we find a new peer via mDNS discovery
 type discoveryNotifee struct {
-	h         host.Host
-	peerStore *PeerStore
+	h       host.Host
+	isValid func(id peer.ID) bool
 }
 
 // HandlePeerFound connects to peers discovered via mDNS. Once they're connected,
 // the PubSub system will automatically start interacting with them if they also
 // support PubSub.
 func (n *discoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
-	if !n.peerStore.IsValidID(pi.ID) {
+	if !n.isValid(pi.ID) {
 		logger.I().Warnw("found invalid peer", "peerID", pi.ID)
 		return
 	}
@@ -117,8 +117,8 @@ func (n *discoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
 
 // setupDiscovery creates an mDNS discovery service and attaches it to the libp2p Host.
 // This lets us automatically discover peers on the same LAN and connect to them.
-func setupDiscovery(h host.Host, peerStore *PeerStore) error {
+func setupDiscovery(h host.Host, isValid func(id peer.ID) bool) error {
 	// setup mDNS discovery to find local peers
-	s := mdns.NewMdnsService(h, DiscoveryServiceTag, &discoveryNotifee{h, peerStore})
+	s := mdns.NewMdnsService(h, DiscoveryServiceTag, &discoveryNotifee{h, isValid})
 	return s.Start()
 }

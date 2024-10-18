@@ -21,7 +21,7 @@ func TestQuorumCert(t *testing.T) {
 	for i := range privKeys {
 		privKeys[i] = GenerateKey(nil)
 		if i > 0 {
-			vs.On("IsValidator", privKeys[i].pubKey).Return(true)
+			vs.On("IsValidator", privKeys[i].pubKey.String()).Return(true)
 		}
 	}
 	vs.On("IsValidator", mock.Anything).Return(false)

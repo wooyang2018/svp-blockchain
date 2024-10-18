@@ -26,32 +26,26 @@ import (
 const protocolID = "/point2point"
 const low, high = 2, 4 // low and high watermark
 
-type Peers interface {
-	GetPeers() []*Peer
-}
-
 type Host struct {
 	privKey   *core.PrivateKey
-	peerStore *PeerStore
-	peers     Peers
+	roleStore RoleStore
 
 	pointAddr  multiaddr.Multiaddr
 	pointHost  host.Host
 	consLeader *Peer
+	emitter    *emitter.Emitter
 
 	topicAddr multiaddr.Multiaddr
 	topicHost host.Host
 	chatRoom  *ChatRoom
 }
 
-func NewHost(privKey *core.PrivateKey, pointAddr, topicAddr multiaddr.Multiaddr, peers Peers) (*Host, error) {
+func NewHost(privKey *core.PrivateKey, pointAddr, topicAddr multiaddr.Multiaddr) (*Host, error) {
 	host := new(Host)
+	host.emitter = emitter.New()
 	host.privKey = privKey
 	host.pointAddr = pointAddr
 	host.topicAddr = topicAddr
-	host.peers = peers
-	host.peerStore = NewPeerStore()
-
 	pointHost, topicHost, err := host.newLibHost()
 	if err != nil {
 		return nil, err
@@ -59,7 +53,6 @@ func NewHost(privKey *core.PrivateKey, pointAddr, topicAddr multiaddr.Multiaddr,
 	pointHost.SetStreamHandler(protocolID, host.handleStream)
 	host.pointHost = pointHost
 	host.topicHost = topicHost
-
 	return host, nil
 }
 
@@ -89,13 +82,22 @@ func (host *Host) handleStream(s network.Stream) {
 	if err != nil {
 		return
 	}
-	if peer := host.peerStore.Load(pubKey); peer != nil {
+	if peer := host.roleStore.Load(pubKey); peer != nil {
 		if err = peer.setConnecting(); err == nil {
 			peer.onConnected(s)
 			return
 		}
 	}
 	s.Close() // cannot find peer in the store (peer not allowed to connect)
+}
+
+func (host *Host) SetRoleStore(roleStore RoleStore) {
+	host.roleStore = roleStore
+	for _, p := range host.roleStore.AllPeers() {
+		if !p.PublicKey().Equal(host.privKey.PublicKey()) {
+			host.roleStore.Store(p)
+		}
+	}
 }
 
 func (host *Host) JoinChatRoom() error {
@@ -106,7 +108,7 @@ func (host *Host) JoinChatRoom() error {
 		return err
 	}
 	// setup local mDNS discovery
-	if err = setupDiscovery(host.topicHost, host.peerStore); err != nil {
+	if err = setupDiscovery(host.topicHost, host.roleStore.IsValidID); err != nil {
 		return err
 	}
 	// join the chatroom
@@ -126,31 +128,34 @@ func (host *Host) Close() {
 }
 
 func (host *Host) SetLeader(idx int) {
-	host.consLeader = host.peers.GetPeers()[idx]
+	host.consLeader = host.roleStore.AllPeers()[idx]
 	if !host.consLeader.pubKey.Equal(host.privKey.PublicKey()) {
-		host.ConnectLeader()
+		host.ConnectPeer(host.consLeader)
 	}
 }
 
-func (host *Host) ConnectLeader() {
-	leader := host.consLeader
+func (host *Host) ConnectPeer(peer *Peer) {
 	// prevent simultaneous connections from both hosts
-	if err := leader.setConnecting(); err != nil {
+	if err := peer.setConnecting(); err != nil {
 		logger.I().Error(err)
 		return
 	}
-	s, err := host.newStream(leader)
+	s, err := host.newStream(peer)
 	if err != nil {
-		leader.disconnect()
-		logger.I().Errorw("failed to reconnect leader", "error", err)
+		peer.disconnect()
+		logger.I().Errorw("failed to reconnect peer", "error", err)
 		return
 	}
-	leader.onConnected(s)
+	peer.onConnected(s)
 	return
 }
 
-func (host *Host) SubscribeMsg() *emitter.Subscription {
+func (host *Host) SubscribeTopicMsg() *emitter.Subscription {
 	return host.chatRoom.emitter.Subscribe(20)
+}
+
+func (host *Host) SubscribePointMsg() *emitter.Subscription {
+	return host.emitter.Subscribe(10)
 }
 
 func (host *Host) newStream(peer *Peer) (network.Stream, error) {
@@ -163,13 +168,8 @@ func (host *Host) newStream(peer *Peer) (network.Stream, error) {
 	return host.pointHost.NewStream(context.Background(), id, protocolID)
 }
 
-func (host *Host) AddPeer(peer *Peer) {
-	host.peerStore.Store(peer)
-	peer.host = host
-}
-
-func (host *Host) PeerStore() *PeerStore {
-	return host.peerStore
+func (host *Host) RoleStore() RoleStore {
+	return host.roleStore
 }
 
 func getRemotePublicKey(s network.Stream) (*core.PublicKey, error) {

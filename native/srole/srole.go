@@ -20,7 +20,17 @@ type Input struct {
 	Topic  string `json:"topic"`
 }
 
-type InitInput struct{}
+type InitInput struct {
+	Size  int     `json:"size"`
+	Peers []*Peer `json:"peers"`
+}
+
+type Peer struct {
+	Addr  []byte `json:"addr"`
+	Quota uint64 `json:"quota"`
+	Point string `json:"point"`
+	Topic string `json:"topic"`
+}
 
 // SRole chaincode
 type SRole struct{}
@@ -31,8 +41,37 @@ func (c *SRole) Init(ctx common.CallContext) error {
 	if ctx.BlockHeight() != 0 {
 		return errors.New("srole chaincode must init at genesis")
 	}
-	_, err := parseInitInput(ctx.Input())
-	return err
+	input, err := parseInitInput(ctx.Input())
+	if err != nil {
+		return err
+	}
+	core.SRole.SetWindowSize(input.Size)
+	keyMap := make(map[string]struct{})
+	for _, peer := range input.Peers {
+		keyStr := common.AddressToString(peer.Addr)
+		keyMap[keyStr] = struct{}{}
+		if !core.SRole.IsValidator(keyStr) {
+			err := core.SRole.AddValidator(keyStr, peer.Point, peer.Topic, peer.Quota)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	count := core.SRole.ValidatorCount()
+	var toDel []string
+	for i := 0; i < count; i++ {
+		key := core.SRole.GetValidator(i)
+		if _, ok := keyMap[key.String()]; !ok {
+			toDel = append(toDel, key.String())
+		}
+	}
+	for _, key := range toDel {
+		err := core.SRole.DeleteValidator(key)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (c *SRole) Invoke(ctx common.CallContext) error {
@@ -45,11 +84,11 @@ func (c *SRole) Invoke(ctx common.CallContext) error {
 	}
 	switch input.Method {
 	case "delete":
-		addrStr := common.AddressToString(input.Addr)
-		return core.SRole.DeleteValidator(addrStr)
+		keyStr := common.AddressToString(input.Addr)
+		return core.SRole.DeleteValidator(keyStr)
 	case "add":
-		addrStr := common.AddressToString(input.Addr)
-		return core.SRole.AddValidator(addrStr, input.Quota)
+		keyStr := common.AddressToString(input.Addr)
+		return core.SRole.AddValidator(keyStr, input.Point, input.Topic, input.Quota)
 	default:
 		return errors.New("method not found")
 	}
@@ -61,8 +100,10 @@ func (c *SRole) Query(ctx common.CallContext) ([]byte, error) {
 		return nil, err
 	}
 	switch input.Method {
-	case "print":
+	case "genesis":
 		return []byte(core.SRole.GetGenesisFile()), nil
+	case "peers":
+		return []byte(core.SRole.GetPeersFile()), nil
 	default:
 		return nil, errors.New("method not found")
 	}

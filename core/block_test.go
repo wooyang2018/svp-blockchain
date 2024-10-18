@@ -42,7 +42,7 @@ func TestBlock(t *testing.T) {
 
 	vs := new(MockValidatorStore)
 	vs.On("MajorityValidatorCount").Return(1)
-	vs.On("IsValidator", privKey.PublicKey()).Return(true)
+	vs.On("IsValidator", privKey.PublicKey().String()).Return(true)
 	vs.On("IsValidator", mock.Anything).Return(false)
 
 	bOk, err := blk.Marshal()

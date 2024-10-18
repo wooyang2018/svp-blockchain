@@ -133,15 +133,14 @@ func (node *Node) setupHost() {
 	checkPort(node.config.TopicPort)
 	pointAddr, _ := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", node.config.PointPort))
 	topicAddr, _ := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", node.config.TopicPort))
-	host, err := p2p.NewHost(node.privKey, pointAddr, topicAddr, node.roleStore)
+
+	host, err := p2p.NewHost(node.privKey, pointAddr, topicAddr)
 	if err != nil {
 		logger.I().Fatalw("cannot create p2p host", "error", err)
 	}
-	for _, p := range node.roleStore.GetPeers() {
-		if !p.PublicKey().Equal(node.privKey.PublicKey()) {
-			host.AddPeer(p)
-		}
-	}
+	node.roleStore.SetHost(host)
+	host.SetRoleStore(node.roleStore)
+
 	if err = host.JoinChatRoom(); err != nil {
 		logger.I().Errorw("failed to join chatroom", "error", err)
 	}

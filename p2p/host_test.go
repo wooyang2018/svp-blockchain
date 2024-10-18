@@ -33,18 +33,20 @@ func (s *SafeBytes) Get() []byte {
 	return s.data
 }
 
-type mockPeers []*Peer
-
-func (p mockPeers) GetPeers() []*Peer {
-	return p
+type mockRoleStore struct {
+	*PeerStore
+	peers []*Peer
 }
 
-func newMockPeers(peers ...*Peer) Peers {
-	var res mockPeers
-	for _, peer := range peers {
-		res = append(res, peer)
+func (s *mockRoleStore) AllPeers() []*Peer {
+	return s.peers
+}
+
+func newMockRoleStore(host *Host, peers ...*Peer) RoleStore {
+	return &mockRoleStore{
+		PeerStore: NewPeerStore(host),
+		peers:     peers,
 	}
-	return res
 }
 
 func setupTwoHost(t *testing.T) (*Host, *Host, *Peer, *Peer) {
@@ -60,12 +62,15 @@ func setupTwoHost(t *testing.T) (*Host, *Host, *Peer, *Peer) {
 	priv2 := core.GenerateKey(nil)
 	peer2 := NewPeer(priv2.PublicKey(), pointAddr2, topicAddr2)
 
-	host1, err := NewHost(priv1, pointAddr1, topicAddr1, newMockPeers(peer1, peer2))
+	host1, err := NewHost(priv1, pointAddr1, topicAddr1)
 	asrt.NoError(err)
-	host2, err := NewHost(priv2, pointAddr2, topicAddr2, newMockPeers(peer1, peer2))
+	host1.SetRoleStore(newMockRoleStore(host1, peer1, peer2))
+	host1.roleStore.Store(peer2)
+
+	host2, err := NewHost(priv2, pointAddr2, topicAddr2)
 	asrt.NoError(err)
-	host1.AddPeer(peer2)
-	host2.AddPeer(peer1)
+	host2.SetRoleStore(newMockRoleStore(host2, peer1, peer2))
+	host2.roleStore.Store(peer1)
 
 	host1.SetLeader(0)
 	host2.SetLeader(0)
@@ -84,11 +89,11 @@ func TestPointHost(t *testing.T) {
 	host1, host2, peer1, peer2 := setupTwoHost(t)
 
 	// wait message from host2
-	s1 := peer1.SubscribeMsg()
+	s1 := host2.SubscribePointMsg()
 	var recv1 SafeBytes
 	go func() {
 		for e := range s1.Events() {
-			recv1.Set(e.([]byte))
+			recv1.Set(e.(*PointMsg).data)
 		}
 	}()
 
@@ -100,11 +105,11 @@ func TestPointHost(t *testing.T) {
 	asrt.Equal(msg, recv1.Get())
 
 	// wait message from host1
-	s2 := peer2.SubscribeMsg()
+	s2 := host1.SubscribePointMsg()
 	var recv2 SafeBytes
 	go func() {
 		for e := range s2.Events() {
-			recv2.Set(e.([]byte))
+			recv2.Set(e.(*PointMsg).data)
 		}
 	}()
 
@@ -124,7 +129,7 @@ func TestTopicHost(t *testing.T) {
 	host1, host2, _, _ := setupTwoHost(t)
 
 	// wait message from host2
-	s1 := host1.SubscribeMsg()
+	s1 := host1.SubscribeTopicMsg()
 	var recv1 SafeBytes
 	go func() {
 		for e := range s1.Events() {
@@ -141,7 +146,7 @@ func TestTopicHost(t *testing.T) {
 	asrt.Equal(msg, recv1.Get())
 
 	// wait message from host1
-	s2 := host2.SubscribeMsg()
+	s2 := host2.SubscribeTopicMsg()
 	var recv2 SafeBytes
 	go func() {
 		for e := range s2.Events() {

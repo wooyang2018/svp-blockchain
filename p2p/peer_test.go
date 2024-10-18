@@ -110,14 +110,15 @@ func (m *MockListener) CB(e emitter.Event) {
 func TestPeerReadWrite(t *testing.T) {
 	asrt := assert.New(t)
 	p := NewPeer(nil, nil, nil)
+	p.host = &Host{emitter: emitter.New()}
 
 	rwc := newRWCLoopBack()
 	p.onConnected(rwc)
-	sub := p.SubscribeMsg()
+	sub := p.host.SubscribePointMsg()
 	msg := []byte("hello")
 
 	mln := new(MockListener)
-	mln.On("CB", msg).Once()
+	mln.On("CB", &PointMsg{peer: p, data: msg}).Once()
 
 	go func() {
 		for event := range sub.Events() {

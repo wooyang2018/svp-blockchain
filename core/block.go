@@ -74,7 +74,7 @@ func (blk *Block) Validate(rs RoleStore) error {
 	if err != nil {
 		return err
 	}
-	if !rs.IsValidator(sig.PublicKey()) {
+	if !rs.IsValidator(sig.PublicKey().String()) {
 		return ErrInvalidValidator
 	}
 	if !sig.Verify(blk.data.Hash) {

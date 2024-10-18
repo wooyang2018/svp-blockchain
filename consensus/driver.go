@@ -39,10 +39,10 @@ func (d *driver) stop() {
 }
 
 func (d *driver) isLeader(pubKey *core.PublicKey) bool {
-	if !d.resources.RoleStore.IsValidator(pubKey) {
+	if !d.resources.RoleStore.IsValidator(pubKey.String()) {
 		return false
 	}
-	return d.status.getLeaderIndex() == uint32(d.resources.RoleStore.GetValidatorIndex(pubKey))
+	return d.status.getLeaderIndex() == uint32(d.resources.RoleStore.GetValidatorIndex(pubKey.String()))
 }
 
 func (d *driver) qcRefHeight(qc *core.QuorumCert) uint64 {

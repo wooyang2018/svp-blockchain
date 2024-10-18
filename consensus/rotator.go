@@ -94,7 +94,7 @@ func (rot *rotator) timerLoop() {
 
 func (rot *rotator) onReceiveProposal(blk *core.Block) {
 	var ltreset, vtreset bool
-	proposer := uint32(rot.resources.RoleStore.GetValidatorIndex(blk.Proposer()))
+	proposer := uint32(rot.resources.RoleStore.GetValidatorIndex(blk.Proposer().String()))
 	if rot.isNormalApproval(blk.View(), proposer) {
 		ltreset = true
 		logger.I().Debugw("refreshed leader",

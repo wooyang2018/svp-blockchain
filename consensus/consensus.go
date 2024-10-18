@@ -119,16 +119,22 @@ func (cons *Consensus) getInitialBlockAndQC() (exec *core.Block, leaf *core.Bloc
 }
 
 func (cons *Consensus) restoreCodeFile() {
-	xcoinAddr, err := os.ReadFile(path.Join(cons.config.DataDir, native.FileCodeXCoin))
+	codePath := path.Join(cons.config.DataDir, native.CodePathDefault)
+	xcoinAddr, err := os.ReadFile(path.Join(codePath, native.FileCodeXCoin))
 	if err != nil {
 		logger.I().Fatalf("cannot read xcoin code file, %+v", err)
 	}
-	taddrAddr, err := os.ReadFile(path.Join(cons.config.DataDir, native.FileCodeTAddr))
+	taddrAddr, err := os.ReadFile(path.Join(codePath, native.FileCodeTAddr))
 	if err != nil {
 		logger.I().Fatalf("cannot read taddr code file, %+v", err)
 	}
+	sroleAddr, err := os.ReadFile(path.Join(codePath, native.FileCodeSRole))
+	if err != nil {
+		logger.I().Fatalf("cannot read srole code file, %+v", err)
+	}
 	common.RegisterCode(native.FileCodeXCoin, xcoinAddr)
 	common.RegisterCode(native.FileCodeTAddr, taddrAddr)
+	common.RegisterCode(native.FileCodeSRole, sroleAddr)
 }
 
 func (cons *Consensus) setupStatus(exec *core.Block, leaf *core.Block, qc *core.QuorumCert) {
@@ -138,7 +144,7 @@ func (cons *Consensus) setupStatus(exec *core.Block, leaf *core.Block, qc *core.
 	cons.status.setQCHigh(qc)
 	// proposer of q0 may not be leader, but it doesn't matter
 	cons.status.setView(qc.View())
-	leaderIdx := uint32(cons.resources.RoleStore.GetValidatorIndex(qc.Proposer()))
+	leaderIdx := uint32(cons.resources.RoleStore.GetValidatorIndex(qc.Proposer().String()))
 	cons.status.setLeaderIndex(leaderIdx)
 }
 
@@ -165,7 +171,7 @@ func (cons *Consensus) setupWindow(qc *core.QuorumCert) {
 		qcQuotas:   make([]uint64, size),
 		voteQuotas: make([]uint64, size),
 		majority:   cons.resources.RoleStore.MajorityQuotaCount(),
-		limit:      cons.resources.RoleStore.GetValidatorQuota(cons.resources.Signer.PublicKey()),
+		limit:      cons.resources.RoleStore.GetValidatorQuota(cons.resources.Signer.PublicKey().String()),
 		height:     cons.driver.qcRefHeight(qc),
 		size:       size,
 		strategy:   cons.config.VoteStrategy,

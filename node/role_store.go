@@ -18,6 +18,7 @@ import (
 )
 
 type roleStore struct {
+	*p2p.PeerStore
 	validatorMap map[string]int
 	validators   []*core.PublicKey
 	stakeQuotas  []uint64
@@ -27,6 +28,7 @@ type roleStore struct {
 }
 
 var _ core.RoleStore = (*roleStore)(nil)
+var _ p2p.RoleStore = (*roleStore)(nil)
 
 func NewRoleStore(genesis *Genesis, peers []*Peer) *roleStore {
 	count := len(genesis.Validators)
@@ -44,16 +46,20 @@ func NewRoleStore(genesis *Genesis, peers []*Peer) *roleStore {
 		store.quotaCount += genesis.StakeQuotas[i]
 	}
 
-	for i, r := range peers {
-		pubKey, err := core.NewPublicKey(r.PubKey)
+	for i, v := range peers {
+		pubKey, err := core.NewPublicKey(v.PubKey)
 		common.Check(err)
-		pointAddr, err := multiaddr.NewMultiaddr(r.PointAddr)
+		pointAddr, err := multiaddr.NewMultiaddr(v.PointAddr)
 		common.Check(err)
-		topicAddr, err := multiaddr.NewMultiaddr(r.TopicAddr)
+		topicAddr, err := multiaddr.NewMultiaddr(v.TopicAddr)
 		common.Check(err)
 		store.peers[i] = p2p.NewPeer(pubKey, pointAddr, topicAddr)
 	}
 	return store
+}
+
+func (store *roleStore) SetHost(host *p2p.Host) {
+	store.PeerStore = p2p.NewPeerStore(host)
 }
 
 func (store *roleStore) ValidatorCount() int {
@@ -68,12 +74,16 @@ func (store *roleStore) MajorityQuotaCount() uint64 {
 	return (store.quotaCount + 1) / 2
 }
 
-func (store *roleStore) IsValidator(pubKey *core.PublicKey) bool {
-	if pubKey == nil {
+func (store *roleStore) IsValidator(keyStr string) bool {
+	if keyStr == "" {
 		return false
 	}
-	_, ok := store.validatorMap[pubKey.String()]
+	_, ok := store.validatorMap[keyStr]
 	return ok
+}
+
+func (store *roleStore) SetWindowSize(size int) {
+	store.windowSize = size
 }
 
 func (store *roleStore) GetWindowSize() int {
@@ -87,18 +97,18 @@ func (store *roleStore) GetValidator(idx int) *core.PublicKey {
 	return store.validators[idx]
 }
 
-func (store *roleStore) GetValidatorIndex(pubKey *core.PublicKey) int {
-	if pubKey == nil {
+func (store *roleStore) GetValidatorIndex(keyStr string) int {
+	if keyStr == "" {
 		return 0
 	}
-	return store.validatorMap[pubKey.String()]
+	return store.validatorMap[keyStr]
 }
 
-func (store *roleStore) GetValidatorQuota(pubKey *core.PublicKey) uint64 {
-	if pubKey == nil {
+func (store *roleStore) GetValidatorQuota(keyStr string) uint64 {
+	if keyStr == "" {
 		return 0
 	}
-	return store.stakeQuotas[store.GetValidatorIndex(pubKey)]
+	return store.stakeQuotas[store.GetValidatorIndex(keyStr)]
 }
 
 func (store *roleStore) GetGenesisFile() string {
@@ -117,34 +127,82 @@ func (store *roleStore) GetGenesisFile() string {
 	return buf.String()
 }
 
-func (store *roleStore) DeleteValidator(pubKey string) error {
-	if _, ok := store.validatorMap[pubKey]; !ok {
+func (store *roleStore) GetPeersFile() string {
+	peers := make([]*Peer, len(store.peers))
+	for i, v := range store.peers {
+		peers[i] = &Peer{
+			PubKey:    v.PublicKey().Bytes(),
+			PointAddr: v.PointAddr().String(),
+			TopicAddr: v.TopicAddr().String(),
+		}
+	}
+	buf := new(bytes.Buffer)
+	e := json.NewEncoder(buf)
+	e.SetIndent("", "  ")
+	e.Encode(peers)
+	return buf.String()
+}
+
+func (store *roleStore) GetValidatorAddr(keyStr string) (string, string) {
+	for _, v := range store.peers {
+		if v.PublicKey().String() == keyStr {
+			return v.PointAddr().String(), v.TopicAddr().String()
+		}
+	}
+	return "", ""
+}
+
+func (store *roleStore) DeleteValidator(keyStr string) error {
+	if _, ok := store.validatorMap[keyStr]; !ok {
 		return errors.New("validator not found")
 	}
 	for i, v := range store.validators {
-		if v.String() == pubKey {
+		if v.String() == keyStr {
 			store.quotaCount -= store.stakeQuotas[i]
 			store.validators = append(store.validators[:i], store.validators[i+1:]...)
 			store.stakeQuotas = append(store.stakeQuotas[:i], store.stakeQuotas[i+1:]...)
-			delete(store.validatorMap, pubKey)
+			delete(store.validatorMap, keyStr)
 			break
 		}
 	}
+	for i, v := range store.peers {
+		if v.PublicKey().String() == keyStr {
+			store.PeerStore.Delete(v.PublicKey())
+			store.peers = append(store.peers[:i], store.peers[i+1:]...)
+			break
+		}
+	}
+	logger.I().Infow("role store delete validator", "key", keyStr)
 	return nil
 }
 
-func (store *roleStore) AddValidator(key string, quota uint64) error {
-	if _, ok := store.validatorMap[key]; ok {
+func (store *roleStore) AddValidator(keyStr, point, topic string, quota uint64) error {
+	if _, ok := store.validatorMap[keyStr]; ok {
 		return errors.New("validator is added repeatedly")
 	}
-	store.validatorMap[key] = len(store.validators)
-	store.validators = append(store.validators, StringToPubKey(key))
+	store.validatorMap[keyStr] = len(store.validators)
+	store.validators = append(store.validators, StringToPubKey(keyStr))
 	store.stakeQuotas = append(store.stakeQuotas, quota)
 	store.quotaCount += quota
+
+	pointAddr, err := multiaddr.NewMultiaddr(point)
+	if err != nil {
+		return err
+	}
+	topicAddr, err := multiaddr.NewMultiaddr(topic)
+	if err != nil {
+		return err
+	}
+	peer := p2p.NewPeer(StringToPubKey(keyStr), pointAddr, topicAddr)
+	store.peers = append(store.peers, peer)
+	store.PeerStore.Store(peer)
+
+	logger.I().Infow("role store add validator", "key", keyStr, "point addr", point, "topic addr", topic, "stake quota", quota)
 	return nil
 }
 
-func (store *roleStore) GetPeers() []*p2p.Peer {
+func (store *roleStore) AllPeers() []*p2p.Peer {
+	logger.I().Infow("got role store peers", "count", len(store.peers))
 	return store.peers
 }
 

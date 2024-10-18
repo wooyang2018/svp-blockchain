@@ -11,15 +11,18 @@ type RoleStore interface {
 	ValidatorCount() int
 	MajorityValidatorCount() int
 	MajorityQuotaCount() uint64
-	IsValidator(pubKey *PublicKey) bool
+	IsValidator(keyStr string) bool
+	SetWindowSize(size int)
 	GetWindowSize() int
 	GetValidator(idx int) *PublicKey
-	GetValidatorIndex(pubKey *PublicKey) int
-	GetValidatorQuota(pubKey *PublicKey) uint64
+	GetValidatorIndex(keyStr string) int
+	GetValidatorQuota(keyStr string) uint64
 
 	GetGenesisFile() string
-	DeleteValidator(pubKey string) error
-	AddValidator(pubKey string, quota uint64) error
+	GetPeersFile() string
+	GetValidatorAddr(keyStr string) (string, string)
+	DeleteValidator(keyStr string) error
+	AddValidator(keyStr, point, topic string, quota uint64) error
 }
 
 var SRole RoleStore
@@ -49,9 +52,13 @@ func (m *MockValidatorStore) MajorityQuotaCount() uint64 {
 	return args.Get(0).(uint64)
 }
 
-func (m *MockValidatorStore) IsValidator(pubKey *PublicKey) bool {
-	args := m.Called(pubKey)
+func (m *MockValidatorStore) IsValidator(keyStr string) bool {
+	args := m.Called(keyStr)
 	return args.Bool(0)
+}
+
+func (m *MockValidatorStore) SetWindowSize(size int) {
+	m.Called(size)
 }
 
 func (m *MockValidatorStore) GetWindowSize() int {
@@ -68,13 +75,13 @@ func (m *MockValidatorStore) GetValidator(idx int) *PublicKey {
 	return val.(*PublicKey)
 }
 
-func (m *MockValidatorStore) GetValidatorIndex(pubKey *PublicKey) int {
-	args := m.Called(pubKey)
+func (m *MockValidatorStore) GetValidatorIndex(keyStr string) int {
+	args := m.Called(keyStr)
 	return args.Int(0)
 }
 
-func (m *MockValidatorStore) GetValidatorQuota(pubKey *PublicKey) uint64 {
-	args := m.Called(pubKey)
+func (m *MockValidatorStore) GetValidatorQuota(keyStr string) uint64 {
+	args := m.Called(keyStr)
 	return args.Get(0).(uint64)
 }
 
@@ -83,12 +90,22 @@ func (m *MockValidatorStore) GetGenesisFile() string {
 	return args.Get(0).(string)
 }
 
-func (m *MockValidatorStore) DeleteValidator(pubKey string) error {
-	args := m.Called(pubKey)
+func (m *MockValidatorStore) GetPeersFile() string {
+	args := m.Called()
+	return args.Get(0).(string)
+}
+
+func (m *MockValidatorStore) GetValidatorAddr(keyStr string) (string, string) {
+	args := m.Called(keyStr)
+	return args.Get(0).(string), args.Get(1).(string)
+}
+
+func (m *MockValidatorStore) DeleteValidator(keyStr string) error {
+	args := m.Called(keyStr)
 	return args.Get(0).(error)
 }
 
-func (m *MockValidatorStore) AddValidator(pubKey string, quota uint64) error {
-	args := m.Called(pubKey, quota)
+func (m *MockValidatorStore) AddValidator(keyStr, point, topic string, quota uint64) error {
+	args := m.Called(keyStr, point, topic, quota)
 	return args.Get(0).(error)
 }

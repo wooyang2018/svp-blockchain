@@ -17,20 +17,37 @@ import (
 const (
 	FlagAddr  string = "addr"
 	FlagQuota string = "quota"
+	FlagPoint string = "point"
+	FlagTopic string = "topic"
 )
 
 var (
 	address string
 	quota   uint64
+	point   string
+	topic   string
 )
 
-var printCmd = &cobra.Command{
-	Use:   "print",
+var genesisCmd = &cobra.Command{
+	Use:   "genesis",
 	Short: "Print the content of genesis file",
 	Run: func(cmd *cobra.Command, args []string) {
 		client := native.NewClient(false)
 		input := &srole.Input{
-			Method: "print",
+			Method: "genesis",
+		}
+		rawBytes, _ := json.Marshal(input)
+		fmt.Println(string(client.QueryState(rawBytes)))
+	},
+}
+
+var peersCmd = &cobra.Command{
+	Use:   "peers",
+	Short: "Print the content of peers file",
+	Run: func(cmd *cobra.Command, args []string) {
+		client := native.NewClient(false)
+		input := &srole.Input{
+			Method: "peers",
 		}
 		rawBytes, _ := json.Marshal(input)
 		fmt.Println(string(client.QueryState(rawBytes)))
@@ -63,6 +80,8 @@ var addCmd = &cobra.Command{
 			Method: "add",
 			Addr:   destBytes,
 			Quota:  quota,
+			Point:  point,
+			Topic:  topic,
 		}
 		rawBytes, _ := json.Marshal(input)
 		tx := client.MakeTx(rawBytes)
@@ -76,7 +95,8 @@ func main() {
 }
 
 func init() {
-	native.RootCmd.AddCommand(printCmd)
+	native.RootCmd.AddCommand(genesisCmd)
+	native.RootCmd.AddCommand(peersCmd)
 
 	native.RootCmd.AddCommand(deleteCmd)
 	deleteCmd.PersistentFlags().StringVar(&address, FlagAddr, address, "destination address")
@@ -87,4 +107,8 @@ func init() {
 	addCmd.MarkPersistentFlagRequired(FlagAddr)
 	addCmd.PersistentFlags().Uint64Var(&quota, FlagQuota, quota, "value of validator quota")
 	addCmd.MarkPersistentFlagRequired(FlagQuota)
+	addCmd.PersistentFlags().StringVar(&point, FlagPoint, point, "point network address")
+	addCmd.MarkPersistentFlagRequired(FlagPoint)
+	addCmd.PersistentFlags().StringVar(&topic, FlagTopic, topic, "topic network address")
+	addCmd.MarkPersistentFlagRequired(FlagTopic)
 }

@@ -140,7 +140,7 @@ func newSigList(pbsigs []*pb.Signature) (sigList, error) {
 
 func (sigs sigList) hasInvalidValidator(rs RoleStore) bool {
 	for _, sig := range sigs {
-		if !rs.IsValidator(sig.PublicKey()) {
+		if !rs.IsValidator(sig.PublicKey().String()) {
 			return true
 		}
 	}

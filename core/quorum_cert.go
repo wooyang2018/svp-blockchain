@@ -50,7 +50,7 @@ func (qc *QuorumCert) Validate(rs RoleStore) error {
 			return ErrDuplicateSig
 		}
 		dmap[key] = struct{}{}
-		if !rs.IsValidator(sig.PublicKey()) {
+		if !rs.IsValidator(sig.PublicKey().String()) {
 			return ErrInvalidValidator
 		}
 		if !sig.Verify(appendUint64(appendUint32(qc.data.BlockHash, qc.data.View), qc.data.Quotas[i])) {
@@ -61,7 +61,7 @@ func (qc *QuorumCert) Validate(rs RoleStore) error {
 	if err != nil {
 		return err
 	}
-	if !rs.IsValidator(sig.PublicKey()) {
+	if !rs.IsValidator(sig.PublicKey().String()) {
 		return ErrInvalidValidator
 	}
 	if !sig.Verify(appendUint32(qc.data.BlockHash, qc.data.View)) {

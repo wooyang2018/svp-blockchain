@@ -11,14 +11,24 @@ import (
 	"github.com/wooyang2018/svp-blockchain/core"
 )
 
+type RoleStore interface {
+	Load(pubKey *core.PublicKey) *Peer
+	Store(p *Peer) *Peer
+	StoredPeers() []*Peer
+	AllPeers() []*Peer
+	IsValidID(id peer.ID) bool
+}
+
 type PeerStore struct {
+	host  *Host
 	peers map[string]*Peer
 	idSet map[peer.ID]struct{}
 	mtx   sync.RWMutex
 }
 
-func NewPeerStore() *PeerStore {
+func NewPeerStore(host *Host) *PeerStore {
 	return &PeerStore{
+		host:  host,
 		peers: make(map[string]*Peer),
 		idSet: make(map[peer.ID]struct{}),
 	}
@@ -39,6 +49,7 @@ func (s *PeerStore) Store(p *Peer) *Peer {
 		panic(err)
 	}
 	s.idSet[id] = struct{}{}
+	p.host = s.host
 	return p
 }
 
@@ -55,7 +66,7 @@ func (s *PeerStore) Delete(pubKey *core.PublicKey) *Peer {
 	return p
 }
 
-func (s *PeerStore) List() []*Peer {
+func (s *PeerStore) StoredPeers() []*Peer {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 	peers := make([]*Peer, 0, len(s.peers))

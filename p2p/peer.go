@@ -15,7 +15,6 @@ import (
 	"github.com/multiformats/go-multiaddr"
 
 	"github.com/wooyang2018/svp-blockchain/core"
-	"github.com/wooyang2018/svp-blockchain/emitter"
 	"github.com/wooyang2018/svp-blockchain/logger"
 )
 
@@ -42,9 +41,6 @@ type Peer struct {
 	topicAddr multiaddr.Multiaddr
 	status    PeerStatus
 
-	rwc     io.ReadWriteCloser
-	emitter *emitter.Emitter
-
 	mtxRWC    sync.RWMutex
 	mtxStatus sync.RWMutex
 	mtxWrite  sync.Mutex
@@ -53,6 +49,7 @@ type Peer struct {
 	fastReconCount int
 	mtxRecon       sync.RWMutex
 
+	rwc  io.ReadWriteCloser
 	host *Host
 }
 
@@ -62,7 +59,6 @@ func NewPeer(pubKey *core.PublicKey, pointAddr, topicAddr multiaddr.Multiaddr) *
 		pointAddr: pointAddr,
 		topicAddr: topicAddr,
 		status:    PeerStatusDisconnected,
-		emitter:   emitter.New(),
 	}
 	p.resetReconnectInterval()
 	return p
@@ -73,9 +69,14 @@ func (p *Peer) PublicKey() *core.PublicKey {
 	return p.pubKey
 }
 
-// PointAddr return network address of peer
+// PointAddr return point address of peer
 func (p *Peer) PointAddr() multiaddr.Multiaddr {
 	return p.pointAddr
+}
+
+// TopicAddr return topic address of peer
+func (p *Peer) TopicAddr() multiaddr.Multiaddr {
+	return p.topicAddr
 }
 
 func (p *Peer) Status() PeerStatus {
@@ -106,7 +107,7 @@ func (p *Peer) reconnectAfterInterval() {
 
 	time.AfterFunc(reconnInterval, func() {
 		if p.host != nil {
-			p.host.ConnectLeader()
+			p.host.ConnectPeer(p.host.consLeader)
 		}
 	})
 }
@@ -134,6 +135,11 @@ func (p *Peer) onConnected(rwc io.ReadWriteCloser) {
 	go p.listen()
 }
 
+type PointMsg struct {
+	peer *Peer
+	data []byte
+}
+
 func (p *Peer) listen() {
 	defer p.disconnect()
 	for {
@@ -141,7 +147,10 @@ func (p *Peer) listen() {
 		if err != nil {
 			return
 		}
-		p.emitter.Emit(msg)
+		p.host.emitter.Emit(&PointMsg{
+			peer: p,
+			data: msg,
+		})
 	}
 }
 
@@ -168,6 +177,7 @@ func (p *Peer) WriteMsg(msg []byte) error {
 	defer p.mtxWrite.Unlock()
 
 	if p.Status() != PeerStatusConnected {
+		p.host.ConnectPeer(p)
 		return errors.New("peer not connected")
 	}
 	return p.write(msg)
@@ -180,10 +190,6 @@ func (p *Peer) write(b []byte) error {
 
 	_, err := p.getRWC().Write(payload)
 	return err
-}
-
-func (p *Peer) SubscribeMsg() *emitter.Subscription {
-	return p.emitter.Subscribe(10)
 }
 
 func (p *Peer) setRWC(rwc io.ReadWriteCloser) {

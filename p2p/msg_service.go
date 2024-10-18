@@ -71,10 +71,8 @@ type MsgService struct {
 func NewMsgService(host *Host) *MsgService {
 	svc := new(MsgService)
 	svc.host = host
-	for _, peer := range svc.host.PeerStore().List() {
-		go svc.listenPeer(peer)
-	}
-	go svc.listenTopic(host)
+	go svc.listenPoint()
+	go svc.listenTopic()
 
 	svc.reqHandlers = make(map[pb.Request_Type]ReqHandler)
 	svc.setEmitters()
@@ -224,23 +222,23 @@ func (svc *MsgService) setTopicReceivers() {
 	svc.topicReceivers[MsgTypeQC] = svc.onReceiveQC2
 }
 
-func (svc *MsgService) listenPeer(peer *Peer) {
-	sub := peer.SubscribeMsg()
+func (svc *MsgService) listenPoint() {
+	sub := svc.host.SubscribePointMsg()
 	for e := range sub.Events() {
-		msg := e.([]byte)
-		if len(msg) < 2 {
+		msg := e.(*PointMsg)
+		if len(msg.data) < 2 {
 			continue // invalid message
 		}
-		if receiver, found := svc.pointReceivers[MsgType(msg[0])]; found {
-			receiver(peer, msg[1:])
+		if receiver, found := svc.pointReceivers[MsgType(msg.data[0])]; found {
+			receiver(msg.peer, msg.data[1:])
 		} else {
-			logger.I().Errorw("msg service received invalid point message", "type", MsgType(msg[0]))
+			logger.I().Errorw("msg service received invalid point message", "type", MsgType(msg.data[0]))
 		}
 	}
 }
 
-func (svc *MsgService) listenTopic(host *Host) {
-	sub := host.SubscribeMsg()
+func (svc *MsgService) listenTopic() {
+	sub := svc.host.SubscribeTopicMsg()
 	for e := range sub.Events() {
 		msg := e.(*pubsub.Message)
 		if receiver, found := svc.topicReceivers[MsgType(msg.Data[0])]; found {
@@ -341,7 +339,7 @@ func (svc *MsgService) broadcastData(msgType MsgType, data []byte) error {
 }
 
 func (svc *MsgService) sendData(pubKey *core.PublicKey, msgType MsgType, data []byte) error {
-	peer := svc.host.PeerStore().Load(pubKey)
+	peer := svc.host.RoleStore().Load(pubKey)
 	if peer == nil {
 		return errors.New("peer not found")
 	}
@@ -350,7 +348,7 @@ func (svc *MsgService) sendData(pubKey *core.PublicKey, msgType MsgType, data []
 
 func (svc *MsgService) requestData(pubKey *core.PublicKey,
 	reqType pb.Request_Type, reqData []byte) ([]byte, error) {
-	peer := svc.host.PeerStore().Load(pubKey)
+	peer := svc.host.RoleStore().Load(pubKey)
 	if peer == nil {
 		return nil, errors.New("peer not found")
 	}
@@ -360,29 +358,29 @@ func (svc *MsgService) requestData(pubKey *core.PublicKey,
 	req.Seq = atomic.AddUint32(&svc.reqClientSeq, 1)
 	b, _ := proto.Marshal(req)
 
-	sub := peer.SubscribeMsg()
+	sub := svc.host.SubscribePointMsg()
 	defer sub.Unsubscribe()
 
 	if err := peer.WriteMsg(append([]byte{byte(MsgTypeRequest)}, b...)); err != nil {
 		return nil, err
 	}
-	return svc.waitResponse(sub, req.Seq)
+	return svc.waitResponse(sub, peer, req.Seq)
 }
 
-func (svc *MsgService) waitResponse(sub *emitter.Subscription, seq uint32) ([]byte, error) {
+func (svc *MsgService) waitResponse(sub *emitter.Subscription, peer *Peer, seq uint32) ([]byte, error) {
 	timeout := time.After(5 * time.Second)
 	for {
 		select {
 		case <-timeout:
 			return nil, errors.New("request timeout")
 		case e := <-sub.Events():
-			msg := e.([]byte)
-			if len(msg) < 2 {
+			msg := e.(*PointMsg)
+			if len(msg.data) < 2 || msg.peer != peer {
 				continue
 			}
-			if MsgType(msg[0]) == MsgTypeResponse {
+			if MsgType(msg.data[0]) == MsgTypeResponse {
 				resp := new(pb.Response)
-				if err := proto.Unmarshal(msg[1:], resp); err != nil {
+				if err := proto.Unmarshal(msg.data[1:], resp); err != nil {
 					continue
 				}
 				if resp.Seq == seq {

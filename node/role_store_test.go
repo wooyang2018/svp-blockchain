@@ -36,29 +36,40 @@ func TestMajorityCount(t *testing.T) {
 }
 
 func makeInitCtx() *common.MockCallContext {
-	vlds := make([]*core.PublicKey, 4)
-	peers := make([]*Peer, 4)
+	nodeCount := 4
+	vlds := make([]*core.PublicKey, nodeCount)
+	peers := make([]*Peer, nodeCount)
 	genesis := &Genesis{
-		Validators:  make([]string, 4),
-		StakeQuotas: make([]uint64, 4),
+		Validators:  make([]string, nodeCount),
+		StakeQuotas: make([]uint64, nodeCount),
 		WindowSize:  4,
 	}
+	input := srole.InitInput{
+		Size:  genesis.WindowSize,
+		Peers: make([]*srole.Peer, nodeCount),
+	}
 
-	for i := range vlds {
+	for i := 0; i < nodeCount; i++ {
 		vlds[i] = core.GenerateKey(nil).PublicKey()
 		genesis.Validators[i] = vlds[i].String()
 		genesis.StakeQuotas[i] = 100
 		pointAddr := fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", DefaultConfig.PointPort+i)
 		topicAddr := fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", DefaultConfig.TopicPort+i)
 		peers[i] = &Peer{vlds[i].Bytes(), pointAddr, topicAddr}
+		input.Peers[i] = &srole.Peer{
+			Addr:  vlds[i].Bytes(),
+			Quota: genesis.StakeQuotas[i],
+			Point: pointAddr,
+			Topic: topicAddr,
+		}
 	}
 	vs := NewRoleStore(genesis, peers)
+	vs.SetHost(nil)
 	core.SetSRole(vs)
 
 	ctx := new(common.MockCallContext)
 	ctx.MemStateStore = common.NewMemStateStore()
 	ctx.MockSender = vlds[0].Bytes()
-	input := srole.InitInput{}
 	ctx.MockInput, _ = json.Marshal(input)
 	return ctx
 }
@@ -71,7 +82,7 @@ func TestNativeCode(t *testing.T) {
 	asrt.NoError(err)
 
 	input := &srole.Input{
-		Method: "print",
+		Method: "genesis",
 	}
 	ctx.MockInput, _ = json.Marshal(input)
 	ret0, err := jctx.Query(ctx)
@@ -82,6 +93,8 @@ func TestNativeCode(t *testing.T) {
 		Method: "add",
 		Addr:   vld.Bytes(),
 		Quota:  100,
+		Point:  fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", DefaultConfig.PointPort+4),
+		Topic:  fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", DefaultConfig.TopicPort+4),
 	}
 	ctx.MockInput, _ = json.Marshal(input)
 	err = jctx.Invoke(ctx)
@@ -96,7 +109,7 @@ func TestNativeCode(t *testing.T) {
 	asrt.NoError(err)
 
 	input = &srole.Input{
-		Method: "print",
+		Method: "genesis",
 	}
 	ctx.MockInput, _ = json.Marshal(input)
 	ret1, err := jctx.Query(ctx)

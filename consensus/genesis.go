@@ -106,7 +106,7 @@ func (gns *genesis) propose() {
 	gns.setB0(blk)
 	logger.I().Info("created genesis block, broadcasting...")
 	go gns.broadcastProposalLoop()
-	quota := gns.resources.RoleStore.GetValidatorQuota(gns.resources.Signer.PublicKey())
+	quota := gns.resources.RoleStore.GetValidatorQuota(gns.resources.Signer.PublicKey().String())
 	gns.onReceiveVote(blk.Vote(gns.resources.Signer, (quota+1)/2))
 }
 
@@ -116,7 +116,7 @@ func (gns *genesis) genesisTxs() [][]byte {
 	values1 := make([]string, count)
 	for i := 0; i < count; i++ {
 		pubKey := gns.resources.RoleStore.GetValidator(i)
-		quota := gns.resources.RoleStore.GetValidatorQuota(pubKey)
+		quota := gns.resources.RoleStore.GetValidatorQuota(pubKey.String())
 		values0[pubKey.String()] = quota
 		values1[i] = pubKey.String()
 	}
@@ -153,7 +153,17 @@ func (gns *genesis) genesisTxs() [][]byte {
 			CodeID:     native.CodeSRole,
 		},
 	}
-	input2.InitInput, _ = json.Marshal(srole.InitInput{})
+	peers := make([]*srole.Peer, 0)
+	for i := 0; i < gns.resources.RoleStore.ValidatorCount(); i++ {
+		pubKey := gns.resources.RoleStore.GetValidator(i)
+		pointAddr, topicAddr := gns.resources.RoleStore.GetValidatorAddr(pubKey.String())
+		quota := gns.resources.RoleStore.GetValidatorQuota(pubKey.String())
+		peers = append(peers, &srole.Peer{pubKey.Bytes(), quota, pointAddr, topicAddr})
+	}
+	input2.InitInput, _ = json.Marshal(srole.InitInput{
+		Size:  gns.resources.RoleStore.GetWindowSize(),
+		Peers: peers,
+	})
 	b2, _ := json.Marshal(input2)
 	tx2 := core.NewTransaction().
 		SetNonce(time.Now().UnixNano()).
@@ -253,7 +263,7 @@ func (gns *genesis) onReceiveProposal(blk *core.Block) error {
 	}
 	gns.setB0(blk)
 	logger.I().Info("got genesis block, voting...")
-	quota := gns.resources.RoleStore.GetValidatorQuota(gns.resources.Signer.PublicKey())
+	quota := gns.resources.RoleStore.GetValidatorQuota(gns.resources.Signer.PublicKey().String())
 	return gns.resources.MsgSvc.SendVote(blk.Proposer(), blk.Vote(gns.resources.Signer, (quota+1)/2))
 }
 
@@ -296,6 +306,7 @@ func (gns *genesis) requestQC(peer *core.PublicKey, blkHash []byte) (*core.Quoru
 	if err != nil {
 		return nil, fmt.Errorf("request qc failed, %w", err)
 	}
+	// bug fix
 	if err = qc.Validate(gns.resources.RoleStore); err != nil {
 		return nil, fmt.Errorf("validate qc failed, %w", err)
 	}
@@ -403,10 +414,10 @@ func (gns *genesis) getQ0() *core.QuorumCert {
 }
 
 func (gns *genesis) isLeader(pubKey *core.PublicKey) bool {
-	if !gns.resources.RoleStore.IsValidator(pubKey) {
+	if !gns.resources.RoleStore.IsValidator(pubKey.String()) {
 		return false
 	}
-	return gns.resources.RoleStore.GetValidatorIndex(pubKey) == 0
+	return gns.resources.RoleStore.GetValidatorIndex(pubKey.String()) == 0
 }
 
 func hashChainID(chainID int64) []byte {

@@ -102,7 +102,7 @@ func (vld *validator) onReceiveProposal(blk *core.Block) error {
 
 	logger.I().Infow("received proposal",
 		"view", blk.View(),
-		"proposer", vld.resources.RoleStore.GetValidatorIndex(blk.Proposer()),
+		"proposer", vld.resources.RoleStore.GetValidatorIndex(blk.Proposer().String()),
 		"height", blk.Height(),
 		"txs", len(blk.Transactions()))
 
@@ -119,7 +119,7 @@ func (vld *validator) onReceiveProposal(blk *core.Block) error {
 
 func (vld *validator) voteProposal(blk *core.Block) error {
 	if !vld.driver.isLeader(blk.Proposer()) {
-		proposer := vld.resources.RoleStore.GetValidatorIndex(blk.Proposer())
+		proposer := vld.resources.RoleStore.GetValidatorIndex(blk.Proposer().String())
 		return fmt.Errorf("proposer %d is not leader", proposer)
 	}
 	if err := vld.verifyBlockToVote(blk); err != nil {
