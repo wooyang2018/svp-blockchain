@@ -41,6 +41,10 @@ func clusterFactoryHandler(c *gin.Context) {
 		c.String(http.StatusBadRequest, err.Error())
 		return
 	}
+	if params.NodeCount > MaxNodeCount {
+		c.String(http.StatusBadRequest, fmt.Sprintf("NodeCount cannot exceed %d", MaxNodeCount))
+		return
+	}
 	factory = cluster.NewLocalFactory(cluster.LocalFactoryParams{
 		BinPath:     "./chain",
 		WorkDir:     WorkDir,

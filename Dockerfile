@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY . .
 
-RUN wget https://github.com/ethereum/solidity/releases/download/v0.8.27/solc-static-linux && \
+RUN wget https://ghp.ci/https://github.com/ethereum/solidity/releases/download/v0.8.27/solc-static-linux && \
     chmod +x solc-static-linux && \
     mv solc-static-linux /usr/local/bin/solc
 

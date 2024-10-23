@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/multiformats/go-multiaddr"
 
@@ -46,6 +47,8 @@ const (
 	Failed                    // task has failed
 	Success                   // task was successful
 )
+
+const MaxNodeCount = 10
 
 var scores = map[string]map[string]TaskStatus{
 	"setup": {
@@ -298,6 +301,14 @@ func getStartPosition(file *os.File, n int) (int64, error) {
 func main() {
 	gin.SetMode(gin.DebugMode)
 	r := gin.Default()
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 	r.Use(CustomRecovery())
 
 	r.Any("/proxy/:node/*path", proxyHandler)
@@ -347,11 +358,6 @@ func CustomRecovery() gin.HandlerFunc {
 			}
 		}()
 		c.Next()
-
-		c.Header("Access-Control-Allow-Origin", "*")
-		c.Header("Access-Control-Allow-Methods", "GET, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Content-Type")
-
 		route := c.FullPath()
 		for _, prefix := range []string{"/setup", "/transaction", "/native"} {
 			if strings.HasPrefix(route, prefix) {
