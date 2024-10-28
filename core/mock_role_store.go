@@ -23,6 +23,7 @@ type RoleStore interface {
 	GetValidatorAddr(keyStr string) (string, string)
 	DeleteValidator(keyStr string) error
 	AddValidator(keyStr, point, topic string, quota uint64) error
+	DecAndGetGrace() int
 }
 
 var SRole RoleStore
@@ -108,4 +109,9 @@ func (m *MockValidatorStore) DeleteValidator(keyStr string) error {
 func (m *MockValidatorStore) AddValidator(keyStr, point, topic string, quota uint64) error {
 	args := m.Called(keyStr, point, topic, quota)
 	return args.Get(0).(error)
+}
+
+func (m *MockValidatorStore) DecAndGetGrace() int {
+	args := m.Called()
+	return args.Int(0)
 }

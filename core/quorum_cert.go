@@ -40,9 +40,14 @@ func (qc *QuorumCert) Validate(rs RoleStore) error {
 	if qc.data == nil {
 		return ErrNilQC
 	}
-	if len(qc.sigs) < rs.MajorityValidatorCount() {
+	if SRole.DecAndGetGrace() > 0 {
+		if len(qc.sigs) < rs.MajorityValidatorCount()-1 {
+			return ErrNotEnoughSig
+		}
+	} else if len(qc.sigs) < rs.MajorityValidatorCount() {
 		return ErrNotEnoughSig
 	}
+
 	dmap := make(map[string]struct{}, len(qc.sigs))
 	for i, sig := range qc.sigs {
 		key := sig.PublicKey().String()

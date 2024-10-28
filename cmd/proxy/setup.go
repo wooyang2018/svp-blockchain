@@ -170,7 +170,7 @@ func checkLivenessHandler(c *gin.Context) {
 		return
 	}
 	ret := testutil.GetStatusAll(cls)
-	if len(ret) < params.NodeCount {
+	if len(ret) != 0 && len(ret) < params.NodeCount {
 		failed := make([]int, 0)
 		for i := 0; i < params.NodeCount; i++ {
 			if _, ok := ret[i]; !ok {

@@ -20,8 +20,8 @@ import (
 )
 
 func getLocalCodeAddr(file string) ([]byte, error) {
-	workDir := path.Join(WorkDir, ClusterName)
-	codeAddrPath := path.Join(workDir, "0", file)
+	workDir := path.Join(WorkDir, ClusterName, "0")
+	codeAddrPath := path.Join(workDir, native.CodePathDefault, file)
 	return os.ReadFile(codeAddrPath)
 }
 

@@ -140,6 +140,9 @@ func (host *Host) ConnectPeer(peer *Peer) {
 		logger.I().Error(err)
 		return
 	}
+	if peer.PublicKey().Equal(host.privKey.PublicKey()) {
+		return
+	}
 	s, err := host.newStream(peer)
 	if err != nil {
 		peer.disconnect()

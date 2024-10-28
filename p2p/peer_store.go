@@ -58,7 +58,7 @@ func (s *PeerStore) Delete(pubKey *core.PublicKey) *Peer {
 	defer s.mtx.Unlock()
 	p := s.peers[pubKey.String()]
 	delete(s.peers, pubKey.String())
-	id, err := getIDFromPublicKey(p.PublicKey())
+	id, err := getIDFromPublicKey(pubKey)
 	if err != nil {
 		panic(err)
 	}

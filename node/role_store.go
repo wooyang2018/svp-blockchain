@@ -25,6 +25,7 @@ type roleStore struct {
 	quotaCount   uint64
 	windowSize   int
 	peers        []*p2p.Peer
+	graceHeight  int
 }
 
 var _ core.RoleStore = (*roleStore)(nil)
@@ -197,8 +198,16 @@ func (store *roleStore) AddValidator(keyStr, point, topic string, quota uint64) 
 	store.peers = append(store.peers, peer)
 	store.PeerStore.Store(peer)
 
+	store.graceHeight = MinGraceHeight
 	logger.I().Infow("role store add validator", "key", keyStr, "point addr", point, "topic addr", topic, "stake quota", quota)
 	return nil
+}
+
+func (store *roleStore) DecAndGetGrace() int {
+	if store.graceHeight > 0 {
+		store.graceHeight--
+	}
+	return store.graceHeight
 }
 
 func (store *roleStore) AllPeers() []*p2p.Peer {

@@ -10,6 +10,7 @@ import (
 )
 
 const MaxProcsNum = 8 // set corresponding num of CPUs when benchmark test
+const MinGraceHeight = 4
 
 type Config struct {
 	Debug       bool
