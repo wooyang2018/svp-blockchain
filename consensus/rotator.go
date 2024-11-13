@@ -23,10 +23,10 @@ type rotator struct {
 	viewTimer    *time.Timer
 	timeoutCount int
 	highQCCount  int
+	oldView      uint32
 	mtxView      sync.Mutex
 
-	newViewCh chan struct{}
-	stopCh    chan struct{}
+	stopCh chan struct{}
 }
 
 func (rot *rotator) start() {
@@ -176,18 +176,30 @@ func (rot *rotator) onReceiveQC(qc *core.QuorumCert) error {
 	}
 
 	rot.driver.mtxUpdate.Lock()
-	defer rot.driver.mtxUpdate.Unlock()
-
-	rot.highQCCount++
+	rot.driver.updateQCHigh(qc)
+	rot.driver.mtxUpdate.Unlock()
 	logger.I().Debugw("received qc",
 		"view", qc.View(),
 		"height", blk.Height(),
 		"count", rot.highQCCount)
 
-	rot.driver.updateQCHigh(qc)
+	if rot.status.getViewChange() == 1 && rot.oldView == rot.status.getView() {
+		rot.status.setView(rot.oldView + 1)
+		nextIdx := (rot.oldView + 1) % uint32(rot.resources.RoleStore.ValidatorCount())
+		rot.status.setLeaderIndex(nextIdx)
+		logger.I().Infow("view changed",
+			"view", rot.status.getView(),
+			"leader", rot.status.getLeaderIndex(),
+			"qc", rot.driver.qcRefHeight(rot.status.getQCHigh()))
+	}
+
+	rot.highQCCount++
 	if rot.highQCCount >= rot.resources.RoleStore.MajorityValidatorCount() {
-		rot.newViewCh <- struct{}{}
-		rot.highQCCount = 0
+		if rot.driver.isLeader(rot.resources.Signer.PublicKey()) {
+			rot.driver.mtxUpdate.Lock()
+			rot.newViewProposal()
+			rot.driver.mtxUpdate.Unlock()
+		}
 	}
 	return nil
 }
@@ -196,7 +208,8 @@ func (rot *rotator) onLeaderTimeout() {
 	view := rot.status.getView()
 	logger.I().Warnw("leader timeout", "view", view, "leader", rot.status.getLeaderIndex())
 	rot.timeoutCount++
-	rot.changeView(view)
+	rot.oldView = view
+	rot.changeView()
 	drainStopTimer(rot.leaderTimer)
 
 	faultyCount := rot.resources.RoleStore.ValidatorCount() - rot.resources.RoleStore.MajorityValidatorCount()
@@ -211,43 +224,26 @@ func (rot *rotator) onLeaderTimeout() {
 func (rot *rotator) onViewTimeout() {
 	view := rot.status.getView()
 	logger.I().Warnw("view timeout", "view", view, "leader", rot.status.getLeaderIndex())
-	rot.changeView(view)
+	rot.oldView = view
+	rot.changeView()
 	drainStopTimer(rot.leaderTimer)
 	rot.leaderTimer.Reset(rot.config.LeaderTimeout)
 }
 
-func (rot *rotator) changeView(view uint32) {
-	nextIdx := (view + 1) % uint32(rot.resources.RoleStore.ValidatorCount())
+func (rot *rotator) changeView() {
+	nextIdx := (rot.oldView + 1) % uint32(rot.resources.RoleStore.ValidatorCount())
+	nextLeader := rot.resources.RoleStore.GetValidator(int(nextIdx))
+
 	rot.mtxView.Lock()
-	if view == rot.status.getView() {
+	defer rot.mtxView.Unlock()
+	if rot.oldView == rot.status.getView() {
 		rot.status.setViewChange(1)
-
-		nextLeader := rot.resources.RoleStore.GetValidator(int(nextIdx))
+		rot.highQCCount = 0
 		rot.resources.Host.SetLeader(int(nextIdx))
-		rot.resources.MsgSvc.SendQC(nextLeader, rot.status.getQCHigh())
-		rot.highQCCount++
-
-		select {
-		case <-rot.newViewCh: // wait to receive n-f qcs
-		case <-time.After(2 * time.Second):
-		}
-	}
-	rot.mtxView.Unlock()
-
-	rot.driver.mtxUpdate.Lock()
-	defer rot.driver.mtxUpdate.Unlock()
-
-	if rot.status.getViewChange() == 1 && view == rot.status.getView() {
-		rot.status.setView(view + 1)
-		rot.status.setLeaderIndex(nextIdx)
-
-		logger.I().Infow("view changed",
-			"view", rot.status.getView(),
-			"leader", rot.status.getLeaderIndex(),
-			"qc", rot.driver.qcRefHeight(rot.status.getQCHigh()))
-
-		if rot.driver.isLeader(rot.resources.Signer.PublicKey()) {
-			rot.newViewProposal()
+		if !rot.resources.Signer.PublicKey().Equal(nextLeader) {
+			rot.resources.MsgSvc.SendQC(nextLeader, rot.status.getQCHigh())
+		} else {
+			rot.highQCCount++
 		}
 	}
 }

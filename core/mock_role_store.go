@@ -112,6 +112,5 @@ func (m *MockValidatorStore) AddValidator(keyStr, point, topic string, quota uin
 }
 
 func (m *MockValidatorStore) DecAndGetGrace() int {
-	args := m.Called()
-	return args.Int(0)
+	return 0
 }

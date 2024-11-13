@@ -216,7 +216,6 @@ func (cons *Consensus) setupRotator() {
 		state:     cons.state,
 		status:    cons.status,
 		driver:    cons.driver,
-		newViewCh: make(chan struct{}),
 	}
 	cons.driver.rotator = cons.rotator
 }

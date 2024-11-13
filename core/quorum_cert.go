@@ -40,7 +40,7 @@ func (qc *QuorumCert) Validate(rs RoleStore) error {
 	if qc.data == nil {
 		return ErrNilQC
 	}
-	if SRole.DecAndGetGrace() > 0 {
+	if rs.DecAndGetGrace() > 0 {
 		if len(qc.sigs) < rs.MajorityValidatorCount()-1 {
 			return ErrNotEnoughSig
 		}
