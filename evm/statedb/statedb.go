@@ -15,8 +15,6 @@ import (
 	storecomm "github.com/wooyang2018/svp-blockchain/storage"
 )
 
-var stateDB *StateDB
-
 type BalanceHandler interface {
 	SubBalance(addr ethcomm.Address, val *big.Int) error
 	AddBalance(addr ethcomm.Address, val *big.Int) error
@@ -86,13 +84,6 @@ func NewStateDB(cacheDB *CacheDB, thash, bhash ethcomm.Hash, handler BalanceHand
 	}
 }
 
-func RegisterStateDB(db *StateDB) {
-	if stateDB != nil {
-		panic("duplicate assignment to statedb is not allowed")
-	}
-	stateDB = db
-}
-
 func (self *StateDB) Prepare(thash, bhash ethcomm.Hash) {
 	self.thash = thash
 	self.bhash = bhash
@@ -104,13 +95,6 @@ func (self *StateDB) BlockHash() ethcomm.Hash {
 
 func (self *StateDB) GetLogs() []*common.StorageLog {
 	return self.logs
-}
-
-func Commit() error {
-	if stateDB == nil {
-		return nil
-	}
-	return stateDB.Commit()
 }
 
 func (self *StateDB) Commit() error {

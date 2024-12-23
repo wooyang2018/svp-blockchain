@@ -79,6 +79,10 @@ func (c *Client) Sender() []byte {
 	return c.callData.Sender
 }
 
+func (c *Client) TransactionHash() []byte {
+	return c.callData.TransactionHash
+}
+
 func (c *Client) BlockHash() []byte {
 	return c.callData.BlockHash
 }

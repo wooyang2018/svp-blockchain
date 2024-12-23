@@ -29,7 +29,6 @@ func NewCodeDriver(codeDir string, nativeDriver common.CodeDriver, storage stora
 	cache := statedb.NewCacheDB(storage)
 	proxy := NewNativeProxy(nativeDriver)
 	stateDB := statedb.NewStateDB(cache, ethcomm.Hash{}, ethcomm.Hash{}, proxy)
-	statedb.RegisterStateDB(stateDB)
 	return &CodeDriver{
 		codeDir: codeDir,
 		proxy:   proxy,

@@ -29,7 +29,8 @@ func checkLiveness() bool {
 		return false
 	}
 	defer resp.Body.Close()
-	return resp.StatusCode == http.StatusOK
+	body, _ := io.ReadAll(resp.Body)
+	return resp.StatusCode == http.StatusOK && len(body) != 0
 }
 
 func oneClickStart() error {
@@ -51,7 +52,7 @@ func oneClickStart() error {
 }
 
 func getNode0Key() (*core.PrivateKey, error) {
-	resp, err := http.Get(ProxyUrl + "/workdir/0/nodekey")
+	resp, err := http.Get(ProxyUrl + "/workdir/file/0/nodekey")
 	retErr := common.CheckResponse(resp, err)
 	if retErr != nil {
 		return nil, retErr

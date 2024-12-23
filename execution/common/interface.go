@@ -38,6 +38,7 @@ type CodeDriver interface {
 
 type CallContext interface {
 	Sender() []byte
+	TransactionHash() []byte
 	BlockHash() []byte
 	BlockHeight() uint64
 	Input() []byte

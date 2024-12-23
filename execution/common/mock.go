@@ -31,16 +31,21 @@ func (store *MemStateStore) SetState(key, value []byte) {
 
 type MockCallContext struct {
 	*MemStateStore
-	MockSender      []byte
-	MockBlockHeight uint64
-	MockBlockHash   []byte
-	MockInput       []byte
+	MockSender          []byte
+	MockBlockHeight     uint64
+	MockTransactionHash []byte
+	MockBlockHash       []byte
+	MockInput           []byte
 }
 
 var _ CallContext = (*MockCallContext)(nil)
 
 func (wc *MockCallContext) Sender() []byte {
 	return wc.MockSender
+}
+
+func (wc *MockCallContext) TransactionHash() []byte {
+	return wc.MockTransactionHash
 }
 
 func (wc *MockCallContext) BlockHash() []byte {

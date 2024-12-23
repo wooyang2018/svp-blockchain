@@ -98,11 +98,12 @@ func (r *Runner) setupCmd() error {
 
 func (r *Runner) sendCallData(callType CallType) error {
 	callData := &CallData{
-		CallType:    callType,
-		Input:       r.callCtx.Input(),
-		Sender:      r.callCtx.Sender(),
-		BlockHash:   r.callCtx.BlockHash(),
-		BlockHeight: r.callCtx.BlockHeight(),
+		CallType:        callType,
+		Input:           r.callCtx.Input(),
+		Sender:          r.callCtx.Sender(),
+		TransactionHash: r.callCtx.TransactionHash(),
+		BlockHash:       r.callCtx.BlockHash(),
+		BlockHeight:     r.callCtx.BlockHeight(),
 	}
 	b, _ := json.Marshal(callData)
 	return r.rw.write(b)

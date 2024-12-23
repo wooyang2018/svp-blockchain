@@ -38,6 +38,7 @@ func TestCallData(t *testing.T) {
 	mctx := new(common.MockCallContext)
 	mctx.MockInput = []byte("input")
 	mctx.MockSender = []byte("sender")
+	mctx.MockTransactionHash = []byte("transactionHash")
 	mctx.MockBlockHash = []byte("blockHash")
 	mctx.MockBlockHeight = 10
 	r.callCtx = mctx

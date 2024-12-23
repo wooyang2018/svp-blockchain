@@ -79,6 +79,8 @@ func (r *Runner) Init(ctx common.CallContext) error {
 		r.config.GasLimit,
 		r.config.Value,
 	)
+	err = r.config.State.Commit()
+	common.Check(err)
 	mtxExec.Unlock()
 
 	ctx.SetState(keyAddr, address.Bytes())
@@ -117,6 +119,8 @@ func (r *Runner) Invoke(ctx common.CallContext) error {
 		r.config.GasLimit,
 		r.config.Value,
 	)
+	err = r.config.State.Commit()
+	common.Check(err)
 	mtxExec.Unlock()
 
 	retSlice, _ := contractAbi.Unpack(input.Method, ret)
@@ -166,13 +170,17 @@ func (r *Runner) SetTxTrk(txTrk *common.StateTracker) {
 func (r *Runner) setConfig(ctx common.CallContext) error {
 	cfg := new(runtime.Config)
 	runtime.SetDefaults(cfg)
+	cfg.BlockNumber = big.NewInt(0).SetUint64(ctx.BlockHeight())
+
 	addr20, err := r.Proxy.queryAddr(ctx.Sender())
 	if err != nil {
 		return err
 	}
 	cfg.Origin = ethcomm.BytesToAddress(addr20)
+
+	r.StateDB.Prepare(ethcomm.BytesToHash(ctx.TransactionHash()),
+		ethcomm.BytesToHash(ctx.BlockHash()))
 	cfg.State = r.StateDB
-	cfg.BlockNumber = big.NewInt(0).SetUint64(ctx.BlockHeight())
 	r.config = cfg
 	return nil
 }

@@ -12,11 +12,12 @@ const (
 )
 
 type CallData struct {
-	Input       []byte
-	Sender      []byte
-	BlockHash   []byte
-	BlockHeight uint64
-	CallType    CallType
+	Input           []byte
+	Sender          []byte
+	TransactionHash []byte
+	BlockHash       []byte
+	BlockHeight     uint64
+	CallType        CallType
 }
 
 type UpStreamType int

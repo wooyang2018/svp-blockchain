@@ -27,6 +27,13 @@ func (ctx *CallContextTx) Sender() []byte {
 	return ctx.Transaction.Sender().Bytes()
 }
 
+func (ctx *CallContextTx) TransactionHash() []byte {
+	if ctx.Transaction == nil {
+		return nil
+	}
+	return ctx.Transaction.Hash()
+}
+
 func (ctx *CallContextTx) BlockHash() []byte {
 	if ctx.Block == nil {
 		return nil
@@ -59,6 +66,10 @@ func (ctx *CallContextQuery) Input() []byte {
 
 func (ctx *CallContextQuery) Sender() []byte {
 	return ctx.RawSender
+}
+
+func (ctx *CallContextQuery) TransactionHash() []byte {
+	return nil
 }
 
 func (ctx *CallContextQuery) BlockHash() []byte {

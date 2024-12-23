@@ -9,7 +9,6 @@ import (
 
 	"github.com/wooyang2018/svp-blockchain/core"
 	"github.com/wooyang2018/svp-blockchain/emitter"
-	"github.com/wooyang2018/svp-blockchain/evm/statedb"
 	"github.com/wooyang2018/svp-blockchain/execution/common"
 	"github.com/wooyang2018/svp-blockchain/logger"
 )
@@ -54,9 +53,7 @@ func (bexe *blkExecutor) execute() (*core.BlockCommit, []*core.TxCommit) {
 	bexe.rootTrk = common.NewStateTracker(bexe.state, nil)
 	bexe.txCommits = make([]*core.TxCommit, len(bexe.txs))
 	bexe.executeConcurrent()
-	if err := statedb.Commit(); err != nil {
-		logger.I().Fatalw("failed to commit statedb", "error", err)
-	}
+
 	elapsed := time.Since(start)
 	bcm := core.NewBlockCommit().
 		SetHash(bexe.blk.Hash()).
